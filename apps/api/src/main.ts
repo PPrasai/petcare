@@ -12,9 +12,18 @@ const stopTelemetry = startTelemetry(config);
 const { buildServer } = await import('./server');
 const app = await buildServer({ config });
 
+const jobs = config.runJobs
+  ? await (
+      await import('./jobs')
+    ).startJobs(config, app.notifications, (error) =>
+      app.log.error({ err: error }, 'job runner error'),
+    )
+  : null;
+
 async function shutdown(): Promise<void> {
   // Stop accepting requests, drain for up to 10 s, then close pools (AS section 6).
   const timer = setTimeout(() => process.exit(1), 10_000);
+  await jobs?.stop();
   await app.close();
   await stopTelemetry();
   clearTimeout(timer);

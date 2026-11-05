@@ -10,6 +10,7 @@ import { AuthPage } from '../features/auth/AuthPage';
 import { NewPetPage } from '../features/pets/NewPetPage';
 import { PetDetailPage, parseTab } from '../features/pets/PetDetailPage';
 import { PetsPage } from '../features/pets/PetsPage';
+import { NotificationsPanel } from '../features/settings/NotificationsPanel';
 import { AppShell } from '../features/shell/AppShell';
 import { SimplePage } from '../features/shared/SimplePage';
 import { TodayPage } from '../features/today/TodayPage';
@@ -70,7 +71,7 @@ const household = leaf('/household', () => (
 ));
 const settings = leaf('/settings', () => (
   <SimplePage title={t('settings.title')}>
-    <p>{t('settings.placeholder')}</p>
+    <NotificationsPanel />
   </SimplePage>
 ));
 const syncActivity = leaf('/sync', SyncPage);
