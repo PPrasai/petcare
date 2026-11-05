@@ -32,6 +32,15 @@ export interface SyncProblem {
   message: string;
 }
 
+/** A file chosen on this device that the server has not received yet. `id` is a placeholder. */
+export interface PendingFile {
+  id: string;
+  householdId: string;
+  name: string;
+  mimeType: string;
+  blob: Blob;
+}
+
 export interface MetaRow {
   key: string;
   value: unknown;
@@ -46,6 +55,7 @@ export class LocalDb extends Dexie {
   conflicts!: Table<ConflictItem, string>;
   problems!: Table<SyncProblem, number>;
   meta!: Table<MetaRow, string>;
+  pendingFiles!: Table<PendingFile, string>;
 
   constructor(
     readonly userId: string,
@@ -64,6 +74,7 @@ export class LocalDb extends Dexie {
       stores[entity.type] = ['id', 'householdId', 'deletedAt', ...indexed].join(', ');
     }
     this.version(1).stores(stores);
+    this.version(2).stores({ ...stores, pendingFiles: 'id, householdId' });
   }
 
   records(type: RecordType): Table<LocalRecord, string> {

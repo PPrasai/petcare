@@ -1,4 +1,5 @@
 import type { LightMyRequestResponse } from 'fastify';
+import { multipartBody } from './multipart';
 import type { TestApp } from './test-app';
 
 export const ORIGIN = 'http://localhost:5173';
@@ -46,6 +47,27 @@ export class ApiClient {
       else this.cookies.set(name.trim(), value.join('='));
     }
     return res;
+  }
+
+  /** Uploads one file to POST /api/files (multipart). */
+  async upload(
+    fields: Record<string, string>,
+    file: { name: string; type: string; bytes: Buffer },
+  ): Promise<LightMyRequestResponse> {
+    const cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
+    const { payload, headers } = multipartBody(fields, file);
+    return this.api.app.inject({
+      method: 'POST',
+      url: '/api/files',
+      remoteAddress: '127.0.0.1',
+      headers: {
+        origin: this.origin,
+        'x-forwarded-for': this.ip,
+        ...(cookie ? { cookie } : {}),
+        ...headers,
+      },
+      payload,
+    });
   }
 
   get(url: string) {

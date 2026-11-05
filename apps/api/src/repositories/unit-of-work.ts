@@ -1,5 +1,6 @@
 import type { Db } from '../db/connection';
 import { createAccountRepository } from './account-repository';
+import { createFileRepository } from './file-repository';
 import { createHouseholdRepository } from './household-repository';
 import { createInviteRepository } from './invite-repository';
 import { createNotificationRepository } from './notification-repository';
@@ -11,6 +12,7 @@ import { createSyncRepository } from './sync-repository';
 export function createRepositories(db: Db) {
   return {
     accounts: createAccountRepository(db),
+    files: createFileRepository(db),
     households: createHouseholdRepository(db),
     invites: createInviteRepository(db),
     notifications: createNotificationRepository(db),

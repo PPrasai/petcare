@@ -90,6 +90,8 @@ export function checkResponse(r: ResponseCheck): string | null {
   const media = resolved?.content?.[mediaType];
   if (!resolved?.content) return null; // documented with no body
   if (!media) return `${label}: content-type ${mediaType} not documented`;
+  // Binary bodies (file downloads) have no JSON shape; the documented media type is the check.
+  if (!mediaType.includes('json')) return null;
 
   const schemaRef = `${pointer}/content/${escape(mediaType)}/schema`;
   let validate = cache.get(schemaRef);

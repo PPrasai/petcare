@@ -11,6 +11,9 @@ export interface ClientConfig {
   emailPasswordEnabled: boolean;
   /** The VAPID public key for web push; null when the server has push turned off. */
   vapidPublicKey: string | null;
+  /** Upload limits (bytes) from the server. */
+  maxFileBytes: number;
+  householdQuotaBytes: number;
 }
 
 /** A sign-in/up failure the form can explain. */

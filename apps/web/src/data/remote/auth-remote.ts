@@ -27,6 +27,8 @@ export function createAuthRemote(): AuthApi {
         providers: field<string[]>(body, 'providers') ?? [],
         emailPasswordEnabled: field<boolean>(body, 'emailPasswordEnabled') ?? true,
         vapidPublicKey: field<string | null>(body, 'vapidPublicKey') ?? null,
+        maxFileBytes: field<number>(body, 'maxFileBytes') ?? 10_485_760,
+        householdQuotaBytes: field<number>(body, 'householdQuotaBytes') ?? 524_288_000,
       };
     },
 
