@@ -44,6 +44,8 @@ import type { PushSender } from './services/ports';
 import { createFileService } from './services/file-service';
 import { createPushService } from './services/push-service';
 import { createInviteService } from './services/invite-service';
+import { createPurgeService } from './services/purge-service';
+import type { PurgeService } from './services/purge-service';
 import { createSyncService } from './services/sync-service';
 import { createMembershipDirectory } from './services/membership-directory';
 import { getPublicConfig } from './services/public-config-service';
@@ -75,7 +77,11 @@ declare module 'fastify' {
     /** Every registered route (method + URL template), for the route-coverage check. */
     routeList: RouteEntry[];
     /** Background work the job runner calls; tests call it directly with a controlled clock. */
-    notifications: { dispatcher: Dispatcher; extend: () => Promise<number> };
+    notifications: {
+      dispatcher: Dispatcher;
+      extend: () => Promise<number>;
+      purge: PurgeService['purge'];
+    };
   }
 }
 
@@ -230,6 +236,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   app.decorate('notifications', {
     dispatcher,
     extend: () => extendSchedules(unitOfWork, { clock, newId }),
+    purge: createPurgeService({ unitOfWork, files: fileStore, clock }).purge,
   });
 
   app.addHook('onClose', async () => {
