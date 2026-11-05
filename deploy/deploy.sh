@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Runs on the VPS as the forced command of the CI deploy key (see bootstrap-vps.sh).
-# CI connects with:  ssh deploy@<vps> "deploy <40-character commit sha>"
+# Installed on the VPS as /usr/local/bin/petcare-deploy (root-owned) by bootstrap-vps.sh.
+# CI reaches it only through the petcare-ci SSH key:  ssh petcare-ci@<vps> "deploy <commit sha>"
+# CI sends its short-lived GITHUB_TOKEN on stdin; it is used for this pull only and never stored.
 # Pulls that commit's images, starts them, waits for /api/ready, and rolls back on failure.
 set -euo pipefail
 
-dir=/opt/petcare
+dir=/opt/pprasai/projects/petcare
 registry=ghcr.io/pprasai
-
-read -r verb tag extra <<<"${SSH_ORIGINAL_COMMAND:-}" || true
-if [[ "${verb:-}" != deploy || ! "${tag:-}" =~ ^[0-9a-f]{40}$ || -n "${extra:-}" ]]; then
-  echo "usage: deploy <commit-sha>" >&2
+tag="${1:-}"
+if [[ ! "$tag" =~ ^[0-9a-f]{40}$ || $# -ne 1 ]]; then
+  echo "usage: petcare-deploy <40-character commit sha>" >&2
   exit 2
 fi
 
@@ -20,9 +20,20 @@ flock -w 900 9
 
 prev=$(cat .deployed-tag 2>/dev/null || true)
 
+# Registry login for this run only, in a throwaway Docker config that is deleted on exit.
+token=""
+if [[ ! -t 0 ]]; then IFS= read -r token || true; fi
+pull_config="${DOCKER_CONFIG:-$HOME/.docker}"
+if [[ -n "$token" ]]; then
+  pull_config=$(mktemp -d)
+  trap 'rm -rf "$pull_config"' EXIT
+  printf '%s' "$token" | DOCKER_CONFIG="$pull_config" docker login ghcr.io -u github-actions --password-stdin >/dev/null
+fi
+unset token
+
 echo "Pulling $tag"
-docker pull -q "$registry/petcare-api:$tag" >/dev/null
-docker pull -q "$registry/petcare-web:$tag" >/dev/null
+DOCKER_CONFIG="$pull_config" docker pull -q "$registry/petcare-api:$tag" >/dev/null
+DOCKER_CONFIG="$pull_config" docker pull -q "$registry/petcare-web:$tag" >/dev/null
 
 # Take compose.yaml from the image so it always matches the code being deployed.
 [[ -f compose.yaml ]] && cp compose.yaml compose.prev.yaml

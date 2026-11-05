@@ -68,6 +68,9 @@ jobs:
     # Switched on by the repository variable DEPLOY_ENABLED=true once the VPS is set up.
     if: github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: production
       url: https://petcare.pprasai.io
@@ -78,13 +81,16 @@ jobs:
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           HOST: ${{ vars.DEPLOY_HOST }}
           PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          # This job's own token: read access to this repo's packages, expires when the job ends.
+          PULL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploy_key -p "$PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "deploy@$HOST" "deploy $SHA"
+          printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          # The token goes on stdin, so the VPS pulls the images without storing any registry credential.
+          printf '%s\n' "$PULL_TOKEN" | ssh -i ~/.ssh/deploy_key -p "$PORT" -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes "petcare-ci@$HOST" "deploy $SHA"
       - name: Smoke test through the public URL
         run: |
           curl -fsS --retry 5 --retry-delay 3 --retry-all-errors https://petcare.pprasai.io/api/health

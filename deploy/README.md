@@ -9,19 +9,19 @@
 
    Both are tagged with the commit SHA and pushed to GHCR (private).
 
-3. deploy then connects to the VPS over SSH as `deploy`. That key can only run `deploy.sh`. The script:
-   - pulls the images;
+3. deploy then connects to the VPS over SSH as `petcare-ci` and sends `deploy <sha>`. The VPS script:
+   - pulls the images, using the job's own GitHub token, which is sent over the SSH connection, expires when the job ends and is never stored;
    - takes `compose.yaml` from the image;
-   - starts the stack in `/opt/petcare`;
+   - starts the stack in `/opt/pprasai/projects/petcare`;
    - waits for `/api/ready`.
 
    If the stack isn't ready within 90 s, it prints the API logs and **rolls back** to the previous commit.
 
-4. The workflow then smoke-tests `https://petcare.pprasai.io/api/health`.
+4. The workflow smoke-tests `https://petcare.pprasai.io/api/health`.
 
 Pull requests that change the images only build them, so a broken Dockerfile shows up before merge.
 
-**Where to watch:** GitHub → Actions → `deploy`. Each run shows the commit it deployed. The `production` environment page lists every deployment.
+**Where to watch:** GitHub → Actions → `deploy`. Each run shows the commit it deployed.
 
 **Rolling back:** open an older successful `deploy` run and choose **Re-run jobs**. That redeploys its commit. **Run workflow** redeploys the current `main`.
 
@@ -31,92 +31,244 @@ internet ─TLS─> host Caddy (petcare.pprasai.io) ─> 127.0.0.1:8002
                                                                └─ shared network: postgres, redis
 ```
 
+### The CI user
+
+`petcare-ci` sits next to your `pprasai` (admin) and `deploy` (site) users. Following the one-key-per-role rule from `docs/VPS-SETUP.md`, it gets its own key, `ci@petcare.pprasai.io`.
+
+- It isn't in the `sudo` or `docker` groups.
+- Its key is pinned to a wrapper that accepts only `deploy <40-character sha>`.
+- The wrapper runs `/usr/local/bin/petcare-deploy` as root, the single command its sudo rule allows.
+
+A leaked key can redeploy an existing commit of this repo, and nothing else. The `deploy` user is untouched.
+
 ## One-time setup
 
-Do these steps in order. Every secret stays with you: none of them goes in the repo or the chat.
+- `PS>` lines run in PowerShell on your PC, from `D:\aeom projects\petcare`. Until PR #1 is merged, use `D:\aeom projects\petcare-cicd` instead.
+- `$` lines run on the VPS after `ssh pprasai`.
+- `=#` lines run inside `psql`.
 
-### 1. Database and role (on the VPS)
+### 1. Database and role
 
-Choose a password and keep it for step 4.
-
-```sh
-docker exec -it shared-postgres-1 psql -U postgres
-CREATE ROLE petcare LOGIN PASSWORD '<choose one>';
-CREATE DATABASE petcare OWNER petcare;
-REVOKE ALL ON DATABASE petcare FROM PUBLIC;
-\c petcare
-REVOKE CREATE ON SCHEMA public FROM PUBLIC; ALTER SCHEMA public OWNER TO petcare;
+```bash
+$ sudo docker exec -it shared-postgres-1 psql -U postgres
 ```
 
-### 2. Deploy key (on your PC)
+Check whether they already exist. They do if `petcare` was in `PROJECT_DBS` when Postgres was first created.
 
-```sh
-ssh-keygen -t ed25519 -N "" -C petcare-ci -f petcare_deploy
+```sql
+=# \du petcare
+=# \l petcare
 ```
 
-This creates `petcare_deploy` (private, for GitHub) and `petcare_deploy.pub` (public, for the VPS).
+- **Both exist:** use the password from `PROJECT_DBS` in `/opt/pprasai/infra/.env`, or set a new one with `\password petcare`.
+- **Neither exists:**
 
-### 3. Deploy user (on the VPS)
+  ```sql
+  =# CREATE ROLE petcare LOGIN;
+  =# \password petcare
+  =# CREATE DATABASE petcare OWNER petcare;
+  =# REVOKE ALL ON DATABASE petcare FROM PUBLIC;
+  =# \c petcare
+  =# REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+  =# ALTER SCHEMA public OWNER TO petcare;
+  =# \q
+  ```
 
-```sh
-scp deploy/bootstrap-vps.sh deploy/deploy.sh petcare_deploy.pub pprasai:
-ssh -t pprasai 'sudo bash bootstrap-vps.sh "$(cat petcare_deploy.pub)" && rm bootstrap-vps.sh deploy.sh petcare_deploy.pub'
+`\password` asks twice without echoing and doesn't save the password to history. Any characters are fine except a single quote (`'`).
+
+To **change** the password later, run `\password petcare` the same way, then update `PGPASSWORD` in step 4.
+
+### 2. CI key (on your PC)
+
+You already have `$env:USERPROFILE\.ssh\ci@petcare.pprasai.io` and its `.pub`. If not:
+
+```powershell
+PS> ssh-keygen -t ed25519 -f $env:USERPROFILE\.ssh\ci@petcare.pprasai.io -C "ci@petcare.pprasai.io"
 ```
 
-### 4. Secrets file `/opt/petcare/.env` (on the VPS)
+Unlike your admin and deploy keys, this key must have **no passphrase**, because GitHub can't type one. To check, run:
 
-```sh
-sudo install -o root -g deploy -m 640 /dev/null /opt/petcare/.env
-sudo nano /opt/petcare/.env
+```powershell
+PS> ssh-keygen -y -f $env:USERPROFILE\.ssh\ci@petcare.pprasai.io
+# expect: a line starting "ssh-ed25519 …" printed straight away. If it asks for a passphrase, remove it:
+PS> ssh-keygen -p -f $env:USERPROFILE\.ssh\ci@petcare.pprasai.io
+# enter the old passphrase, then press Enter twice for an empty one
+```
+
+The private key (the file without `.pub`) goes **only** to GitHub, in step 6. Never copy it to the VPS.
+
+### 3. CI user on the VPS
+
+Upload the two scripts and the **public** key, then run the setup script:
+
+```powershell
+PS> scp deploy\bootstrap-vps.sh deploy\deploy.sh pprasai:
+PS> scp $env:USERPROFILE\.ssh\ci@petcare.pprasai.io.pub pprasai:ci.pub
+PS> ssh -t pprasai "sudo bash bootstrap-vps.sh ci.pub && rm bootstrap-vps.sh deploy.sh ci.pub"
+# -t gives sudo a terminal so it can ask for your pprasai password
+# expect: "Added petcare-ci to AllowUsers in /etc/ssh/sshd_config.d/00-hardening.conf" and "Done."
+```
+
+The script:
+
+- creates `petcare-ci`;
+- installs `/usr/local/bin/petcare-deploy` and its SSH wrapper;
+- adds the sudo rule;
+- creates `/opt/pprasai/projects/petcare` (root-only);
+- appends `petcare-ci` to `AllowUsers`, after checking the SSH config with `sshd -t`.
+
+It's safe to run again.
+
+Check it, in a **new** window, keeping the old one open:
+
+```powershell
+PS> ssh pprasai "echo admin ok"
+# expect: admin ok
+PS> ssh -o IdentitiesOnly=yes -i $env:USERPROFILE\.ssh\ci@petcare.pprasai.io petcare-ci@<VPS IP> deploy nope
+# expect: usage: deploy <commit-sha>   (the key works and can do nothing else)
+```
+
+`<VPS IP>` is the `HostName` in your `%USERPROFILE%\.ssh\config`.
+
+### 4. Secrets file
+
+```bash
+$ sudo install -m 600 -o root -g root /dev/null /opt/pprasai/projects/petcare/.env
+$ sudo nano /opt/pprasai/projects/petcare/.env
 ```
 
 Required:
 
 ```
-DATABASE_URL=postgres://petcare:<password from step 1>@postgres:5432/petcare
-REDIS_URL=redis://:<redis password from infra/.env>@redis:6379
-BETTER_AUTH_SECRET=<output of: openssl rand -base64 48>
+DATABASE_URL=postgres://petcare@postgres:5432/petcare
+PGPASSWORD='<password from step 1>'
+REDIS_URL=redis://:<REDIS_PASSWORD from /opt/pprasai/infra/.env>@redis:6379
+BETTER_AUTH_SECRET=<output of: openssl rand -hex 32>
 ```
 
-Optional:
+- **Database password:** it goes in `PGPASSWORD`, not in the URL. The Postgres driver reads `PGPASSWORD` whenever the URL has no password. Keep the single quotes: they stop Docker Compose from treating `$` as a variable.
+- **Redis password:** the Redis client only takes it inside `REDIS_URL`. Percent-encode any character other than letters and digits: `@` → `%40`, `#` → `%23`, `$` → `%24`, `/` → `%2F`, `:` → `%3A`, `%` → `%25`.
 
-- Add each OAuth provider as both `AUTH_<GOOGLE|GITHUB|MICROSOFT>_CLIENT_ID` and `_SECRET`. A provider turns on only when both are set.
-- For web push, set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT=mailto:<you>`.
+To see the Redis password without printing the rest of the file:
 
-All other keys have production defaults. `compose.yaml` fixes `APP_ORIGIN`, `PORT`, `FILES_DIR` and `TRUST_PROXY`.
-
-### 5. Let the VPS pull private images
-
-Create a GitHub token: **classic**, scope `read:packages` only, no expiry or a long one. Then run:
-
-```sh
-ssh -t pprasai 'sudo -u deploy -H docker login ghcr.io -u PPrasai'
+```bash
+$ sudo grep '^REDIS_PASSWORD=' /opt/pprasai/infra/.env
 ```
 
-Paste the token when prompted.
+Added later:
 
-### 6. Caddy
+- Sign-in providers (Google, GitHub, Microsoft): see step 7.
+- Web push: set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT=mailto:<you>`.
 
-Uncomment the `petcare.pprasai.io` block in `pprasai.io/deploy/Caddyfile`, then ship it with `deploy.ps1` as usual.
+All other keys have production defaults. `compose.yaml` sets `APP_ORIGIN`, `PORT`, `FILES_DIR` and `TRUST_PROXY`.
 
-### 7. GitHub secrets and variables (on your PC)
+`ship-app.ps1` resets every `.env` under `/opt/pprasai` to root-only (600), which is what this file needs anyway.
 
-```sh
-gh secret set DEPLOY_SSH_KEY -R PPrasai/petcare < petcare_deploy
-ssh-keyscan -t ed25519 <vps host> | gh secret set DEPLOY_KNOWN_HOSTS -R PPrasai/petcare
-gh variable set DEPLOY_HOST -R PPrasai/petcare --body "<vps host>"
-gh variable set DEPLOY_ENABLED -R PPrasai/petcare --body true
-# only if SSH is not on port 22:
-gh variable set DEPLOY_PORT -R PPrasai/petcare --body <port>
+### 5. Caddy
+
+Uncomment the `petcare.pprasai.io` block in `D:\pprasai.io\deploy\Caddyfile`, then install it as in `docs/VPS-SETUP.md` step 10:
+
+```powershell
+PS> scp D:\pprasai.io\deploy\Caddyfile pprasai:~/Caddyfile
 ```
 
-Then delete `petcare_deploy` from your PC; GitHub holds the only copy. Start the first deploy from Actions → `deploy` → **Run workflow**.
+```bash
+$ sudo install -m 644 -o root -g root ~/Caddyfile /etc/caddy/Caddyfile && rm ~/Caddyfile
+$ sudo -u caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+$ sudo systemctl reload caddy
+```
+
+DNS is already covered by the wildcard record. Until the first deploy, the site answers 502. That's expected.
+
+### 6. GitHub secrets and variables (on your PC)
+
+```powershell
+PS> gh secret set DEPLOY_SSH_KEY -R PPrasai/petcare --body (Get-Content $env:USERPROFILE\.ssh\ci@petcare.pprasai.io -Raw)
+PS> ssh-keyscan -t ed25519 <VPS IP> | gh secret set DEPLOY_KNOWN_HOSTS -R PPrasai/petcare
+PS> gh variable set DEPLOY_HOST -R PPrasai/petcare --body "<VPS IP>"
+PS> gh variable set DEPLOY_ENABLED -R PPrasai/petcare --body true
+```
+
+SSH is on port 22, so `DEPLOY_PORT` isn't needed. If you ever move it, set `DEPLOY_PORT` and add `-p <port>` to `ssh-keyscan`.
+
+GitHub now holds the private key, and you can delete your local copy if you like. To rotate it, generate a new key and repeat steps 2, 3 and 6.
+
+**First deploy:** go to GitHub → Actions → `deploy` → **Run workflow**. When it's green, open https://petcare.pprasai.io.
+
+### 7. Sign-in providers (Google, GitHub, Microsoft)
+
+The first deploy works without these, because email + password sign-in is on by default. They are still part of the product, and they matter for one more reason: **there is no email in v1**. A user who forgets their password can recover only through a linked Google, GitHub or Microsoft account, or by asking you to run `pnpm --filter api cli reset-link <email>` on the server. So set up at least one before inviting real users.
+
+Each provider turns on only when both its ID and secret are in `.env`. The sign-in page shows only the providers that are on. Every provider uses the same callback pattern:
+
+```
+https://petcare.pprasai.io/api/auth/callback/<google|github|microsoft>
+```
+
+**GitHub** (easiest):
+
+1. Go to your profile picture → **Settings** → **Developer settings** (bottom of the left sidebar) → **OAuth Apps** → **New OAuth App**. The direct link is https://github.com/settings/applications/new.
+2. Fill in:
+   - Application name: `PetCare`
+   - Homepage URL: `https://petcare.pprasai.io`
+   - Authorization callback URL: `https://petcare.pprasai.io/api/auth/callback/github`
+3. Choose **Register application**, then **Generate a new client secret**.
+4. Copy the client ID and secret into `.env` as `AUTH_GITHUB_CLIENT_ID` and `AUTH_GITHUB_CLIENT_SECRET`.
+
+**Google:**
+
+1. Go to https://console.cloud.google.com, create a project named `petcare`, then open **Google Auth Platform**.
+2. Under **Branding**, set the app name `PetCare`, your support email and the home page `https://petcare.pprasai.io`.
+3. Under **Audience**, choose **External**, then **Publish app**. While it's in "Testing", only the test users you list can sign in. The app asks only for name, email and profile picture, so Google doesn't require a review.
+4. Under **Clients**, choose **Create client** → **Web application**, and fill in:
+   - Authorized JavaScript origins: `https://petcare.pprasai.io`
+   - Authorized redirect URIs: `https://petcare.pprasai.io/api/auth/callback/google`
+5. Copy the client ID and secret into `.env` as `AUTH_GOOGLE_CLIENT_ID` and `AUTH_GOOGLE_CLIENT_SECRET`. Google shows the secret only once, so save it in your password manager as well.
+
+**Microsoft:**
+
+1. Go to https://entra.microsoft.com → **App registrations** → **New registration**. If it asks you to create a directory or tenant, the free one is enough.
+2. Fill in:
+   - Name: `PetCare`
+   - Supported account types: **Accounts in any organizational directory and personal Microsoft accounts**. This matches the default `AUTH_MICROSOFT_TENANT_ID=common`.
+   - Redirect URI: platform **Web**, `https://petcare.pprasai.io/api/auth/callback/microsoft`
+3. Copy the **Application (client) ID** from the Overview page.
+4. Under **Certificates & secrets**, choose **New client secret** and copy its **Value**, not its ID.
+5. Put them in `.env` as `AUTH_MICROSOFT_CLIENT_ID` and `AUTH_MICROSOFT_CLIENT_SECRET`.
+6. Microsoft secrets expire after at most 24 months. Put a renewal reminder in your calendar.
+
+**Apple** stays off: it needs a paid Apple Developer membership ($99/year).
+
+After editing `.env`, apply the change (below). Then check which providers are on:
+
+```powershell
+PS> curl.exe -s https://petcare.pprasai.io/api/config
+# expect: "providers":["github","google",...] listing the ones you configured
+```
+
+### Applying `.env` changes
+
+Docker Compose doesn't notice edits to `.env` on its own, so recreate the containers on the current version:
+
+```bash
+$ sudo bash -c 'cd /opt/pprasai/projects/petcare && PETCARE_TAG=$(cat .deployed-tag) docker compose up -d --force-recreate'
+```
+
+GitHub → Actions → `deploy` → **Run workflow** does the same thing, but for the current `main`.
+
+## Checking it by hand
+
+```bash
+$ sudo docker compose -p petcare ps
+$ sudo docker compose -p petcare logs --tail 100 api
+$ sudo cat /opt/pprasai/projects/petcare/.deployed-tag
+```
 
 ## Notes
 
 - **Images:**
   - The API image runs the TypeScript sources through `tsx` with the full workspace installed. That's simple and correct, but large.
-  - A slimmer single image, with the API serving the PWA itself, is planned for slice 18. When it lands, update this folder and keep `deploy.sh`'s interface (`deploy <sha>`).
+  - A slimmer single image, with the API serving the PWA itself, is planned for slice 18. When it lands, update this folder and keep the interface `petcare-deploy <sha>`.
 - **Observability:** telemetry export is off (`OTEL_SDK_DISABLED=true`) until an LGTM stack runs on the VPS.
 - **Backups:**
   - Uploaded files live in the Docker volume `petcare-files`. `infra/backup.sh` backs up databases only.
