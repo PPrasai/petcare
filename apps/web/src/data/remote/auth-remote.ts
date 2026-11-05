@@ -1,3 +1,5 @@
+import { DEFAULT_PREFERENCES } from '@petcare/domain';
+import type { Preferences } from '@petcare/domain';
 import { AuthError } from '../../application/ports/auth-api';
 import type { AuthApi, ClientConfig, MeSnapshot } from '../../application/ports/auth-api';
 import { http } from './http';
@@ -36,6 +38,7 @@ export function createAuthRemote(): AuthApi {
       return {
         user: { id: user.id, name: user.name, email: user.email },
         households: field<MeSnapshot['households']>(body, 'households') ?? [],
+        preferences: field<Preferences>(body, 'preferences') ?? DEFAULT_PREFERENCES,
       };
     },
 

@@ -7,6 +7,8 @@ import {
   redirect,
 } from '@tanstack/react-router';
 import { AuthPage } from '../features/auth/AuthPage';
+import { NewPetPage } from '../features/pets/NewPetPage';
+import { PetDetailPage, parseTab } from '../features/pets/PetDetailPage';
 import { PetsPage } from '../features/pets/PetsPage';
 import { AppShell } from '../features/shell/AppShell';
 import { SimplePage } from '../features/shared/SimplePage';
@@ -39,7 +41,7 @@ const app = createRoute({
   component: AppShell,
 });
 
-const leaf = (path: string, component: () => React.ReactNode) =>
+const leaf = <P extends string>(path: P, component: () => React.ReactNode) =>
   createRoute({ getParentRoute: () => app, path, component });
 
 const today = leaf('/', () => (
@@ -48,6 +50,17 @@ const today = leaf('/', () => (
   </SimplePage>
 ));
 const pets = leaf('/pets', PetsPage);
+const newPet = leaf('/pets/new', NewPetPage);
+const petDetail = createRoute({
+  getParentRoute: () => app,
+  path: '/pets/$petId',
+  validateSearch: (search: Record<string, unknown>) => ({ tab: parseTab(search.tab) }),
+  component: function PetRoute() {
+    const { petId } = petDetail.useParams();
+    const { tab } = petDetail.useSearch();
+    return <PetDetailPage petId={petId} tab={tab} />;
+  },
+});
 const expenses = leaf('/expenses', () => (
   <SimplePage title={t('expenses.title')}>
     <p>{t('expenses.placeholder')}</p>
@@ -76,7 +89,7 @@ const publicRoute = (path: '/sign-in' | '/sign-up', mode: 'signIn' | 'signUp') =
   });
 
 const routeTree = root.addChildren([
-  app.addChildren([today, pets, expenses, household, settings, syncActivity]),
+  app.addChildren([today, pets, newPet, petDetail, expenses, household, settings, syncActivity]),
   publicRoute('/sign-in', 'signIn'),
   publicRoute('/sign-up', 'signUp'),
 ]);

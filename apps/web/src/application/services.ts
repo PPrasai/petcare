@@ -1,3 +1,4 @@
+import type { MeasurementService } from './measurement-service';
 import type { PetService } from './pet-service';
 import type { SyncControl } from './ports/sync-control';
 
@@ -18,4 +19,5 @@ export interface Services {
   session: SessionControl;
   sync: SyncControl;
   pets: PetService;
+  measurements: MeasurementService;
 }

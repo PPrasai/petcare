@@ -1,9 +1,11 @@
 import { QueryClient } from '@tanstack/react-query';
+import { MeasurementService } from '../application/measurement-service';
 import { PetService } from '../application/pet-service';
 import { AuthError } from '../application/ports/auth-api';
 import type { AuthApi, MeSnapshot } from '../application/ports/auth-api';
 import { NetworkError } from '../application/ports/remote-api';
 import type { RemoteApi } from '../application/ports/remote-api';
+import type { RecordStore } from '../application/ports/record-store';
 import type { Services, SessionControl, SignInResult } from '../application/services';
 import { createAuthRemote } from '../data/remote/auth-remote';
 import { createSyncRemote } from '../data/remote/sync-remote';
@@ -56,7 +58,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     });
     data = opened;
     scheduler = createScheduler(opened.engine);
-    useSessionStore.getState().setSignedIn(me.user, me.households);
+    useSessionStore.getState().setSignedIn(me.user, me.households, me.preferences);
     const onOnline = () => scheduler?.nudge();
     const onOffline = () => useConnectivityStore.getState().update({ online: false });
     const onVisible = () => {
@@ -123,6 +125,14 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     },
   };
 
+  const records: RecordStore = {
+    list: (type, householdId) => current().records.list(type, householdId),
+    get: (type, id) => current().records.get(type, id),
+    create: (type, householdId, fields) => current().records.create(type, householdId, fields),
+    update: (type, id, fields) => current().records.update(type, id, fields),
+    remove: (type, id) => current().records.remove(type, id),
+  };
+
   // The services read `data` lazily, so they keep working across sign-out and sign-in.
   const services: Services = {
     session,
@@ -131,13 +141,8 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       pendingCount: () => (data ? data.sync.pendingCount() : Promise.resolve(0)),
       problems: () => (data ? data.sync.problems() : Promise.resolve([])),
     },
-    pets: new PetService({
-      list: (type, householdId) => current().records.list(type, householdId),
-      get: (type, id) => current().records.get(type, id),
-      create: (type, householdId, fields) => current().records.create(type, householdId, fields),
-      update: (type, id, fields) => current().records.update(type, id, fields),
-      remove: (type, id) => current().records.remove(type, id),
-    }),
+    pets: new PetService(records),
+    measurements: new MeasurementService(records),
   };
 
   return {

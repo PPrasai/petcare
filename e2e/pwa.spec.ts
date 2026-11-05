@@ -24,7 +24,7 @@ test('manifest is installable and the app opens offline', async ({ page, context
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
-  await page.getByRole('link', { name: 'Pets' }).click();
+  await page.getByRole('link', { name: 'Pets', exact: true }).click();
   await expect(page.getByText('Momo', { exact: true })).toBeVisible();
   await expect(page.getByTestId('connectivity')).toHaveText('Offline');
 });

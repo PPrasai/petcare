@@ -20,10 +20,11 @@ export async function signUp(page: Page, label = 'e2e') {
 }
 
 export async function addPet(page: Page, name: string) {
-  await page.getByRole('link', { name: 'Pets' }).click();
+  await page.getByRole('link', { name: 'Pets', exact: true }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).click();
   await page.getByLabel('Pet name').fill(name);
   await page.getByRole('button', { name: 'Save pet' }).click();
-  await expect(page.getByText(name, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
 }
 
 /** Waits until nothing is waiting to sync. */
