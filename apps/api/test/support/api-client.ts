@@ -6,13 +6,16 @@ let nextIp = 1;
 
 /** A tiny cookie-keeping HTTP client over `app.inject`, with its own client IP. */
 export class ApiClient {
-  readonly ip = `198.51.100.${nextIp++ % 250}`;
+  readonly ip: string;
   private cookies = new Map<string, string>();
 
   constructor(
     private readonly api: TestApp,
     private readonly origin: string = ORIGIN,
-  ) {}
+    ip?: string,
+  ) {
+    this.ip = ip ?? `198.51.100.${nextIp++ % 250}`;
+  }
 
   async request(
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',

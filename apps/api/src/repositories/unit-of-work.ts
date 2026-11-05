@@ -1,6 +1,7 @@
 import type { Db } from '../db/connection';
 import { createAccountRepository } from './account-repository';
 import { createHouseholdRepository } from './household-repository';
+import { createInviteRepository } from './invite-repository';
 import { createPreferencesRepository } from './preferences-repository';
 
 /** Every repository bound to one database handle (the pool, or one transaction). */
@@ -8,6 +9,7 @@ export function createRepositories(db: Db) {
   return {
     accounts: createAccountRepository(db),
     households: createHouseholdRepository(db),
+    invites: createInviteRepository(db),
     preferences: createPreferencesRepository(db),
   };
 }

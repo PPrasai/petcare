@@ -95,6 +95,9 @@ export function registerErrorHandling(app: FastifyInstance): void {
   );
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const body = toProblem(error);
+    if (error instanceof AppError && error.retryAfterSeconds !== undefined) {
+      void reply.header('retry-after', String(error.retryAfterSeconds));
+    }
     if (body.status >= 500) request.log.error({ err: error }, 'unhandled error');
     return send(reply, body);
   });

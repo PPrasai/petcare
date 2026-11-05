@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { Redis } from 'ioredis';
 import { Writable } from 'node:stream';
 import { buildServer } from '../../src/server';
 import type { BuildServerOptions } from '../../src/server';
@@ -7,6 +8,9 @@ import { checkResponse, responseFailures } from './response-validator';
 
 export interface TestApp {
   app: FastifyInstance;
+  config: Config;
+  /** Forget a user's cached memberships (after a test changes them directly in the database). */
+  forgetMemberships: (...userIds: string[]) => Promise<void>;
   /** Everything the API logged, as text (for the redaction tests). */
   logs: () => string;
   close: () => Promise<void>;
@@ -58,5 +62,18 @@ export async function createTestApp(
       });
     },
   });
-  return { app, logs: () => chunks.join(''), close: () => app.close() };
+  let redis: Redis | undefined;
+  return {
+    app,
+    config,
+    logs: () => chunks.join(''),
+    async forgetMemberships(...userIds) {
+      redis ??= new Redis(config.redisUrl, { maxRetriesPerRequest: 1 });
+      await redis.del(...userIds.map((id) => `${config.redisKeyPrefix}mem:${id}`));
+    },
+    async close() {
+      redis?.disconnect();
+      await app.close();
+    },
+  };
 }

@@ -7,6 +7,7 @@ import { createDb } from './db/connection';
 import { runMigrations } from './db/migrate';
 import { registerActorResolution } from './http/actor';
 import { registerAuthRoutes } from './http/auth-routes';
+import { registerHouseholdRoutes } from './http/household-routes';
 import { registerMeRoutes } from './http/me-routes';
 import { registerErrorHandling } from './http/error-handler';
 import { registerOriginHook } from './http/origin-hook';
@@ -16,12 +17,18 @@ import { registerSystemRoutes } from './http/system-routes';
 import { createAuth } from './infra/auth';
 import type { AuthDeps } from './infra/auth';
 import { createCache, createRedisClient } from './infra/cache';
+import { createFileStore } from './infra/file-store';
+import { createLimiter } from './infra/limiter';
 import { createLogger } from './infra/logger';
+import { createMetrics } from './infra/metrics';
 import { createRateLimitStore } from './infra/rate-limit-store';
 import { v7 as uuidv7 } from 'uuid';
 import { createHealthRepository } from './repositories/health-repository';
 import { createUnitOfWork } from './repositories';
 import { createAccountService } from './services/account-service';
+import { createHouseholdService } from './services/household-service';
+import { createInviteService } from './services/invite-service';
+import { createMembershipDirectory } from './services/membership-directory';
 import { getPublicConfig } from './services/public-config-service';
 import { checkReadiness } from './services/readiness-service';
 
@@ -94,9 +101,24 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerOriginHook(app, config.appOrigin);
   registerRequestLogging(app);
 
-  const accounts = createAccountService({
-    unitOfWork: createUnitOfWork(db),
-    newId: () => uuidv7(),
+  const unitOfWork = createUnitOfWork(db);
+  const newId = () => uuidv7();
+  const directory = createMembershipDirectory({ unitOfWork, cache });
+  const accounts = createAccountService({ unitOfWork, newId });
+  const households = createHouseholdService({
+    unitOfWork,
+    directory,
+    files: createFileStore(config.filesDir),
+    newId,
+  });
+  const invites = createInviteService({
+    unitOfWork,
+    directory,
+    limiter: createLimiter(redis, config.redisKeyPrefix),
+    metrics: createMetrics(),
+    newId,
+    clock: () => new Date(),
+    appOrigin: config.appOrigin,
   });
   const auth = createAuth({
     config,
@@ -115,6 +137,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
 
   registerAuthRoutes(app, auth.handler, config.appOrigin);
   registerMeRoutes(app, accounts);
+  registerHouseholdRoutes(app, households, invites);
 
   app.addHook('onClose', async () => {
     redis.disconnect();
