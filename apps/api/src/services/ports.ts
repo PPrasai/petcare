@@ -15,6 +15,11 @@ export interface Metrics {
   inviteAttempt(result: 'ok' | 'notFound' | 'rateLimited'): void;
   syncMutation(status: 'applied' | 'merged' | 'rejected'): void;
   syncConflicts(recordType: string, count: number): void;
+  notificationSent(result: 'sent' | 'noDevice' | 'retry' | 'dropped' | 'skipped'): void;
+  /** Seconds between a notification's due time and the moment it was handled. */
+  dispatchLag(seconds: number): void;
+  authSignin(method: 'email' | 'social' | 'signUp', result: 'ok' | 'failed'): void;
+  uploadBytes(bytes: number): void;
 }
 
 export interface HouseholdFiles {

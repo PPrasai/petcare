@@ -1,0 +1,11 @@
+# Loads the PetCare dashboards from files. Mounted at
+# /otel-lgtm/grafana/conf/provisioning/dashboards/petcare.yaml.
+apiVersion: 1
+providers:
+  - name: PetCare
+    folder: PetCare
+    type: file
+    allowUiUpdates: false
+    options:
+      path: /petcare/dashboards
+      foldersFromFilesStructure: false

@@ -26,5 +26,11 @@ services:
   lgtm:
     image: grafana/otel-lgtm:0.39.0
     ports: ['127.0.0.1:3001:3000', '127.0.0.1:4318:4318']
+    # Dashboards, alert rules and the collector's host metrics are provisioned from files.
+    volumes:
+      - ./deploy/observability/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
+      - ./deploy/observability/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/petcare.yaml:ro
+      - ./deploy/observability/dashboards:/petcare/dashboards:ro
+      - ./deploy/observability/petcare-alerts.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/petcare-alerts.yaml:ro
 volumes:
   pgdata:

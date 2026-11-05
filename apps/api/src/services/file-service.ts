@@ -4,7 +4,7 @@ import type { UnitOfWork } from '../repositories';
 import type { FileRow } from '../repositories/file-repository';
 import { AppError, forbidden, invalid, notFound } from './app-error';
 import type { createMembershipDirectory } from './membership-directory';
-import type { HouseholdFiles } from './ports';
+import type { HouseholdFiles, Metrics } from './ports';
 
 export const ALLOWED_TYPES = [
   'image/jpeg',
@@ -18,6 +18,7 @@ export type AllowedType = (typeof ALLOWED_TYPES)[number];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export interface FileServiceDeps {
+  metrics?: Pick<Metrics, 'uploadBytes'>;
   unitOfWork: UnitOfWork;
   directory: ReturnType<typeof createMembershipDirectory>;
   files: HouseholdFiles;
@@ -86,6 +87,7 @@ export function createFileService(deps: FileServiceDeps) {
         await unitOfWork.run((repos) => repos.files.markDeleted(id));
         throw error;
       }
+      deps.metrics?.uploadBytes(upload.bytes.length);
       return row;
     },
 

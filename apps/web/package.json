@@ -4,6 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "dependencies": {
+    "@opentelemetry/api": "~1.10",
+    "@opentelemetry/exporter-trace-otlp-http": "~0.300",
+    "@opentelemetry/instrumentation-document-load": "~0.69",
+    "@opentelemetry/instrumentation-fetch": "~0.300",
+    "@opentelemetry/sdk-trace": "~3.0",
     "@petcare/contracts": "workspace:^",
     "@petcare/domain": "workspace:^",
     "@tanstack/react-form": "1.33.5",

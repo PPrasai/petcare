@@ -1,5 +1,5 @@
 import type { Repositories, UnitOfWork } from '../repositories';
-import type { PushSender } from './ports';
+import type { Metrics, PushSender } from './ports';
 
 export const MAX_ATTEMPTS = 3;
 
@@ -21,6 +21,7 @@ export interface DispatcherDeps {
   sender: PushSender;
   clock: () => Date;
   batch: number;
+  metrics?: Pick<Metrics, 'notificationSent' | 'dispatchLag'>;
 }
 
 /**
@@ -28,7 +29,7 @@ export interface DispatcherDeps {
  * Rows are claimed with FOR UPDATE SKIP LOCKED, so two dispatchers never send the same row.
  */
 export function createDispatcher(deps: DispatcherDeps) {
-  const { unitOfWork, sender, clock, batch } = deps;
+  const { unitOfWork, sender, clock, batch, metrics } = deps;
 
   async function stillWanted(
     repos: Repositories,
@@ -52,14 +53,17 @@ export function createDispatcher(deps: DispatcherDeps) {
     await unitOfWork.run(async (repos) => {
       for (const row of await repos.notifications.claimDue(now, batch)) {
         const verdict = await stillWanted(repos, row, now);
+        metrics?.dispatchLag(Math.max(0, (now.getTime() - row.fireAt.getTime()) / 1000));
         if (verdict === 'drop') {
           await repos.notifications.deleteScheduled([row.id]);
           result.skipped += 1;
+          metrics?.notificationSent('dropped');
           continue;
         }
         if (verdict !== 'send') {
           await repos.notifications.upsertScheduled([{ ...row, fireAt: verdict.snoozedUntil }]);
           result.skipped += 1;
+          metrics?.notificationSent('skipped');
           continue;
         }
 
@@ -83,13 +87,16 @@ export function createDispatcher(deps: DispatcherDeps) {
         if (subscriptions.length === 0) {
           await repos.notifications.markSent(row.id, now);
           result.noDevice += 1;
+          metrics?.notificationSent('noDevice');
         } else if (delivered) {
           await repos.notifications.markSent(row.id, now);
           result.sent += 1;
+          metrics?.notificationSent('sent');
         } else if ((await repos.notifications.bumpAttempts(row.id)) >= MAX_ATTEMPTS) {
           await repos.notifications.markSent(row.id, now);
         } else {
           result.retry += 1;
+          metrics?.notificationSent('retry');
         }
       }
     });
