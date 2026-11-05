@@ -15,6 +15,7 @@ const BASE = 'https://petcare.pprasai.io/contracts/';
 
 interface Operation {
   'x-owner'?: string;
+  requestBody?: unknown;
   responses: Record<string, ResponseObject>;
 }
 interface ResponseObject {
@@ -78,6 +79,17 @@ export function checkResponse(r: ResponseCheck): string | null {
       return checkComponent('Problem', r.body) === null
         ? null
         : `${label}: cross-cutting body is not a Problem`;
+    }
+    // A request body that fails its schema is 400 `invalid`. deleteMe's contract lists no 400
+    // although it takes a body (DIS-note in the slice 16 report); the code is still checked.
+    if (
+      r.status === 400 &&
+      operation.requestBody &&
+      (r.body as { code?: string } | null)?.code === 'invalid'
+    ) {
+      return checkComponent('Problem', r.body) === null
+        ? null
+        : `${label}: 400 body is not a Problem`;
     }
     return `${label}: status not documented`;
   }

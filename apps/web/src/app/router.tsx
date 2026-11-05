@@ -16,9 +16,8 @@ import { pendingInvite } from '../lib/pending-invite';
 import { NewPetPage } from '../features/pets/NewPetPage';
 import { PetDetailPage, parseTab } from '../features/pets/PetDetailPage';
 import { PetsPage } from '../features/pets/PetsPage';
-import { NotificationsPanel } from '../features/settings/NotificationsPanel';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { AppShell } from '../features/shell/AppShell';
-import { SimplePage } from '../features/shared/SimplePage';
 import { TodayPage } from '../features/today/TodayPage';
 import { SyncPage } from '../features/sync/SyncPage';
 import { t } from '../i18n/t';
@@ -76,14 +75,7 @@ const petDetail = createRoute({
 const expenses = leaf('/expenses', ExpensesPage);
 const contacts = leaf('/contacts', ContactsPage);
 const household = leaf('/household', HouseholdPage);
-const settings = leaf('/settings', () => (
-  <SimplePage title={t('settings.title')}>
-    <NotificationsPanel />
-    <Link to="/contacts" className="underline">
-      {t('contacts.title')}
-    </Link>
-  </SimplePage>
-));
+const settings = leaf('/settings', SettingsPage);
 const syncActivity = leaf('/sync', SyncPage);
 
 const publicRoute = (path: '/sign-in' | '/sign-up', mode: 'signIn' | 'signUp') =>

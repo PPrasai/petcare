@@ -1,6 +1,8 @@
 import { QueryClient } from '@tanstack/react-query';
 import { DEFAULT_PREFERENCES } from '@petcare/domain';
+import type { Preferences } from '@petcare/domain';
 import { ConflictService } from '../application/conflict-service';
+import { AccountService } from '../application/account-service';
 import { HouseholdService } from '../application/household-service';
 import { createHouseholdRemote } from '../data/remote/household-remote';
 import { EmergencyService } from '../application/emergency-service';
@@ -38,7 +40,9 @@ import type { UserData } from '../data/local/user-data';
 import { createScheduler } from '../data/sync/scheduler';
 import type { Scheduler } from '../data/sync/scheduler';
 import { useConnectivityStore } from '../state/connectivity';
+import { useUiPreferences } from '../state/ui-preferences';
 import { useSessionStore } from '../state/session';
+import { createAccountRemote } from '../data/remote/account-remote';
 
 export interface Runtime {
   queryClient: QueryClient;
@@ -233,6 +237,15 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     scheduler?.request();
   }
 
+  /** Makes saved preferences take effect now and on the next offline start. */
+  function applyPreferences(preferences: Preferences): void {
+    const state = useSessionStore.getState();
+    state.setPreferences(preferences);
+    useUiPreferences.getState().setTheme(preferences.theme);
+    const last = recalledSession();
+    if (last) rememberSession({ ...last, preferences });
+  }
+
   // The services read `data` lazily, so they keep working across sign-out and sign-in.
   const services: Services = {
     session,
@@ -256,6 +269,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     contacts: new ContactService(records),
     households: new HouseholdService(householdApi, refreshHouseholds),
     emergency: new EmergencyService(records, createEmergencyRemote()),
+    account: new AccountService(createAccountRemote(), applyPreferences),
     conflicts: new ConflictService(
       {
         list: (householdId) => current().conflicts.list(householdId),

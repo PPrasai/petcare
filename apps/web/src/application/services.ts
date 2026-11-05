@@ -5,6 +5,7 @@ import type { EmergencyService } from './emergency-service';
 import type { ExpenseService } from './expense-service';
 import type { FileGateway } from './ports/file-gateway';
 import type { HealthService } from './health-service';
+import type { AccountService } from './account-service';
 import type { HouseholdService } from './household-service';
 import type { TodayService } from './today-service';
 import type { MeasurementService } from './measurement-service';
@@ -46,4 +47,5 @@ export interface Services {
   households: HouseholdService;
   conflicts: ConflictService;
   emergency: EmergencyService;
+  account: AccountService;
 }
