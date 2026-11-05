@@ -4,22 +4,7 @@
  * missing for an operation that is not listed here. Slice 18 requires this list to be empty.
  */
 export const PENDING_OPERATIONS: string[] = [
-  'authSignUpEmail',
-  'authSignInEmail',
-  'authSignInSocial',
-  'authCallbackGet',
-  'authCallbackPost',
-  'authGetSession',
-  'authSignOut',
-  'authLinkSocial',
-  'authListAccounts',
-  'authUnlinkAccount',
-  'authChangePassword',
-  'authSetPassword',
-  'authResetPassword',
-  'getMe',
   'deleteMe',
-  'putPreferences',
   'exportMe',
   'listHouseholds',
   'createHousehold',

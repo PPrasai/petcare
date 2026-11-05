@@ -10,3 +10,4 @@ export * from './money';
 export * from './recurrence';
 export * from './due';
 export * from './vaccine-suggestions';
+export * from './preferences';

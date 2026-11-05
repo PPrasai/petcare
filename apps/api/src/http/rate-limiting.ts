@@ -17,8 +17,8 @@ export const AUTHENTICATED_LIMIT = { max: 300, timeWindow: '1 minute' } as const
 export async function registerRateLimiting(app: FastifyInstance, options: Options): Promise<void> {
   await app.register(rateLimit, {
     global: false,
-    // Authenticated routes switch the key to the user id (slice 4); until then it is the client IP.
-    keyGenerator: (request) => request.ip,
+    // The signed-in user when there is one (resolved by registerActorResolution), else the client IP.
+    keyGenerator: (request) => request.actor?.userId ?? request.ip,
     ...(options.store ? { store: options.store as never } : {}),
     errorResponseBuilder: () => {
       const error = new Error('rate limit exceeded') as Error & { statusCode: number };

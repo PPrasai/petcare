@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { Writable } from 'node:stream';
 import { buildServer } from '../../src/server';
+import type { BuildServerOptions } from '../../src/server';
 import type { Config } from '../../src/config/env';
 import { checkResponse, responseFailures } from './response-validator';
 
@@ -18,7 +19,10 @@ export interface TestApp {
 export async function createTestApp(
   config: Config,
   logLevel?: string,
-  options: { extraRoutes?: (app: FastifyInstance) => void } = {},
+  options: {
+    extraRoutes?: (app: FastifyInstance) => void;
+    socialOverrides?: BuildServerOptions['socialOverrides'];
+  } = {},
 ): Promise<TestApp> {
   const chunks: string[] = [];
   const logStream = new Writable({
@@ -30,6 +34,7 @@ export async function createTestApp(
   const app = await buildServer({
     config: logLevel ? { ...config, logLevel } : config,
     logStream,
+    ...(options.socialOverrides ? { socialOverrides: options.socialOverrides } : {}),
     beforeReady(instance) {
       options.extraRoutes?.(instance);
       instance.addHook('onSend', async (request, reply, payload) => {

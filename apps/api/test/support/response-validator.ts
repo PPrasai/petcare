@@ -33,6 +33,14 @@ addFormats(ajv);
 ajv.addSchema(records);
 ajv.addSchema({ ...doc, $id: `${BASE}openapi.json` });
 
+/** Status codes the contract applies to every operation, with the Problem.code they carry. */
+const CROSS_CUTTING: Record<number, string> = {
+  403: 'badOrigin',
+  413: 'tooLarge',
+  429: 'rateLimited',
+  500: 'internal',
+};
+
 const escape = (s: string) => encodeURIComponent(s.replaceAll('~', '~0').replaceAll('/', '~1'));
 const cache = new Map<string, ValidateFunction>();
 
@@ -62,7 +70,17 @@ export function checkResponse(r: ResponseCheck): string | null {
 
   const key = String(r.status);
   const entry = operation.responses[key] ?? operation.responses.default;
-  if (!entry) return `${label}: status not documented`;
+  if (!entry) {
+    // CON-petcare-001 section 1 and 2.1 define these for every operation in prose, without
+    // repeating them per operation: the problem code must match and the body must be a Problem.
+    const crossCutting = CROSS_CUTTING[r.status];
+    if (crossCutting && (r.body as { code?: string } | null)?.code === crossCutting) {
+      return checkComponent('Problem', r.body) === null
+        ? null
+        : `${label}: cross-cutting body is not a Problem`;
+    }
+    return `${label}: status not documented`;
+  }
   const responseKey = operation.responses[key] ? key : 'default';
   const base = `${BASE}openapi.json#/paths/${escape(path)}/${r.method.toLowerCase()}/responses/${responseKey}`;
   const pointer = entry.$ref ? `${BASE}openapi.json#/${entry.$ref.replace(/^#\//, '')}` : base;
