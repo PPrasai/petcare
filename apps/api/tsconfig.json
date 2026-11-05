@@ -7,6 +7,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["src", "test", "drizzle.config.ts"],
+  "include": ["src", "test", "perf", "drizzle.config.ts"],
   "references": [{ "path": "../../packages/domain" }, { "path": "../../packages/contracts" }]
 }

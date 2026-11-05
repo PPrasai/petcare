@@ -47,6 +47,7 @@
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
     "db:generate": "drizzle-kit generate",
-    "cli": "tsx src/cli/index.ts"
+    "cli": "tsx src/cli/index.ts",
+    "perf": "tsx perf/run.ts"
   }
 }
