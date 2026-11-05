@@ -2,13 +2,15 @@ import { existsSync } from 'node:fs';
 import { loadConfig } from '../config/env';
 import { createDb } from '../db/connection';
 import { createAuth } from '../infra/auth';
+import { generateVapidKeys } from '../infra/push-sender';
 
 /**
  * Operator commands: `pnpm --filter @petcare/api cli <command>`.
  *   reset-link <email>   print a one-time password-reset URL (valid 30 minutes)
- * More commands (vapid, seed-envelope) are added by later slices.
+ *   vapid                print a new VAPID key pair as .env lines (web push)
+ * More commands (seed-envelope) are added by later slices.
  */
-const USAGE = 'usage: cli reset-link <email>';
+const USAGE = 'usage: cli reset-link <email> | cli vapid';
 
 async function resetLink(email: string | undefined): Promise<number> {
   if (!email) {
@@ -36,6 +38,11 @@ async function resetLink(email: string | undefined): Promise<number> {
 const [command, ...args] = process.argv.slice(2);
 if (command === 'reset-link') {
   process.exitCode = await resetLink(args[0]);
+} else if (command === 'vapid') {
+  const keys = generateVapidKeys();
+  console.log(`VAPID_PUBLIC_KEY=${keys.publicKey}`);
+  console.log(`VAPID_PRIVATE_KEY=${keys.privateKey}`);
+  console.log('VAPID_SUBJECT=mailto:you@example.com');
 } else {
   console.error(USAGE);
   process.exitCode = 2;

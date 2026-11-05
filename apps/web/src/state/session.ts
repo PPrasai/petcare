@@ -17,6 +17,7 @@ export interface SessionHousehold {
 export interface PublicConfig {
   providers: string[];
   emailPasswordEnabled: boolean;
+  vapidPublicKey: string | null;
 }
 
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn';

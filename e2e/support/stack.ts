@@ -14,6 +14,10 @@ const app = await buildServer({
     OTEL_SDK_DISABLED: 'true',
     LOG_LEVEL: 'warn',
     RUN_JOBS: 'false',
+    // Throwaway keys, used only by the e2e run.
+    VAPID_PUBLIC_KEY:
+      'BKWonvARONJvl6nEILDKTIw4GC5x4dLUWGGXGsAPAMzkms1g3rPN9U9W-Bdk3wu5laUjdEG1ePCj2dvets5bkq4',
+    VAPID_PRIVATE_KEY: 'sDWV9C9wYwBsr-mPddd8dffmybVctwJ3zmEgLuYMxZc',
     PORT: '3100',
     DATABASE_URL: postgres.getConnectionUri(),
     REDIS_URL: `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`,

@@ -21,3 +21,24 @@ export interface HouseholdFiles {
   /** Deletes every stored blob of a household. */
   removeAll(householdId: string): Promise<void>;
 }
+
+export interface PushTarget {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushPayload {
+  title: string;
+  body: string;
+  /** Opens this path when the notification is clicked. */
+  url: string;
+  tag?: string;
+}
+
+export type PushOutcome = { ok: true } | { ok: false; gone: boolean };
+
+/** Sends one web push message. The adapter lives in src/infra; tests supply a fake. */
+export interface PushSender {
+  send(target: PushTarget, payload: PushPayload): Promise<PushOutcome>;
+}
