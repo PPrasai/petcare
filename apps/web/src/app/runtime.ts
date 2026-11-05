@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { HealthService } from '../application/health-service';
 import { MeasurementService } from '../application/measurement-service';
 import { PetService } from '../application/pet-service';
 import { AuthError } from '../application/ports/auth-api';
@@ -143,6 +144,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     },
     pets: new PetService(records),
     measurements: new MeasurementService(records),
+    health: new HealthService(records),
   };
 
   return {

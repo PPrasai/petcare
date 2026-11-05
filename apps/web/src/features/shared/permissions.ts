@@ -10,6 +10,14 @@ export function useCan(op: Operation, type: RecordType, fields?: string[]): bool
   return can(role, op, type, { actorId: userId, createdBy: userId, ...(fields ? { fields } : {}) });
 }
 
+/** Whether the user may delete a record of `type` created by `createdBy` (caretakers: only their own). */
+export function useCanDelete(type: RecordType): (createdBy: string) => boolean {
+  const role = useSessionStore((s) => s.households[0]?.role);
+  const userId = useSessionStore((s) => s.user?.id ?? '');
+  return (createdBy) =>
+    role !== undefined && can(role, 'delete', type, { actorId: userId, createdBy });
+}
+
 /** The household the app is showing. Slice 13 adds switching between households. */
 export function useHouseholdId(): string {
   return useSessionStore((s) => s.households[0]?.id ?? '');

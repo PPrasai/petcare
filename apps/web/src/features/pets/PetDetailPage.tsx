@@ -4,10 +4,21 @@ import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { ConditionsPanel } from '../health/ConditionsPanel';
+import { MedicationsPanel } from '../health/MedicationsPanel';
+import { VaccinationsPanel } from '../health/VaccinationsPanel';
+import { VisitsPanel } from '../health/VisitsPanel';
 import { MeasurementsPanel } from './MeasurementsPanel';
 import { PetOverview } from './PetOverview';
 
-export const PET_TABS = ['overview', 'health'] as const;
+export const PET_TABS = [
+  'overview',
+  'health',
+  'vaccinations',
+  'medications',
+  'visits',
+  'conditions',
+] as const;
 export type PetTab = (typeof PET_TABS)[number];
 
 export const parseTab = (value: unknown): PetTab =>
@@ -50,11 +61,14 @@ export function PetDetailPage({ petId, tab }: { petId: string; tab: PetTab }) {
               </Link>
             ))}
           </nav>
-          {tab === 'overview' ? (
-            <PetOverview pet={pet.data} />
-          ) : (
-            <MeasurementsPanel petId={petId} />
-          )}
+          {tab === 'overview' ? <PetOverview pet={pet.data} /> : null}
+          {tab === 'health' ? <MeasurementsPanel petId={petId} /> : null}
+          {tab === 'vaccinations' ? (
+            <VaccinationsPanel petId={petId} species={String(pet.data.data.species)} />
+          ) : null}
+          {tab === 'medications' ? <MedicationsPanel petId={petId} /> : null}
+          {tab === 'visits' ? <VisitsPanel petId={petId} /> : null}
+          {tab === 'conditions' ? <ConditionsPanel petId={petId} /> : null}
         </>
       ) : null}
     </div>
