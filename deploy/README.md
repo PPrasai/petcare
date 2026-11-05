@@ -74,7 +74,7 @@ First check whether they already exist. They do if `petcare` was listed in `PROJ
   =# \q
   ```
 
-The password goes into a URL in step 4, so use letters and digits only. `openssl rand -hex 24` gives a good one.
+Any characters are fine except a single quote (`'`). Step 4 keeps the password out of the connection URL, so it never needs encoding.
 
 ### 2. CI key (on your PC)
 
@@ -113,12 +113,14 @@ $ sudo nano /opt/petcare/.env
 Required:
 
 ```
-DATABASE_URL=postgres://petcare:<password from step 1>@postgres:5432/petcare
+DATABASE_URL=postgres://petcare@postgres:5432/petcare
+PGPASSWORD='<password from step 1>'
 REDIS_URL=redis://:<REDIS_PASSWORD from /opt/pprasai/infra/.env>@redis:6379
 BETTER_AUTH_SECRET=<output of: openssl rand -hex 32>
 ```
 
-If the Redis password has characters other than letters and digits, percent-encode them in the URL, for example `@` → `%40`. Don't use `$` anywhere in this file: Docker Compose would try to expand it.
+- **Database password:** it goes in `PGPASSWORD`, not in `DATABASE_URL`. The Postgres driver used by the API and the job queue reads `PGPASSWORD` whenever the URL has no password. Keep the single quotes: they stop Docker Compose from treating `$` as a variable.
+- **Redis password:** the Redis client only takes it inside `REDIS_URL`. If it has characters other than letters and digits, percent-encode them, for example `@` → `%40`, `#` → `%23`, `$` → `%24`, `/` → `%2F`.
 
 Optional:
 
