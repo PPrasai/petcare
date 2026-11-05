@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { Metrics } from '../services/ports';
 
 type Handler = (request: Request) => Promise<Response>;
 
@@ -42,7 +43,19 @@ function toWebRequest(request: FastifyRequest, origin: string): Request {
   return new Request(new URL(request.url, origin), init);
 }
 
-export function registerAuthRoutes(app: FastifyInstance, handler: Handler, origin: string): void {
+/** Sign-in and sign-up routes counted in petcare_auth_signins_total. */
+const SIGNIN_METHODS: Record<string, 'email' | 'social' | 'signUp'> = {
+  '/api/auth/sign-in/email': 'email',
+  '/api/auth/sign-in/social': 'social',
+  '/api/auth/sign-up/email': 'signUp',
+};
+
+export function registerAuthRoutes(
+  app: FastifyInstance,
+  handler: Handler,
+  origin: string,
+  metrics?: Pick<Metrics, 'authSignin'>,
+): void {
   // Encapsulated so the form parser (Apple's form_post callback) stays out of other routes.
   void app.register(async (scope) => {
     scope.addContentTypeParser(
@@ -57,6 +70,8 @@ export function registerAuthRoutes(app: FastifyInstance, handler: Handler, origi
         url: route.url,
         handler: async (request, reply) => {
           const response = await handler(toWebRequest(request, origin));
+          const method = SIGNIN_METHODS[route.url];
+          if (method) metrics?.authSignin(method, response.status < 400 ? 'ok' : 'failed');
           reply.status(response.status);
           response.headers.forEach((value, name) => {
             if (name.toLowerCase() !== 'set-cookie') reply.header(name, value);

@@ -133,7 +133,7 @@ describe('origin rule (CON-petcare-001 I-09)', () => {
 
   it('does not apply to GET, /api/auth, /api/telemetry or /api/public', async () => {
     expect((await post('https://evil.example', '/api/auth/x')).statusCode).toBe(404);
-    expect((await post('https://evil.example', '/api/telemetry/v1/traces')).statusCode).toBe(404);
+    expect((await post('https://evil.example', '/api/telemetry/v1/traces')).statusCode).toBe(202);
     expect((await post('https://evil.example', '/api/public/emergency/abc')).statusCode).toBe(404);
     const get = await api.app.inject({
       method: 'GET',

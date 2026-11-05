@@ -19,6 +19,7 @@ import { registerOriginHook } from './http/origin-hook';
 import { registerRateLimiting } from './http/rate-limiting';
 import { registerRequestLogging } from './http/request-logging';
 import { registerSystemRoutes } from './http/system-routes';
+import { registerTelemetryRoutes } from './http/telemetry-routes';
 import { createAuth } from './infra/auth';
 import type { AuthDeps } from './infra/auth';
 import { createCache, createRedisClient } from './infra/cache';
@@ -148,6 +149,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
     sender: pushSender,
     clock,
     batch: config.dispatchBatch,
+    metrics,
   });
   const sync = createSyncService({
     unitOfWork,
@@ -181,7 +183,11 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
     publicConfig: () => getPublicConfig(config),
   });
 
-  registerAuthRoutes(app, auth.handler, config.appOrigin);
+  await registerTelemetryRoutes(app, {
+    collectorEndpoint: config.otel.disabled ? null : config.otel.endpoint,
+  });
+
+  registerAuthRoutes(app, auth.handler, config.appOrigin, metrics);
   registerMeRoutes(
     app,
     accounts,
@@ -201,6 +207,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
       files: createFileStore(config.filesDir),
       newId,
       quotaBytes: config.householdQuotaBytes,
+      metrics,
     }),
     { maxFileBytes: config.maxFileBytes },
   );
