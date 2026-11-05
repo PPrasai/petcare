@@ -80,11 +80,11 @@ jobs:
           PORT: ${{ vars.DEPLOY_PORT || '22' }}
         run: |
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -p "$PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "deploy@$HOST" "deploy $SHA"
+            "petcare-ci@$HOST" "deploy $SHA"
       - name: Smoke test through the public URL
         run: |
           curl -fsS --retry 5 --retry-delay 3 --retry-all-errors https://petcare.pprasai.io/api/health

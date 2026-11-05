@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
-# Runs on the VPS as the forced command of the CI deploy key (see bootstrap-vps.sh).
-# CI connects with:  ssh deploy@<vps> "deploy <40-character commit sha>"
+# Installed on the VPS as /usr/local/bin/petcare-deploy (root-owned) by bootstrap-vps.sh.
+# CI reaches it only through the petcare-ci SSH key:  ssh petcare-ci@<vps> "deploy <commit sha>"
 # Pulls that commit's images, starts them, waits for /api/ready, and rolls back on failure.
 set -euo pipefail
 
 dir=/opt/petcare
 registry=ghcr.io/pprasai
-
-read -r verb tag extra <<<"${SSH_ORIGINAL_COMMAND:-}" || true
-if [[ "${verb:-}" != deploy || ! "${tag:-}" =~ ^[0-9a-f]{40}$ || -n "${extra:-}" ]]; then
-  echo "usage: deploy <commit-sha>" >&2
+tag="${1:-}"
+if [[ ! "$tag" =~ ^[0-9a-f]{40}$ || $# -ne 1 ]]; then
+  echo "usage: petcare-deploy <40-character commit sha>" >&2
   exit 2
 fi
 
