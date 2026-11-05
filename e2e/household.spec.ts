@@ -39,7 +39,6 @@ test('an owner invites a member by link; roles, transfer and leaving work', asyn
   await page.getByRole('button', { name: 'Create invite' }).click();
   const region = page.getByRole('region', { name: 'New invite' });
   const link = (await region.getByTestId('invite-link').textContent()) ?? '';
-  const code = (await region.getByTestId('invite-code').textContent()) ?? '';
   expect(link).toMatch(/\/join#[A-Za-z0-9_-]{43}$/);
   await expect(
     region.getByRole('img', { name: 'QR code of the invite link' }).locator('svg'),

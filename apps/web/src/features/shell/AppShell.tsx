@@ -29,7 +29,7 @@ export function AppShell(): ReactNode {
       </a>
       <nav
         aria-label={t('nav.main')}
-        className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-card lg:static lg:w-52 lg:flex-col lg:border-r lg:border-t-0 lg:p-3"
+        className="fixed inset-x-0 bottom-0 z-10 print:hidden flex border-t border-line bg-card lg:static lg:w-52 lg:flex-col lg:border-r lg:border-t-0 lg:p-3"
       >
         {tabs.map((tab) => (
           <Link
@@ -47,7 +47,7 @@ export function AppShell(): ReactNode {
         ))}
       </nav>
       <div className="flex flex-1 flex-col pb-16 lg:pb-0">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-card px-4 py-2">
+        <header className="flex flex-wrap print:hidden items-center justify-between gap-2 border-b border-line bg-card px-4 py-2">
           <div>
             <p className="font-semibold">{t('app.name')}</p>
             {householdName ? <p className="text-sm text-muted">{householdName}</p> : null}

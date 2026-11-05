@@ -4,6 +4,7 @@ import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { EmergencyPanel } from '../emergency/EmergencyPanel';
 import { DocumentsPanel } from '../documents/DocumentsPanel';
 import { RoutinesPanel } from '../care/RoutinesPanel';
 import { ConditionsPanel } from '../health/ConditionsPanel';
@@ -22,6 +23,7 @@ export const PET_TABS = [
   'conditions',
   'routines',
   'documents',
+  'emergency',
 ] as const;
 export type PetTab = (typeof PET_TABS)[number];
 
@@ -74,6 +76,9 @@ export function PetDetailPage({ petId, tab }: { petId: string; tab: PetTab }) {
           {tab === 'visits' ? <VisitsPanel petId={petId} /> : null}
           {tab === 'routines' ? <RoutinesPanel petId={petId} /> : null}
           {tab === 'documents' ? <DocumentsPanel petId={petId} /> : null}
+          {tab === 'emergency' ? (
+            <EmergencyPanel petId={petId} petName={String(pet.data.data.name)} />
+          ) : null}
           {tab === 'conditions' ? <ConditionsPanel petId={petId} /> : null}
         </>
       ) : null}

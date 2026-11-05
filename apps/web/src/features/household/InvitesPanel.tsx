@@ -1,36 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import QRCode from 'qrcode';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { CreatedInvite, InviteRole } from '../../application/ports/household-api';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Banner, Button, SelectField } from '../../ui';
+import { LinkQr } from '../shared/LinkQr';
 import { useServices } from '../shared/services-context';
 import { useHouseholdAction } from './useHouseholdAction';
-
-/** The QR code of an invite link, drawn as inline SVG (no external request). */
-function LinkQr({ link }: { link: string }) {
-  const [svg, setSvg] = useState('');
-  useEffect(() => {
-    let live = true;
-    void QRCode.toString(link, { type: 'svg', margin: 1 }).then((markup) => {
-      if (live) setSvg(markup);
-    });
-    return () => {
-      live = false;
-    };
-  }, [link]);
-  return (
-    <div
-      role="img"
-      aria-label={t('household.qr')}
-      className="h-40 w-40 bg-white p-1 [&>svg]:h-full [&>svg]:w-full"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-  );
-}
 
 /** Owner-only: create invites (link, code and QR shown once), list open ones, revoke. */
 export function InvitesPanel({ householdId }: { householdId: string }) {
@@ -90,7 +68,7 @@ export function InvitesPanel({ householdId }: { householdId: string }) {
           <p>
             {t('household.code')}: <code data-testid="invite-code">{created.code}</code>
           </p>
-          <LinkQr link={created.link} />
+          <LinkQr link={created.link} label={t('household.qr')} />
           <Button variant="secondary" className="self-start" onClick={() => setCreated(null)}>
             {t('household.hide')}
           </Button>
