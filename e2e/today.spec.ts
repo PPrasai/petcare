@@ -50,7 +50,7 @@ test('routines and reminders show on Today and can be done, skipped or snoozed',
   await page.getByRole('button', { name: 'Skip Evening walk (Momo)' }).click();
   await expect(done.getByText(/skipped by you/)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Snooze Medicine drops (Momo) until tomorrow' }).click();
+  await page.getByRole('button', { name: 'Snooze until tomorrow: Medicine drops (Momo)' }).click();
   await expect(
     page.getByRole('region', { name: /Snoozed/ }).getByText('Medicine drops'),
   ).toBeVisible();

@@ -1,0 +1,171 @@
+import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { addPet, signUp, waitSynced } from './support/app';
+
+// A real 1x1 PNG, so the server's content sniffing accepts it.
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+interface Change {
+  type: string;
+  id: string;
+  deletedAt: string | null;
+  data: Record<string, unknown>;
+}
+const pullAll = async (page: Page): Promise<Change[]> =>
+  (await (await page.request.get('/api/sync/pull')).json()).changes as Change[];
+
+const openPet = async (page: Page) => {
+  await page.getByRole('link', { name: 'Pets', exact: true }).click();
+  await page.getByRole('link', { name: 'Momo' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
+};
+const tab = async (page: Page, name: string) => {
+  await openPet(page);
+  await page.getByRole('link', { name, exact: true }).click();
+};
+
+// QA-02: every record type can be created, edited and deleted offline (CAP-04 to CAP-15), survives
+// an offline reload, and reaches the server when the connection returns.
+test('every record type works offline, survives a reload, and syncs when back online', async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(240_000);
+  await signUp(page, 'offline-all');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
+  await addPet(page, 'Momo');
+  // Records that exist on the server before going offline, so deleting them offline must sync
+  // (deleting a record whose create was never sent is eliminated from the outbox by design).
+  await page.getByRole('link', { name: 'Health', exact: true }).click();
+  await page.getByLabel(/^Value/).fill('12.5');
+  await page.getByRole('button', { name: 'Add measurement' }).click();
+  await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
+  await page.getByRole('link', { name: 'Contacts', exact: true }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Temp clinic');
+  await page.getByRole('button', { name: 'Add contact' }).click();
+  await expect(page.getByText('Temp clinic')).toBeVisible();
+  await waitSynced(page);
+  await page.reload();
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true);
+
+  await context.setOffline(true);
+
+  // CAP-04: edit the pet.
+  await openPet(page);
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('Colour').fill('Brindle');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Brindle')).toBeVisible();
+
+  // Measurements (create, then delete one).
+  await openPet(page);
+  await page.getByRole('link', { name: 'Health', exact: true }).click();
+  await page.getByRole('button', { name: /^Delete Weight from/ }).click();
+  await page.getByLabel(/^Value/).fill('13');
+  await page.getByRole('button', { name: 'Add measurement' }).click();
+
+  // Vaccination, medication, vet visit.
+  await page.getByRole('link', { name: 'Vaccinations', exact: true }).click();
+  await page.getByLabel('Vaccine', { exact: true }).fill('Rabies');
+  await page.getByLabel('Given on').fill('2025-01-15');
+  await page.getByRole('button', { name: 'Add vaccination' }).click();
+  await expect(page.getByText('Given 2025-01-15')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Medications', exact: true }).click();
+  await page.getByLabel('Medication', { exact: true }).fill('Amoxicillin');
+  await page.getByLabel('Dose', { exact: true }).fill('5');
+  await page.getByLabel('Dose unit').selectOption('mg');
+  await page.getByLabel('Times (24-hour, comma separated)').fill('09:00');
+  await page.getByRole('button', { name: 'Add medication' }).click();
+  await expect(page.getByText('Amoxicillin').first()).toBeVisible();
+
+  await page.getByRole('link', { name: 'Vet visits', exact: true }).click();
+  await page.getByLabel('Reason', { exact: true }).fill('Annual check');
+  await page.getByRole('button', { name: 'Add visit' }).click();
+  await expect(page.getByText('Annual check')).toBeVisible();
+
+  // Condition, symptom.
+  await page.getByRole('link', { name: 'Conditions', exact: true }).click();
+  await page.getByLabel('Condition name').fill('Asthma');
+  await page.getByRole('button', { name: 'Add condition' }).click();
+  await expect(page.getByText('Asthma')).toBeVisible();
+  await page.getByLabel('What you noticed').fill('Coughing at night');
+  await page.getByRole('button', { name: 'Add symptom' }).click();
+  await expect(page.getByText('Coughing at night')).toBeVisible();
+
+  // Care routine, document with a file (kept on the device until it can upload).
+  await page.getByRole('link', { name: 'Care routines', exact: true }).click();
+  await page.getByLabel('Routine name').fill('Breakfast');
+  await page.getByLabel('Times (24-hour, comma separated)').fill('08:00');
+  await page.getByRole('button', { name: 'Add routine' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Breakfast' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Documents', exact: true }).click();
+  await page.getByLabel('Title').fill('Insurance card');
+  await page
+    .getByLabel('File (photo or PDF)')
+    .setInputFiles({ name: 'card.png', mimeType: 'image/png', buffer: PNG });
+  await page.getByRole('button', { name: 'Add document' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Insurance card' })).toContainText(
+    'waiting to upload',
+  );
+
+  // Custom reminder (on Today), expense, contact (created, then deleted).
+  await page.getByRole('link', { name: 'Today', exact: true }).click();
+  await page.getByLabel('Reminder', { exact: true }).fill('Order food');
+  await page.getByRole('button', { name: 'Add reminder' }).click();
+  await expect(page.getByText('Order food').first()).toBeVisible();
+
+  await page.getByRole('link', { name: 'Expenses', exact: true }).click();
+  await page.getByLabel('Amount').fill('42.50');
+  await page.getByRole('button', { name: 'Add expense' }).click();
+  await expect(page.getByRole('list', { name: 'Expenses' }).getByRole('listitem')).toHaveCount(1);
+
+  await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
+  await page.getByRole('link', { name: 'Contacts', exact: true }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Dr Rao');
+  await page.getByRole('button', { name: 'Add contact' }).click();
+  await expect(page.getByText('Dr Rao')).toBeVisible();
+  await page.getByRole('button', { name: 'Delete Temp clinic' }).click();
+  await expect(page.getByText('Temp clinic')).toHaveCount(0);
+
+  // Reload while still offline: everything is still there.
+  await page.reload();
+  await expect(page.getByText('Dr Rao')).toBeVisible();
+  await tab(page, 'Vaccinations');
+  await expect(page.getByText('Given 2025-01-15')).toBeVisible();
+  await tab(page, 'Conditions');
+  await expect(page.getByText('Asthma')).toBeVisible();
+  await tab(page, 'Documents');
+  await expect(page.getByRole('listitem').filter({ hasText: 'Insurance card' })).toBeVisible();
+  await openPet(page);
+  await expect(page.getByText('Brindle')).toBeVisible();
+
+  // Back online: the server has every change.
+  await context.setOffline(false);
+  await waitSynced(page);
+  const changes = await pullAll(page);
+  const live = (type: string) => changes.filter((c) => c.type === type && c.deletedAt === null);
+  expect(live('pet')[0]?.data.colour).toBe('Brindle');
+  expect(live('measurement')).toHaveLength(1);
+  expect(changes.filter((c) => c.type === 'measurement' && c.deletedAt !== null)).toHaveLength(1);
+  expect(live('vaccination').map((c) => c.data.vaccineName)).toContain('Rabies');
+  expect(live('medication').map((c) => c.data.name)).toContain('Amoxicillin');
+  expect(live('vetVisit').map((c) => c.data.reason)).toContain('Annual check');
+  expect(live('condition').map((c) => c.data.name)).toContain('Asthma');
+  expect(live('symptomEntry').map((c) => c.data.description)).toContain('Coughing at night');
+  expect(live('careRoutine').map((c) => c.data.title)).toContain('Breakfast');
+  expect(live('reminder').map((c) => c.data.title)).toContain('Order food');
+  expect(live('expense')).toHaveLength(1);
+  expect(live('contact').map((c) => c.data.name)).toEqual(['Dr Rao']);
+  expect(changes.filter((c) => c.type === 'contact' && c.deletedAt !== null)).toHaveLength(1);
+
+  const [document] = live('document');
+  const download = await page.request.get(`/api/files/${String(document?.data.fileId)}`);
+  expect(download.status()).toBe(200);
+});
