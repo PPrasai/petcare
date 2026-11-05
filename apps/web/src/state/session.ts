@@ -26,6 +26,8 @@ export type SessionStatus = 'loading' | 'signedOut' | 'signedIn';
 
 interface SessionState {
   status: SessionStatus;
+  /** True while the on-device demo is open: nothing is sent to the server. */
+  demo: boolean;
   user: SessionUser | null;
   households: SessionHousehold[];
   /** The household being shown; null means the first one. */
@@ -37,6 +39,7 @@ interface SessionState {
     user: SessionUser,
     households: SessionHousehold[],
     preferences: Preferences,
+    demo?: boolean,
   ) => void;
   setSignedOut: () => void;
   setHouseholds: (households: SessionHousehold[]) => void;
@@ -56,16 +59,25 @@ function remembered(): string | null {
 
 export const useSessionStore = create<SessionState>()((set) => ({
   status: 'loading',
+  demo: false,
   user: null,
   households: [],
   activeHouseholdId: null,
   preferences: DEFAULT_PREFERENCES,
   config: null,
-  setSignedIn: (user, households, preferences) =>
-    set({ status: 'signedIn', user, households, activeHouseholdId: remembered(), preferences }),
+  setSignedIn: (user, households, preferences, demo = false) =>
+    set({
+      status: 'signedIn',
+      demo,
+      user,
+      households,
+      activeHouseholdId: demo ? null : remembered(),
+      preferences,
+    }),
   setSignedOut: () =>
     set({
       status: 'signedOut',
+      demo: false,
       user: null,
       households: [],
       activeHouseholdId: null,

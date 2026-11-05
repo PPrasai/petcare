@@ -25,6 +25,7 @@ const capitalize = (word: string) => word.charAt(0).toUpperCase() + word.slice(1
 export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
   const { session } = useServices();
   const navigate = useNavigate();
+  const [demoBusy, setDemoBusy] = useState(false);
   const providers = useSessionStore((s) => s.config?.providers.join(',') ?? '');
   const [problem, setProblem] = useState<MessageKey | null>(null);
   const signUp = mode === 'signUp';
@@ -124,6 +125,21 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
           ))}
         </div>
       ) : null}
+      {signUp ? null : (
+        <div className="flex flex-col gap-1 border-t border-line pt-4">
+          <Button
+            variant="secondary"
+            disabled={demoBusy}
+            onClick={() => {
+              setDemoBusy(true);
+              void session.startDemo().then(() => navigate({ to: '/' }));
+            }}
+          >
+            {t('demo.try')}
+          </Button>
+          <p className="text-center text-sm text-muted">{t('demo.tryHint')}</p>
+        </div>
+      )}
       <a
         className="text-center underline"
         href={signUp ? '/sign-in' : '/sign-up'}

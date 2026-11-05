@@ -1,4 +1,5 @@
 import { NetworkError } from '../../application/ports/remote-api';
+import { assertNetworkAllowed } from './network-gate';
 
 export interface HttpResult {
   status: number;
@@ -11,6 +12,7 @@ export interface HttpResult {
  * 502/503/504 from a proxy in front of a stopped API, is a NetworkError: the caller retries.
  */
 export async function http(method: string, path: string, body?: unknown): Promise<HttpResult> {
+  assertNetworkAllowed();
   let response: Response;
   try {
     response = await fetch(path, {

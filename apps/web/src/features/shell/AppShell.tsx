@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { activeHousehold, useSessionStore } from '../../state/session';
+import { useDemo } from '../shared/demo';
+import { DemoBanner } from './DemoBanner';
 import { SignOutButton } from '../sync/SignOutButton';
 import { SyncIndicator } from '../sync/SyncIndicator';
 
@@ -18,6 +20,7 @@ const tabs: { to: string; label: MessageKey }[] = [
 export function AppShell(): ReactNode {
   const householdName = useSessionStore((s) => activeHousehold(s)?.name ?? '');
   const userName = useSessionStore((s) => s.user?.name ?? '');
+  const demo = useDemo();
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
@@ -47,12 +50,13 @@ export function AppShell(): ReactNode {
         ))}
       </nav>
       <div className="flex flex-1 flex-col pb-16 lg:pb-0">
+        {demo ? <DemoBanner /> : null}
         <header className="flex flex-wrap print:hidden items-center justify-between gap-2 border-b border-line bg-card px-4 py-2">
           <div>
             <p className="font-semibold">{t('app.name')}</p>
             {householdName ? <p className="text-sm text-muted">{householdName}</p> : null}
           </div>
-          <SyncIndicator />
+          {demo ? <span /> : <SyncIndicator />}
           <div className="flex items-center gap-2">
             <span className="hidden text-sm text-muted sm:inline">
               {t('auth.signedInAs', { name: userName })}
@@ -60,7 +64,7 @@ export function AppShell(): ReactNode {
             <Link to="/sync" className="inline-flex min-h-11 items-center underline">
               {t('nav.sync')}
             </Link>
-            <SignOutButton />
+            {demo ? null : <SignOutButton />}
           </div>
         </header>
         <main id="content" className="flex-1 p-4">

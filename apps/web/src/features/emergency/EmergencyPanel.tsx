@@ -12,6 +12,7 @@ import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Banner, Button, TextField } from '../../ui';
+import { useDemo } from '../shared/demo';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { LinkQr } from '../shared/LinkQr';
 import { useServices } from '../shared/services-context';
@@ -149,6 +150,7 @@ function LostMode({ card, petId }: { card: StoredRecord | null; petId: string })
 
 function LinkSection({ card, petName }: { card: StoredRecord | null; petName: string }) {
   const { emergency } = useServices();
+  const demo = useDemo();
   const [link, setLink] = useState<EmergencyLink | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -169,8 +171,9 @@ function LinkSection({ card, petName }: { card: StoredRecord | null; petName: st
       <h3 id="link-title" className="text-lg font-semibold print:hidden">
         {t('emergency.linkTitle')}
       </h3>
-      {!card ? <Banner>{t('emergency.linkNeedsCard')}</Banner> : null}
-      {card ? (
+      {demo ? <Banner>{t('demo.emergencyDisabled')}</Banner> : null}
+      {!card && !demo ? <Banner>{t('emergency.linkNeedsCard')}</Banner> : null}
+      {card && !demo ? (
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button
             onClick={() =>

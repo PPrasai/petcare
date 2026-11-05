@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { DEFAULT_PREFERENCES } from '@petcare/domain';
 import { ConflictService } from '../application/conflict-service';
 import { HouseholdService } from '../application/household-service';
 import { createHouseholdRemote } from '../data/remote/household-remote';
@@ -19,6 +20,16 @@ import { NetworkError } from '../application/ports/remote-api';
 import type { RemoteApi } from '../application/ports/remote-api';
 import type { RecordStore } from '../application/ports/record-store';
 import type { Services, SessionControl, SignInResult } from '../application/services';
+import {
+  DEMO_HOUSEHOLD,
+  DEMO_USER,
+  DEMO_USER_ID,
+  seedDemo,
+  unreachableFiles,
+  unreachableRemote,
+  wipeDemo,
+} from '../data/local/demo-data';
+import { blockNetwork } from '../data/remote/network-gate';
 import { createAuthRemote } from '../data/remote/auth-remote';
 import { createSyncRemote } from '../data/remote/sync-remote';
 import { forgetSession, recalledSession, rememberSession } from '../data/local/session-cache';
@@ -99,6 +110,45 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     data = null;
   }
 
+  const DEMO_FLAG = 'petcare-demo';
+  const setDemoFlag = (on: boolean) => {
+    try {
+      if (on) localStorage.setItem(DEMO_FLAG, '1');
+      else localStorage.removeItem(DEMO_FLAG);
+    } catch {
+      // Without storage a reload leaves the demo, which is harmless.
+    }
+  };
+  const demoFlag = (): boolean => {
+    try {
+      return localStorage.getItem(DEMO_FLAG) === '1';
+    } catch {
+      return false;
+    }
+  };
+
+  /** Opens the demo database (seeding it if empty). Never starts sync and never uses the network. */
+  async function openDemo(): Promise<void> {
+    blockNetwork(true);
+    await seedDemo();
+    data = openUserData(DEMO_USER_ID, unreachableRemote(), unreachableFiles(), {
+      onChanged: invalidate,
+      onStatus: () => undefined,
+    });
+    const preferences = {
+      ...DEFAULT_PREFERENCES,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    useSessionStore
+      .getState()
+      .setSignedIn(
+        DEMO_USER,
+        [{ id: DEMO_HOUSEHOLD.id, name: DEMO_HOUSEHOLD.name, role: DEMO_HOUSEHOLD.role }],
+        preferences,
+        true,
+      );
+  }
+
   const current = (): UserData => {
     if (!data) throw new Error('not signed in');
     return data;
@@ -124,6 +174,32 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
   };
 
   const session: SessionControl = {
+    async startDemo() {
+      close();
+      setDemoFlag(true);
+      await openDemo();
+    },
+    async resetDemo() {
+      close();
+      await wipeDemo();
+      await openDemo();
+      // Every screen re-reads the freshly seeded database.
+      await queryClient.invalidateQueries();
+    },
+    async exitDemo() {
+      close();
+      setDemoFlag(false);
+      blockNetwork(false);
+      queryClient.clear();
+      useSessionStore.getState().setSignedOut();
+      // Sign-in options are needed again if the demo was opened straight from a reload.
+      if (!useSessionStore.getState().config) {
+        void auth
+          .config()
+          .then((config) => useSessionStore.getState().setConfig(config))
+          .catch(() => undefined);
+      }
+    },
     signInEmail: (email, password) => attempt(() => auth.signInEmail(email, password)),
     signUpEmail: (name, email, password) => attempt(() => auth.signUpEmail(name, email, password)),
     signInSocial: (provider) => auth.socialSignInUrl(provider),
@@ -196,6 +272,10 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     households: () => (data ? data.households() : Promise.resolve([])),
     async bootstrap() {
       const store = useSessionStore.getState();
+      if (demoFlag()) {
+        await openDemo();
+        return;
+      }
       try {
         store.setConfig(await auth.config());
       } catch {

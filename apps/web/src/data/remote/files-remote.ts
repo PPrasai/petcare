@@ -1,6 +1,7 @@
 import type { FileApi, UploadedFile } from '../../application/ports/file-api';
 import { NetworkError, RemoteError } from '../../application/ports/remote-api';
 import { problemCode } from './http';
+import { assertNetworkAllowed } from './network-gate';
 
 async function problemOf(response: Response): Promise<string> {
   try {
@@ -17,6 +18,7 @@ export function createFilesRemote(): FileApi {
       const form = new FormData();
       form.append('householdId', householdId);
       form.append('file', blob, name);
+      assertNetworkAllowed();
       let response: Response;
       try {
         response = await fetch('/api/files', {
