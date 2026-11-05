@@ -1,0 +1,10 @@
+# Lint configuration for the PetCare contract (normative, part of CON-petcare-001).
+extends:
+  - recommended
+rules:
+  operation-summary: off          # summaries are optional; operationIds are required and unique
+  tag-description: off
+  no-server-example.com: off      # localhost server is the dev Vite proxy
+  operation-4xx-response: warn
+  operation-2xx-response: warn    # OAuth callbacks answer 302 only
+  no-required-schema-properties-undefined: warn   # false positive on if/then inside records.schema.json

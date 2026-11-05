@@ -1,0 +1,30 @@
+name: petcare-dev
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: petcare
+      POSTGRES_USER: petcare
+      POSTGRES_PASSWORD: petcare
+    ports: ['127.0.0.1:54329:5432']
+    volumes: ['pgdata:/var/lib/postgresql/data']
+  redis:
+    image: redis:7-alpine
+    command:
+      [
+        'redis-server',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+        '--maxmemory',
+        '64mb',
+        '--maxmemory-policy',
+        'allkeys-lru',
+      ]
+    ports: ['127.0.0.1:63799:6379']
+  lgtm:
+    image: grafana/otel-lgtm:0.39.0
+    ports: ['127.0.0.1:3001:3000', '127.0.0.1:4318:4318']
+volumes:
+  pgdata:

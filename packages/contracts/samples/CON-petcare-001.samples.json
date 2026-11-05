@@ -1,0 +1,39 @@
+{
+  "PushRequest": [{
+    "clientId": "01930f70-0000-7000-8000-00000000c1a1",
+    "mutations": [
+      { "mutationId": "01930f70-1111-7000-8000-000000000001", "type": "pet", "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+        "householdId": "01930f6e-0000-7000-8000-000000000001", "op": "update", "baseVersion": 2, "fields": { "diet": "Wet food" }, "clientTime": "2026-11-05T06:00:00Z" },
+      { "mutationId": "01930f70-1111-7000-8000-000000000002", "type": "medicationDose", "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f99",
+        "householdId": "01930f6e-0000-7000-8000-000000000001", "op": "create", "baseVersion": 0,
+        "fields": { "medicationId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f82", "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+          "occurrenceAt": "2026-11-05T02:15:00Z", "givenAt": "2026-11-05T02:30:00Z", "skipped": false }, "clientTime": "2026-11-05T02:30:00Z" }
+    ]
+  }],
+  "PushResponse": [{
+    "results": [
+      { "mutationId": "01930f70-1111-7000-8000-000000000001", "status": "merged", "conflictIds": ["01930f71-0000-7000-8000-0000000000c1"],
+        "record": { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "type": "pet", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 4,
+          "createdAt": "2026-11-01T08:00:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-05T06:00:02Z", "updatedBy": "usr_b2", "deletedAt": null,
+          "data": { "name": "Momo", "species": "dog", "diet": "Wet food" } } },
+      { "mutationId": "01930f70-1111-7000-8000-000000000002", "status": "rejected", "error": { "code": "invalidReference", "message": "medicationId not found in household", "path": "/medicationId" } }
+    ],
+    "serverTime": "2026-11-05T06:00:02Z"
+  }],
+  "PullResponse": [{
+    "changes": [],
+    "households": [{ "id": "01930f6e-0000-7000-8000-000000000001", "name": "Home", "role": "caretaker", "memberCount": 2 }],
+    "conflicts": [{ "id": "01930f71-0000-7000-8000-0000000000c1", "householdId": "01930f6e-0000-7000-8000-000000000001", "recordType": "pet",
+      "recordId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "field": "diet", "keptValue": "Wet food", "replacedValue": "Dry food twice daily",
+      "replacedBy": "usr_a1", "winningBy": "usr_b2", "reason": "concurrentFieldEdit", "createdAt": "2026-11-05T06:00:02Z", "resolvedAt": null }],
+    "cursor": "eyJ2IjoxLCJzZXEiOiIxMjM0In0", "hasMore": false, "serverTime": "2026-11-05T06:00:03Z"
+  }],
+  "PublicConfig": [{ "providers": ["google", "github", "microsoft"], "emailPasswordEnabled": true, "vapidPublicKey": "BExampleKeyBase64Url",
+    "limits": { "maxFileBytes": 10485760, "householdQuotaBytes": 524288000, "maxMutationsPerPush": 100 } }],
+  "InviteCreated": [{ "id": "01930f72-0000-7000-8000-000000000001", "role": "caretaker", "createdAt": "2026-11-05T06:00:00Z", "expiresAt": "2026-11-12T06:00:00Z",
+    "status": "open", "link": "https://petcare.pprasai.io/join#AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "code": "7K3QM-9XTZ2" }],
+  "PublicEmergencyCard": [{ "isLost": true, "lostSince": "2026-11-05T05:30:00Z", "lostMessage": "Lost near Jawalakhel, please call", "hasPhoto": true,
+    "name": "Momo", "breed": "Tibetan Terrier", "allergies": ["Chicken"], "ownerDisplayName": "Parikshit", "ownerPhone": "+977-9800000000" }],
+  "Problem": [{ "type": "https://petcare.pprasai.io/problems/quotaExceeded", "title": "Storage quota exceeded", "status": 409, "code": "quotaExceeded",
+    "traceId": "4bf92f3577b34da6a3ce929d0e0e4736" }]
+}

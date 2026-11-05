@@ -16,3 +16,8 @@ PROJECT-INPUT.md
 .claude/
 CLAUDE.md
 AGENTS.md
+
+reports/
+test-results/
+playwright-report/
+.data/

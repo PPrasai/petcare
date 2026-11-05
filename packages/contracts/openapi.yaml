@@ -1,0 +1,1129 @@
+openapi: 3.1.0
+info:
+  title: PetCare API
+  version: 1.0.0
+  description: |
+    Authoritative HTTP contract (CON-petcare-001). Record shapes live in records.schema.json (CON-petcare-002),
+    which sits next to this file in packages/contracts. All errors are RFC 9457 problem+json.
+    Every non-GET /api request from a browser must send Origin equal to APP_ORIGIN; JSON bodies must use
+    Content-Type application/json (multipart for uploads; OTLP types for telemetry).
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://petcare.pprasai.io
+  - url: http://localhost:5173
+security:
+  - cookieAuth: []
+tags:
+  - name: system
+  - name: auth
+    description: Mounted Better Auth handler. Reference only (x-owner better-auth); excluded from response-conformance checks.
+  - name: me
+  - name: households
+  - name: invites
+  - name: sync
+  - name: files
+  - name: notifications
+  - name: calendar
+  - name: emergency
+  - name: telemetry
+
+paths:
+  /api/health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      security: []
+      summary: Liveness
+      responses:
+        '200':
+          description: Process is up
+          content:
+            application/json:
+              schema: { type: object, required: [status], properties: { status: { const: ok } } }
+  /api/ready:
+    get:
+      tags: [system]
+      operationId: getReady
+      security: []
+      summary: Readiness; Redis failure is degraded, not down
+      responses:
+        '200':
+          description: Ready (possibly degraded)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Readiness' }
+        '503':
+          description: Postgres unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Readiness' }
+  /api/config:
+    get:
+      tags: [system]
+      operationId: getConfig
+      security: []
+      summary: Public client configuration (enabled sign-in providers, push key, limits)
+      responses:
+        '200':
+          description: Config
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicConfig' }
+
+  # ---------- Better Auth (reference) ----------
+  /api/auth/sign-up/email:
+    post:
+      tags: [auth]
+      operationId: authSignUpEmail
+      security: []
+      x-owner: better-auth
+      summary: Register with email + password (no verification)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, minLength: 10, maxLength: 128 }
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '200': { description: Signed up and signed in (session cookie set) }
+        '422': { description: Invalid input or email unavailable (generic message) }
+        '429': { description: Rate limited }
+  /api/auth/sign-in/email:
+    post:
+      tags: [auth]
+      operationId: authSignInEmail
+      security: []
+      x-owner: better-auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                rememberMe: { type: boolean, default: true }
+      responses:
+        '200': { description: Signed in (session cookie set) }
+        '401': { description: Invalid credentials (generic) }
+        '429': { description: Rate limited }
+  /api/auth/sign-in/social:
+    post:
+      tags: [auth]
+      operationId: authSignInSocial
+      security: []
+      x-owner: better-auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider]
+              properties:
+                provider: { $ref: '#/components/schemas/Provider' }
+                callbackURL: { type: string, description: 'App path to return to, e.g. /' }
+      responses:
+        '200': { description: 'Returns { url, redirect: true }; the client navigates to url' }
+  /api/auth/callback/{provider}:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/Provider' } }
+    get:
+      tags: [auth]
+      operationId: authCallbackGet
+      security: []
+      x-owner: better-auth
+      responses:
+        '302': { description: Redirect back to the app with the session cookie set }
+    post:
+      tags: [auth]
+      operationId: authCallbackPost
+      security: []
+      x-owner: better-auth
+      description: Apple uses response_mode=form_post.
+      responses:
+        '302': { description: Redirect back to the app }
+  /api/auth/get-session:
+    get:
+      tags: [auth]
+      operationId: authGetSession
+      x-owner: better-auth
+      responses:
+        '200': { description: '{ session, user } or null' }
+  /api/auth/sign-out:
+    post:
+      tags: [auth]
+      operationId: authSignOut
+      x-owner: better-auth
+      responses:
+        '200': { description: Signed out; cookie cleared }
+  /api/auth/link-social:
+    post:
+      tags: [auth]
+      operationId: authLinkSocial
+      x-owner: better-auth
+      summary: Link an external account to the signed-in user (the only linking path)
+      responses:
+        '200': { description: 'Returns { url } to the provider' }
+  /api/auth/list-accounts:
+    get:
+      tags: [auth]
+      operationId: authListAccounts
+      x-owner: better-auth
+      responses:
+        '200': { description: Linked accounts (provider ids) }
+  /api/auth/unlink-account:
+    post:
+      tags: [auth]
+      operationId: authUnlinkAccount
+      x-owner: better-auth
+      responses:
+        '200': { description: Unlinked (refused if it is the last sign-in method) }
+  /api/auth/change-password:
+    post:
+      tags: [auth]
+      operationId: authChangePassword
+      x-owner: better-auth
+      responses:
+        '200': { description: Changed }
+  /api/auth/set-password:
+    post:
+      tags: [auth]
+      operationId: authSetPassword
+      x-owner: better-auth
+      summary: Set a password for a user who has only social sign-in (recovery path a)
+      responses:
+        '200': { description: Set }
+  /api/auth/reset-password:
+    post:
+      tags: [auth]
+      operationId: authResetPassword
+      security: []
+      x-owner: better-auth
+      summary: Complete a reset using the one-time token from the operator CLI link (recovery path b)
+      responses:
+        '200': { description: Password reset }
+        '400': { description: Invalid or expired token }
+
+  # ---------- Me ----------
+  /api/me:
+    get:
+      tags: [me]
+      operationId: getMe
+      responses:
+        '200':
+          description: Current user, preferences and memberships
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [me]
+      operationId: deleteMe
+      summary: Delete account and solely-owned data (AS §4.8)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties:
+                confirm: { const: DELETE MY ACCOUNT }
+      responses:
+        '204': { description: Deleted; session cleared }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Sole owner of a household with other members (code soleOwner); transfer or remove members first
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /api/me/preferences:
+    put:
+      tags: [me]
+      operationId: putPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Preferences' }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Preferences' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/me/export:
+    get:
+      tags: [me]
+      operationId: exportMe
+      summary: ZIP with data.json (records of all the user's households, envelope format) and files/
+      responses:
+        '200':
+          description: ZIP stream
+          content:
+            application/zip:
+              schema: { type: string, contentMediaType: application/zip }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------- Households ----------
+  /api/households:
+    get:
+      tags: [households]
+      operationId: listHouseholds
+      responses:
+        '200':
+          description: Memberships
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/HouseholdSummary' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [households]
+      operationId: createHousehold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HouseholdInput' }
+      responses:
+        '201':
+          description: Created; caller is owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HouseholdSummary' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/households/{householdId}:
+    parameters: [{ $ref: '#/components/parameters/HouseholdId' }]
+    patch:
+      tags: [households]
+      operationId: renameHousehold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HouseholdInput' }
+      responses:
+        '200':
+          description: Renamed (owner)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HouseholdSummary' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [households]
+      operationId: deleteHousehold
+      summary: Owner deletes the household, all its records and files
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmName]
+              properties:
+                confirmName: { type: string, description: Must equal the household name }
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/households/{householdId}/members:
+    parameters: [{ $ref: '#/components/parameters/HouseholdId' }]
+    get:
+      tags: [households]
+      operationId: listMembers
+      responses:
+        '200':
+          description: Members (any role may view)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Member' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/households/{householdId}/members/{userId}:
+    parameters:
+      - { $ref: '#/components/parameters/HouseholdId' }
+      - { name: userId, in: path, required: true, schema: { type: string, maxLength: 64 } }
+    patch:
+      tags: [households]
+      operationId: changeMemberRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { enum: [caretaker, viewer] }
+      responses:
+        '200':
+          description: Changed (owner only; cannot target self)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [households]
+      operationId: removeMember
+      responses:
+        '204': { description: Removed (owner only; cannot target self — use leave) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/households/{householdId}/leave:
+    parameters: [{ $ref: '#/components/parameters/HouseholdId' }]
+    post:
+      tags: [households]
+      operationId: leaveHousehold
+      responses:
+        '204': { description: Left }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Last owner while other members exist (code lastOwner)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /api/households/{householdId}/transfer-ownership:
+    parameters: [{ $ref: '#/components/parameters/HouseholdId' }]
+    post:
+      tags: [households]
+      operationId: transferOwnership
+      summary: Owner makes an existing member the owner; caller becomes caretaker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: Transferred
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Member' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------- Invites ----------
+  /api/households/{householdId}/invites:
+    parameters: [{ $ref: '#/components/parameters/HouseholdId' }]
+    get:
+      tags: [invites]
+      operationId: listInvites
+      responses:
+        '200':
+          description: Open invites (owner); secrets are never returned again
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Invite' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [invites]
+      operationId: createInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { enum: [caretaker, viewer] }
+      responses:
+        '201':
+          description: Created; link and code shown once
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InviteCreated' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/households/{householdId}/invites/{inviteId}:
+    parameters:
+      - { $ref: '#/components/parameters/HouseholdId' }
+      - { name: inviteId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [invites]
+      operationId: revokeInvite
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/invites/preview:
+    post:
+      tags: [invites]
+      operationId: previewInvite
+      summary: Show household name and role before accepting (counts toward the accept rate limit)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InviteSecret' }
+      responses:
+        '200':
+          description: Valid invite
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [householdName, role, expiresAt]
+                properties:
+                  householdName: { type: string }
+                  role: { enum: [caretaker, viewer] }
+                  expiresAt: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/invites/accept:
+    post:
+      tags: [invites]
+      operationId: acceptInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InviteSecret' }
+      responses:
+        '200':
+          description: Joined (or already a member — idempotent, role unchanged)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HouseholdSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------- Sync ----------
+  /api/sync/push:
+    post:
+      tags: [sync]
+      operationId: syncPush
+      summary: Apply mutations in order (semantics in CON-petcare-002 §2.3)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushRequest' }
+      responses:
+        '200':
+          description: One result per mutation, same order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+  /api/sync/pull:
+    get:
+      tags: [sync]
+      operationId: syncPull
+      summary: Changes after cursor (semantics in CON-petcare-002 §2.4)
+      parameters:
+        - { name: cursor, in: query, required: false, schema: { type: string, maxLength: 200 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
+      responses:
+        '200':
+          description: A page of changes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PullResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '410':
+          description: Cursor older than retention (code cursorExpired); re-pull from empty cursor
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /api/conflicts/{conflictId}/resolve:
+    parameters:
+      - { name: conflictId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [sync]
+      operationId: resolveConflict
+      summary: Acknowledge a conflict (owner or caretaker). Restoring a value is a normal sync update.
+      responses:
+        '200':
+          description: Resolved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------- Files ----------
+  /api/files:
+    post:
+      tags: [files]
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [householdId, file]
+              properties:
+                householdId: { type: string, format: uuid }
+                file: { type: string, contentMediaType: application/octet-stream }
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FileObject' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Household storage quota exceeded (code quotaExceeded)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: Type not allowed (sniffed from content; code unsupportedType)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /api/files/{fileId}:
+    parameters:
+      - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [files]
+      operationId: downloadFile
+      responses:
+        '200':
+          description: 'Binary; headers X-Content-Type-Options nosniff, Content-Security-Policy sandbox, Content-Disposition inline (images) or attachment (pdf), Cache-Control private, max-age=31536000, immutable'
+          content:
+            image/jpeg: { schema: { type: string, contentMediaType: image/jpeg } }
+            image/png: { schema: { type: string, contentMediaType: image/png } }
+            image/webp: { schema: { type: string, contentMediaType: image/webp } }
+            image/heic: { schema: { type: string, contentMediaType: image/heic } }
+            application/pdf: { schema: { type: string, contentMediaType: application/pdf } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------- Notifications ----------
+  /api/push/subscriptions:
+    post:
+      tags: [notifications]
+      operationId: subscribePush
+      summary: Register this device (idempotent by endpoint; re-binds endpoint to caller)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushSubscriptionInput' }
+      responses:
+        '201': { description: Registered }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [notifications]
+      operationId: unsubscribePush
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint]
+              properties:
+                endpoint: { type: string, format: uri, maxLength: 2048 }
+      responses:
+        '204': { description: Removed (also when it did not exist) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/push/test:
+    post:
+      tags: [notifications]
+      operationId: sendTestPush
+      summary: Send a test notification to all of the caller's devices (max 5/hour)
+      responses:
+        '202': { description: Queued }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------- Calendar ----------
+  /api/calendar/link:
+    get:
+      tags: [calendar]
+      operationId: getCalendarLink
+      responses:
+        '200':
+          description: Whether a feed link exists (URL is only shown at creation)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [exists]
+                properties:
+                  exists: { type: boolean }
+                  createdAt: { type: [string, 'null'], format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [calendar]
+      operationId: createCalendarLink
+      summary: Create or regenerate (old link stops working)
+      responses:
+        '201':
+          description: New link
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SecretLink' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [calendar]
+      operationId: revokeCalendarLink
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /cal/{token}.ics:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' } }
+    get:
+      tags: [calendar]
+      operationId: getCalendarFeed
+      security: []
+      summary: iCalendar feed (past 30 days, next 365 days); 60 requests/hour per token
+      responses:
+        '200':
+          description: RFC 5545 calendar
+          content:
+            text/calendar:
+              schema: { type: string }
+        '404': { description: Unknown or revoked token }
+        '429': { description: Rate limited }
+
+  # ---------- Emergency ----------
+  /api/emergency/{cardId}/link:
+    parameters:
+      - { name: cardId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [emergency]
+      operationId: createEmergencyLink
+      summary: Create or regenerate the public link for an emergency card (owner)
+      responses:
+        '201':
+          description: New link (encode in the QR code)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SecretLink' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [emergency]
+      operationId: revokeEmergencyLink
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/public/emergency/{token}:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' } }
+    get:
+      tags: [emergency]
+      operationId: getPublicEmergencyCard
+      security: []
+      summary: Only fields in visibleFields; 60 requests/min per IP; Cache-Control no-store
+      responses:
+        '200':
+          description: Public card
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicEmergencyCard' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/public/emergency/{token}/photo:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' } }
+    get:
+      tags: [emergency]
+      operationId: getPublicEmergencyPhoto
+      security: []
+      summary: Pet photo, only if "photo" is in visibleFields
+      responses:
+        '200':
+          description: Image
+          content:
+            image/jpeg: { schema: { type: string, contentMediaType: image/jpeg } }
+            image/png: { schema: { type: string, contentMediaType: image/png } }
+            image/webp: { schema: { type: string, contentMediaType: image/webp } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------- Telemetry ----------
+  /api/telemetry/v1/traces:
+    post:
+      tags: [telemetry]
+      operationId: relayBrowserTraces
+      security: []
+      summary: OTLP/HTTP traces from the browser; max 256 KB; 30 requests/min per session or IP; forwarded with telemetry.source=browser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+          application/x-protobuf:
+            schema: { type: string, contentMediaType: application/x-protobuf }
+      responses:
+        '202': { description: Accepted (also when the collector is down; data dropped) }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+      description: 'HttpOnly; Secure; SameSite=Lax; set by Better Auth. In production the name has the __Secure- prefix.'
+
+  parameters:
+    HouseholdId:
+      name: householdId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Validation failed (code invalid; errors[] lists JSON pointers)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: No valid session (code unauthenticated)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Member without the required role (code forbidden), or bad Origin (code badOrigin)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Does not exist or caller is not a member (code notFound)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PayloadTooLarge:
+      description: Body too large (code tooLarge)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooManyRequests:
+      description: Rate limited (code rateLimited); Retry-After header set
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, description: 'https://petcare.pprasai.io/problems/<code>' }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          enum: [invalid, unauthenticated, forbidden, badOrigin, notFound, conflict, soleOwner, lastOwner, quotaExceeded,
+                 unsupportedType, tooLarge, rateLimited, cursorExpired, internal]
+        detail: { type: string }
+        traceId: { type: string, pattern: '^[0-9a-f]{32}$' }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [path, message]
+            properties:
+              path: { type: string, description: JSON pointer }
+              message: { type: string }
+
+    Readiness:
+      type: object
+      required: [status, postgres, redis]
+      properties:
+        status: { enum: [ok, degraded, down] }
+        postgres: { enum: [ok, down] }
+        redis: { enum: [ok, degraded] }
+
+    Provider:
+      enum: [google, github, apple, microsoft]
+
+    PublicConfig:
+      type: object
+      required: [providers, emailPasswordEnabled, vapidPublicKey, limits]
+      properties:
+        providers: { type: array, items: { $ref: '#/components/schemas/Provider' }, uniqueItems: true }
+        emailPasswordEnabled: { type: boolean }
+        vapidPublicKey: { type: [string, 'null'], description: null when push is not configured }
+        limits:
+          type: object
+          required: [maxFileBytes, householdQuotaBytes, maxMutationsPerPush]
+          properties:
+            maxFileBytes: { type: integer }
+            householdQuotaBytes: { type: integer }
+            maxMutationsPerPush: { type: integer }
+
+    Me:
+      type: object
+      required: [user, preferences, households, linkedProviders, hasPassword]
+      properties:
+        user:
+          type: object
+          required: [id, email, name]
+          properties:
+            id: { type: string }
+            email: { type: string }
+            name: { type: string }
+            image: { type: [string, 'null'] }
+        preferences: { $ref: '#/components/schemas/Preferences' }
+        households: { type: array, items: { $ref: '#/components/schemas/HouseholdSummary' } }
+        linkedProviders: { type: array, items: { $ref: '#/components/schemas/Provider' } }
+        hasPassword: { type: boolean }
+
+    Preferences:
+      type: object
+      additionalProperties: false
+      required: [weightUnit, lengthUnit, temperatureUnit, timeZone, dateFormat, currency, theme, leadMinutes, pushEnabled, pushTypes]
+      properties:
+        weightUnit: { enum: [kg, lb] }
+        lengthUnit: { enum: [cm, in] }
+        temperatureUnit: { enum: [c, f] }
+        timeZone: { type: string, maxLength: 64, description: IANA zone }
+        dateFormat: { enum: [iso, dmy, mdy] }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        theme: { enum: [system, light, dark] }
+        leadMinutes:
+          type: object
+          additionalProperties: false
+          required: [vaccination, medication, careRoutine, reminder, vetVisit]
+          properties:
+            vaccination: { type: integer, minimum: 0, maximum: 43200 }
+            medication: { type: integer, minimum: 0, maximum: 1440 }
+            careRoutine: { type: integer, minimum: 0, maximum: 1440 }
+            reminder: { type: integer, minimum: 0, maximum: 43200 }
+            vetVisit: { type: integer, minimum: 0, maximum: 43200 }
+        pushEnabled: { type: boolean }
+        pushTypes:
+          type: array
+          uniqueItems: true
+          items: { enum: [vaccination, medication, careRoutine, reminder, vetVisit] }
+
+    HouseholdInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+
+    HouseholdSummary:
+      type: object
+      required: [id, name, role, memberCount]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        memberCount: { type: integer, minimum: 1 }
+
+    Role:
+      enum: [owner, caretaker, viewer]
+
+    Member:
+      type: object
+      required: [userId, name, role, joinedAt]
+      properties:
+        userId: { type: string }
+        name: { type: string }
+        image: { type: [string, 'null'] }
+        role: { $ref: '#/components/schemas/Role' }
+        joinedAt: { type: string, format: date-time }
+
+    Invite:
+      type: object
+      required: [id, role, createdAt, expiresAt, status]
+      properties:
+        id: { type: string, format: uuid }
+        role: { enum: [caretaker, viewer] }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        status: { enum: [open, used, revoked, expired] }
+
+    InviteCreated:
+      allOf:
+        - { $ref: '#/components/schemas/Invite' }
+        - type: object
+          required: [link, code]
+          properties:
+            link: { type: string, format: uri, description: 'https://<host>/join#<43-char token>' }
+            code: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}$', description: 'Crockford base32, shown grouped' }
+
+    InviteSecret:
+      type: object
+      minProperties: 1
+      maxProperties: 1
+      properties:
+        token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+        code: { type: string, minLength: 10, maxLength: 12, description: 'Case-insensitive; hyphen optional; I/L→1, O→0' }
+
+    Mutation:
+      type: object
+      additionalProperties: false
+      required: [mutationId, type, id, householdId, op, baseVersion, fields, clientTime]
+      properties:
+        mutationId: { type: string, format: uuid }
+        type: { $ref: './records.schema.json#/$defs/RecordType' }
+        id: { type: string, format: uuid }
+        householdId: { type: string, format: uuid }
+        op: { enum: [create, update, delete] }
+        baseVersion: { type: integer, minimum: 0 }
+        fields: { type: object, description: 'create: full data; update: changed keys; delete: {}' }
+        clientTime: { type: string, format: date-time }
+
+    PushRequest:
+      type: object
+      additionalProperties: false
+      required: [clientId, mutations]
+      properties:
+        clientId: { type: string, format: uuid, description: Stable per device install }
+        mutations: { type: array, minItems: 1, maxItems: 100, items: { $ref: '#/components/schemas/Mutation' } }
+
+    PushResult:
+      type: object
+      required: [mutationId, status]
+      properties:
+        mutationId: { type: string, format: uuid }
+        status: { enum: [applied, merged, rejected] }
+        record: { $ref: './records.schema.json#/$defs/Record' }
+        conflictIds: { type: array, items: { type: string, format: uuid } }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { enum: [notFound, forbidden, invalid, invalidReference, duplicate, deleted, appendOnlyUpdate, tooLarge] }
+            message: { type: string }
+            path: { type: string }
+
+    PushResponse:
+      type: object
+      required: [results, serverTime]
+      properties:
+        results: { type: array, items: { $ref: '#/components/schemas/PushResult' } }
+        serverTime: { type: string, format: date-time }
+
+    PullResponse:
+      type: object
+      required: [changes, households, conflicts, cursor, hasMore, serverTime]
+      properties:
+        changes: { type: array, items: { $ref: './records.schema.json#/$defs/Record' } }
+        households: { type: array, items: { $ref: '#/components/schemas/HouseholdSummary' } }
+        conflicts: { type: array, items: { $ref: '#/components/schemas/Conflict' } }
+        cursor: { type: string }
+        hasMore: { type: boolean }
+        serverTime: { type: string, format: date-time }
+
+    Conflict:
+      type: object
+      required: [id, householdId, recordType, recordId, field, keptValue, replacedValue, replacedBy, winningBy, reason, createdAt, resolvedAt]
+      properties:
+        id: { type: string, format: uuid }
+        householdId: { type: string, format: uuid }
+        recordType: { $ref: './records.schema.json#/$defs/RecordType' }
+        recordId: { type: string, format: uuid }
+        field: { type: [string, 'null'] }
+        keptValue: {}
+        replacedValue: {}
+        replacedBy: { type: string }
+        winningBy: { type: string }
+        reason: { enum: [concurrentFieldEdit, updateAfterDelete] }
+        createdAt: { type: string, format: date-time }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+
+    FileObject:
+      type: object
+      required: [id, householdId, mimeType, sizeBytes, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        householdId: { type: string, format: uuid }
+        mimeType: { enum: [image/jpeg, image/png, image/webp, image/heic, application/pdf] }
+        sizeBytes: { type: integer, minimum: 1, maximum: 10485760 }
+        originalName: { type: [string, 'null'], maxLength: 200 }
+        createdAt: { type: string, format: date-time }
+
+    PushSubscriptionInput:
+      type: object
+      additionalProperties: false
+      required: [endpoint, keys]
+      properties:
+        endpoint: { type: string, format: uri, maxLength: 2048, pattern: '^https://' }
+        keys:
+          type: object
+          additionalProperties: false
+          required: [p256dh, auth]
+          properties:
+            p256dh: { type: string, maxLength: 200 }
+            auth: { type: string, maxLength: 100 }
+
+    SecretLink:
+      type: object
+      required: [url, createdAt]
+      properties:
+        url: { type: string, format: uri, description: Contains a 43-char base64url token; shown once }
+        createdAt: { type: string, format: date-time }
+
+    PublicEmergencyCard:
+      type: object
+      additionalProperties: false
+      required: [isLost]
+      description: Each optional property is present only if its field is in visibleFields
+      properties:
+        isLost: { type: boolean }
+        lostSince: { type: [string, 'null'], format: date-time }
+        lostMessage: { type: [string, 'null'] }
+        hasPhoto: { type: boolean }
+        name: { type: string }
+        species: { type: string }
+        breed: { type: [string, 'null'] }
+        colour: { type: [string, 'null'] }
+        markings: { type: [string, 'null'] }
+        microchipId: { type: [string, 'null'] }
+        allergies: { type: array, items: { type: string } }
+        conditions: { type: array, items: { type: string } }
+        medications: { type: array, items: { type: string } }
+        ownerDisplayName: { type: [string, 'null'] }
+        ownerPhone: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }

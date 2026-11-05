@@ -1,0 +1,41 @@
+{
+  "name": "petcare",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "prepare": "node scripts/install-hooks.mjs",
+    "dev": "node scripts/dev.mjs",
+    "typecheck": "tsc -b",
+    "lint": "eslint . && prettier --check .",
+    "lint:deps": "depcruise apps/*/src packages/*/src tests --config .dependency-cruiser.cjs",
+    "lint:openapi": "redocly lint packages/contracts/openapi.yaml --config packages/contracts/redocly.yaml",
+    "gen": "pnpm --filter @petcare/contracts gen",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "perf": "node scripts/perf.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@playwright/test": "~1.64.0",
+    "@redocly/cli": "~2.75.0",
+    "@types/node": "^24.0.0",
+    "@vitest/eslint-plugin": "^1.6.28",
+    "ajv": "^8.0.0",
+    "ajv-formats": "latest",
+    "dependency-cruiser": "~18.7.0",
+    "eslint": "^10.0.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.0.0",
+    "tsx": "latest",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "~8.72.0",
+    "vitest": "~5.1.0",
+    "yaml": "latest"
+  }
+}
