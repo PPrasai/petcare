@@ -2,10 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "tsBuildInfoFile": "dist/.tsbuildinfo",
     "lib": ["ES2023"],
     "types": []
   },
-  "include": ["src"]
+  "include": ["src", "fixtures/*.json"]
 }

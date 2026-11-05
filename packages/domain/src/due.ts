@@ -1,0 +1,153 @@
+import { OVERDUE_LIST_DAYS } from './constants';
+import type { RecordEnvelope } from './envelope';
+import { dueAtNineLocal, occurrencesBetween } from './recurrence';
+import type { Schedule } from './schemas';
+
+export type SourceType = 'vaccination' | 'medication' | 'careRoutine' | 'reminder' | 'vetVisit';
+
+/** One thing that is due at one instant. */
+export interface Occurrence {
+  sourceType: SourceType;
+  sourceId: string;
+  petId: string | null;
+  occurrenceAt: string;
+}
+
+export type OccurrenceStatus = 'done' | 'snoozed' | 'overdue' | 'upcoming';
+
+const alive = (r: RecordEnvelope): boolean => r.deletedAt === null;
+const str = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+const key = (type: string, id: string, at: string): string => `${type}:${id}:${Date.parse(at)}`;
+const normalName = (name: unknown): string =>
+  String(name ?? '')
+    .trim()
+    .toLowerCase();
+
+/**
+ * Every occurrence of every due source between `from` and `to`.
+ * Vaccinations: one occurrence at nextDueOn 09:00 in the user's time zone, unless a later
+ * vaccination of the same pet has the same name (case-insensitive).
+ * Inactive routines and reminders produce nothing.
+ */
+export function dueOccurrences(
+  records: RecordEnvelope[],
+  window: { from: Date | string; to: Date | string },
+  userTz: string,
+): Occurrence[] {
+  const live = records.filter(alive);
+  const result: Occurrence[] = [];
+  const inWindow = (at: string): boolean =>
+    Date.parse(at) >= new Date(window.from).getTime() &&
+    Date.parse(at) <= new Date(window.to).getTime();
+
+  const vaccinations = live.filter((r) => r.type === 'vaccination');
+  for (const v of vaccinations) {
+    const nextDueOn = str(v.data.nextDueOn);
+    if (!nextDueOn) continue;
+    const givenOn = str(v.data.givenOn) ?? '';
+    const superseded = vaccinations.some(
+      (o) =>
+        o.id !== v.id &&
+        o.data.petId === v.data.petId &&
+        normalName(o.data.vaccineName) === normalName(v.data.vaccineName) &&
+        (str(o.data.givenOn) ?? '') > givenOn,
+    );
+    if (superseded) continue;
+    const at = dueAtNineLocal(nextDueOn, userTz);
+    if (inWindow(at)) {
+      result.push({
+        sourceType: 'vaccination',
+        sourceId: v.id,
+        petId: str(v.data.petId),
+        occurrenceAt: at,
+      });
+    }
+  }
+
+  for (const visit of live.filter((r) => r.type === 'vetVisit')) {
+    const followUpOn = str(visit.data.followUpOn);
+    if (!followUpOn) continue;
+    const at = dueAtNineLocal(followUpOn, userTz);
+    if (inWindow(at)) {
+      result.push({
+        sourceType: 'vetVisit',
+        sourceId: visit.id,
+        petId: str(visit.data.petId),
+        occurrenceAt: at,
+      });
+    }
+  }
+
+  const scheduled: { type: string; sourceType: SourceType }[] = [
+    { type: 'medication', sourceType: 'medication' },
+    { type: 'careRoutine', sourceType: 'careRoutine' },
+    { type: 'reminder', sourceType: 'reminder' },
+  ];
+  for (const { type, sourceType } of scheduled) {
+    for (const r of live.filter((x) => x.type === type)) {
+      if (r.data.active === false) continue;
+      const schedule = r.data.schedule as Schedule;
+      for (const at of occurrencesBetween(schedule, window.from, window.to)) {
+        result.push({ sourceType, sourceId: r.id, petId: str(r.data.petId), occurrenceAt: at });
+      }
+    }
+  }
+  return result.sort((a, b) => a.occurrenceAt.localeCompare(b.occurrenceAt));
+}
+
+/** The completion/dose record's source and occurrence, or null for other types. */
+export function completionOf(
+  r: RecordEnvelope,
+): { sourceType: SourceType; sourceId: string; occurrenceAt: string } | null {
+  const occurrenceAt = str(r.data.occurrenceAt);
+  if (!occurrenceAt) return null;
+  const map: Record<string, [SourceType, string]> = {
+    medicationDose: ['medication', 'medicationId'],
+    careCompletion: ['careRoutine', 'routineId'],
+    reminderCompletion: ['reminder', 'reminderId'],
+  };
+  const entry = map[r.type];
+  if (!entry) return null;
+  const sourceId = str(r.data[entry[1]]);
+  return sourceId ? { sourceType: entry[0], sourceId, occurrenceAt } : null;
+}
+
+/** Latest snoozedUntil per occurrence for one user. */
+export function snoozeMap(records: RecordEnvelope[], userId: string): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const r of records.filter(alive)) {
+    if (r.type !== 'reminderSnooze' || r.data.userId !== userId) continue;
+    const until = Date.parse(String(r.data.snoozedUntil));
+    const k = key(String(r.data.sourceType), String(r.data.sourceId), String(r.data.occurrenceAt));
+    map.set(k, Math.max(map.get(k) ?? 0, until));
+  }
+  return map;
+}
+
+/** The set of occurrences that have a non-deleted dose or completion (skips included). */
+export function doneSet(records: RecordEnvelope[]): Set<string> {
+  const done = new Set<string>();
+  for (const r of records.filter(alive)) {
+    const c = completionOf(r);
+    if (c) done.add(key(c.sourceType, c.sourceId, c.occurrenceAt));
+  }
+  return done;
+}
+
+export function occurrenceStatus(
+  occurrence: Occurrence,
+  now: Date | string,
+  done: Set<string>,
+  snoozes: Map<string, number>,
+): OccurrenceStatus {
+  const k = key(occurrence.sourceType, occurrence.sourceId, occurrence.occurrenceAt);
+  const nowMs = new Date(now).getTime();
+  if (done.has(k)) return 'done';
+  if ((snoozes.get(k) ?? 0) > nowMs) return 'snoozed';
+  return Date.parse(occurrence.occurrenceAt) < nowMs ? 'overdue' : 'upcoming';
+}
+
+/** Overdue items stay listed until done, for up to OVERDUE_LIST_DAYS. */
+export function overdueWindowStart(now: Date | string): Date {
+  return new Date(new Date(now).getTime() - OVERDUE_LIST_DAYS * 86_400_000);
+}

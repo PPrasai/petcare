@@ -1,0 +1,18 @@
+{
+  "dog": [
+    { "name": "Rabies", "intervalDays": 365 },
+    { "name": "DHPP", "intervalDays": 365 },
+    { "name": "Leptospirosis", "intervalDays": 365 },
+    { "name": "Bordetella", "intervalDays": 365 },
+    { "name": "Canine influenza", "intervalDays": 365 }
+  ],
+  "cat": [
+    { "name": "Rabies", "intervalDays": 365 },
+    { "name": "FVRCP", "intervalDays": 365 },
+    { "name": "FeLV", "intervalDays": 365 }
+  ],
+  "rabbit": [
+    { "name": "RHDV2", "intervalDays": 365 },
+    { "name": "Myxomatosis", "intervalDays": 365 }
+  ]
+}
