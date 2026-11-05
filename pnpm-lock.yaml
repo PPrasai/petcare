@@ -69,6 +69,8 @@ importers:
 
   packages/domain: {}
 
+  tests/system: {}
+
 packages:
 
   '@babel/code-frame@7.29.7':
