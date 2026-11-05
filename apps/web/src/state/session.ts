@@ -28,6 +28,8 @@ interface SessionState {
   status: SessionStatus;
   user: SessionUser | null;
   households: SessionHousehold[];
+  /** The household being shown; null means the first one. */
+  activeHouseholdId: string | null;
   preferences: Preferences;
   /** Sign-in options from /api/config; null until loaded (or when offline). */
   config: PublicConfig | null;
@@ -38,19 +40,52 @@ interface SessionState {
   ) => void;
   setSignedOut: () => void;
   setHouseholds: (households: SessionHousehold[]) => void;
+  setActiveHousehold: (id: string) => void;
   setConfig: (config: PublicConfig | null) => void;
+}
+
+const ACTIVE_KEY = 'petcare-active-household';
+
+function remembered(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export const useSessionStore = create<SessionState>()((set) => ({
   status: 'loading',
   user: null,
   households: [],
+  activeHouseholdId: null,
   preferences: DEFAULT_PREFERENCES,
   config: null,
   setSignedIn: (user, households, preferences) =>
-    set({ status: 'signedIn', user, households, preferences }),
+    set({ status: 'signedIn', user, households, activeHouseholdId: remembered(), preferences }),
   setSignedOut: () =>
-    set({ status: 'signedOut', user: null, households: [], preferences: DEFAULT_PREFERENCES }),
+    set({
+      status: 'signedOut',
+      user: null,
+      households: [],
+      activeHouseholdId: null,
+      preferences: DEFAULT_PREFERENCES,
+    }),
   setHouseholds: (households) => set({ households }),
+  setActiveHousehold: (id) => {
+    try {
+      localStorage.setItem(ACTIVE_KEY, id);
+    } catch {
+      // The choice then lasts until the page is closed.
+    }
+    set({ activeHouseholdId: id });
+  },
   setConfig: (config) => set({ config }),
 }));
+
+/** The household the app is showing: the chosen one if the user still belongs to it, else the first. */
+export function activeHousehold(
+  state: Pick<SessionState, 'households' | 'activeHouseholdId'>,
+): SessionHousehold | undefined {
+  return state.households.find((h) => h.id === state.activeHouseholdId) ?? state.households[0];
+}

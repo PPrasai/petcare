@@ -1,8 +1,10 @@
+import type { ConflictService } from './conflict-service';
 import type { ContactService } from './contact-service';
 import type { DocumentService } from './document-service';
 import type { ExpenseService } from './expense-service';
 import type { FileGateway } from './ports/file-gateway';
 import type { HealthService } from './health-service';
+import type { HouseholdService } from './household-service';
 import type { TodayService } from './today-service';
 import type { MeasurementService } from './measurement-service';
 import type { PetService } from './pet-service';
@@ -34,4 +36,6 @@ export interface Services {
   documents: DocumentService;
   expenses: ExpenseService;
   contacts: ContactService;
+  households: HouseholdService;
+  conflicts: ConflictService;
 }

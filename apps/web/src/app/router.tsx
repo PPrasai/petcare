@@ -9,6 +9,9 @@ import {
 import { AuthPage } from '../features/auth/AuthPage';
 import { ContactsPage } from '../features/contacts/ContactsPage';
 import { ExpensesPage } from '../features/expenses/ExpensesPage';
+import { HouseholdPage } from '../features/household/HouseholdPage';
+import { JoinPage } from '../features/household/JoinPage';
+import { pendingInvite } from '../lib/pending-invite';
 import { NewPetPage } from '../features/pets/NewPetPage';
 import { PetDetailPage, parseTab } from '../features/pets/PetDetailPage';
 import { PetsPage } from '../features/pets/PetsPage';
@@ -48,7 +51,15 @@ const app = createRoute({
 const leaf = <P extends string>(path: P, component: () => React.ReactNode) =>
   createRoute({ getParentRoute: () => app, path, component });
 
-const today = leaf('/', TodayPage);
+const today = createRoute({
+  getParentRoute: () => app,
+  path: '/',
+  beforeLoad: () => {
+    // An invite link opened before signing in is picked up right after.
+    if (pendingInvite()) throw redirect({ to: '/join' });
+  },
+  component: TodayPage,
+});
 const pets = leaf('/pets', PetsPage);
 const newPet = leaf('/pets/new', NewPetPage);
 const petDetail = createRoute({
@@ -63,11 +74,7 @@ const petDetail = createRoute({
 });
 const expenses = leaf('/expenses', ExpensesPage);
 const contacts = leaf('/contacts', ContactsPage);
-const household = leaf('/household', () => (
-  <SimplePage title={t('household.title')}>
-    <p>{t('household.current', { name: useSessionStore.getState().households[0]?.name ?? '' })}</p>
-  </SimplePage>
-));
+const household = leaf('/household', HouseholdPage);
 const settings = leaf('/settings', () => (
   <SimplePage title={t('settings.title')}>
     <NotificationsPanel />
@@ -100,6 +107,7 @@ const routeTree = root.addChildren([
     settings,
     syncActivity,
   ]),
+  createRoute({ getParentRoute: () => root, path: '/join', component: JoinPage }),
   publicRoute('/sign-in', 'signIn'),
   publicRoute('/sign-up', 'signUp'),
 ]);

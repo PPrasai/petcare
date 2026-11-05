@@ -9,6 +9,7 @@ import { createSyncEngine } from '../sync/engine';
 import type { SyncEngine, SyncStatus } from '../sync/engine';
 import { LocalStore } from '../sync/local-store';
 import type { FileApi } from '../../application/ports/file-api';
+import type { ConflictStore } from '../../application/ports/conflict-store';
 import type { FileGateway } from '../../application/ports/file-gateway';
 import { clearFileCaches } from './file-cache';
 import { createFileGateway } from './file-access';
@@ -18,6 +19,7 @@ export interface UserData {
   sync: SyncControl;
   engine: SyncEngine;
   files: FileGateway;
+  conflicts: ConflictStore;
   households(): Promise<HouseholdRow[]>;
   /** Closes the database and deletes it and every cached file (sign-out). */
   wipe(): Promise<void>;
@@ -111,6 +113,16 @@ export function openUserData(
     records,
     sync,
     engine,
+    conflicts: {
+      async list(householdId) {
+        const rows = await db.conflicts.where('householdId').equals(householdId).toArray();
+        const open = (c: { resolvedAt: string | null }) => (c.resolvedAt === null ? 0 : 1);
+        return rows.sort((a, b) => open(a) - open(b) || b.createdAt.localeCompare(a.createdAt));
+      },
+      async markResolved(conflictId, at) {
+        await db.conflicts.update(conflictId, { resolvedAt: at });
+      },
+    },
     files: createFileGateway(db, fileApi, userId, () => hooks.onChanged([])),
     households: () => db.households.toArray(),
     async wipe() {
