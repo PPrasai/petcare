@@ -25,7 +25,7 @@ import {
  * Which table stores each record type. Adding a record type means one line here (plus the
  * defineEntity file, the table and its migration): sync, change log and permissions are generic.
  */
-export const recordTables: Record<RecordType, PgTable> = {
+export const recordTables: Record<string, PgTable> = {
   pet: pets,
   measurement: measurements,
   vaccination: vaccinations,
@@ -44,6 +44,15 @@ export const recordTables: Record<RecordType, PgTable> = {
   contact: contacts,
   emergencyCard: emergencyCards,
 };
+
+/**
+ * Registers a table for a record type that is not built in. Used by the extensibility test
+ * (QA-13b) to prove a new type needs nothing beyond its entity, table and this registry.
+ */
+export function registerRecordTable(type: string, table: PgTable): void {
+  recordTables[type] = table;
+  cache.delete(type as RecordType);
+}
 
 /** The columns every record table starts with. All other columns are the record's `data`. */
 export const ENVELOPE_COLUMNS = [
@@ -64,11 +73,16 @@ export interface TableColumns {
 }
 
 const cache = new Map<RecordType, TableColumns>();
+const tableOf = (type: RecordType): PgTable => {
+  const table = recordTables[type];
+  if (!table) throw new Error(`no table registered for ${type}`);
+  return table;
+};
 
 export function columnsOf(type: RecordType): TableColumns {
   let found = cache.get(type);
   if (!found) {
-    const all = getTableColumns(recordTables[type]) as Record<string, PgColumn>;
+    const all = getTableColumns(tableOf(type)) as Record<string, PgColumn>;
     const data = Object.fromEntries(
       Object.entries(all).filter(([key]) => !(ENVELOPE_COLUMNS as readonly string[]).includes(key)),
     );

@@ -2,5 +2,14 @@
   "name": "@petcare/system-tests",
   "private": true,
   "version": "0.0.0",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@petcare/domain": "workspace:^",
+    "@types/pg": "^8.23.1",
+    "drizzle-orm": "0.45",
+    "fake-indexeddb": "6.2.7",
+    "pg": "~8.23",
+    "uuid": "14",
+    "zod": "4.6"
+  }
 }

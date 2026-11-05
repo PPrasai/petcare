@@ -162,3 +162,6 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   await app.ready();
   return app;
 }
+export { loadConfig } from './config/env';
+export type { Config } from './config/env';
+export { registerRecordTable } from './repositories/sync-registry';

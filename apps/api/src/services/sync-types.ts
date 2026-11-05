@@ -1,4 +1,4 @@
-import { MAX_MUTATIONS_PER_PUSH, RECORD_TYPES } from '@petcare/domain';
+import { MAX_MUTATIONS_PER_PUSH, isRecordType } from '@petcare/domain';
 import type { RecordEnvelope, RecordType } from '@petcare/domain';
 import { z } from 'zod';
 import { columnsOf, iso, toColumnValue } from '../repositories';
@@ -14,7 +14,8 @@ const dateTime = z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'must be
 
 export const mutationSchema = z.strictObject({
   mutationId: uuid,
-  type: z.enum(RECORD_TYPES),
+  // Known types come from the registry, so a type added there is accepted with no edit here.
+  type: z.custom<RecordType>((v) => typeof v === 'string' && isRecordType(v), 'unknown type'),
   id: uuid,
   householdId: uuid,
   op: z.enum(['create', 'update', 'delete']),

@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { RecordEnvelope, RecordType } from '@petcare/domain';
+import type { PgTable } from 'drizzle-orm/pg-core';
 import type { Db } from '../db/connection';
 import { columnsOf, fromColumnValue, iso, recordTables } from './sync-registry';
 
@@ -38,7 +39,11 @@ export function toEnvelope(type: RecordType, row: RecordRow): RecordEnvelope {
 
 /** Generic reads and writes over the 17 record tables. */
 export function createRecordRepository(db: Db) {
-  const table = (type: RecordType) => recordTables[type];
+  const table = (type: RecordType): PgTable => {
+    const found = recordTables[type];
+    if (!found) throw new Error(`no table registered for ${type}`);
+    return found;
+  };
   const col = (type: RecordType, name: string) => {
     const column = columnsOf(type).all[name];
     if (!column) throw new Error(`${type} has no column ${name}`);
