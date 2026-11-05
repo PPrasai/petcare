@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Runs on the VPS as the forced command of the CI deploy key (see bootstrap-vps.sh).
+# CI connects with:  ssh deploy@<vps> "deploy <40-character commit sha>"
+# Pulls that commit's images, starts them, waits for /api/ready, and rolls back on failure.
+set -euo pipefail
+
+dir=/opt/petcare
+registry=ghcr.io/pprasai
+
+read -r verb tag extra <<<"${SSH_ORIGINAL_COMMAND:-}" || true
+if [[ "${verb:-}" != deploy || ! "${tag:-}" =~ ^[0-9a-f]{40}$ || -n "${extra:-}" ]]; then
+  echo "usage: deploy <commit-sha>" >&2
+  exit 2
+fi
+
+cd "$dir"
+exec 9>"$dir/.deploy.lock"
+flock -w 900 9
+[[ -f .env ]] || { echo "$dir/.env is missing; create it first (deploy/README.md)" >&2; exit 1; }
+
+prev=$(cat .deployed-tag 2>/dev/null || true)
+
+echo "Pulling $tag"
+docker pull -q "$registry/petcare-api:$tag" >/dev/null
+docker pull -q "$registry/petcare-web:$tag" >/dev/null
+
+# Take compose.yaml from the image so it always matches the code being deployed.
+[[ -f compose.yaml ]] && cp compose.yaml compose.prev.yaml
+docker run --rm --entrypoint cat "$registry/petcare-api:$tag" /app/deploy/compose.yaml >compose.yaml.new
+mv compose.yaml.new compose.yaml
+
+PETCARE_TAG="$tag" docker compose up -d --remove-orphans
+
+for _ in $(seq 1 45); do
+  if curl -fsS -o /dev/null http://127.0.0.1:8002/api/ready; then
+    echo "$tag" >.deployed-tag
+    docker image prune -f --filter "until=168h" >/dev/null || true
+    echo "Deployed $tag"
+    exit 0
+  fi
+  sleep 2
+done
+
+echo "Health check failed for $tag. Last API logs:" >&2
+PETCARE_TAG="$tag" docker compose logs --no-color --tail 80 api >&2 || true
+if [[ -n "$prev" && -f compose.prev.yaml ]]; then
+  cp compose.prev.yaml compose.yaml
+  PETCARE_TAG="$prev" docker compose up -d --remove-orphans
+  echo "Rolled back to $prev" >&2
+fi
+exit 1

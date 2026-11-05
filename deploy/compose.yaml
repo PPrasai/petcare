@@ -1,0 +1,60 @@
+# Production stack for petcare.pprasai.io, run from /opt/petcare on the VPS by deploy.sh.
+# The deploy script copies this file out of the API image, so the repository is the source of truth.
+# Secrets live in /opt/petcare/.env (see deploy/README.md); compose also reads it for ${...} below.
+name: petcare
+
+services:
+  api:
+    image: ghcr.io/pprasai/petcare-api:${PETCARE_TAG:?PETCARE_TAG is set by deploy.sh}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      APP_ORIGIN: https://petcare.pprasai.io
+      FILES_DIR: /data/files
+      REDIS_KEY_PREFIX: 'pc:'
+      # Inner Caddy (127.0.0.1) and the Docker gateway (private ranges) sit between the host Caddy and the API.
+      TRUST_PROXY: 127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      # No LGTM stack on the VPS yet; set OTEL_SDK_DISABLED=false in .env once it exists.
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+    ports:
+      # Served by the web container, which shares this container's network namespace.
+      - '127.0.0.1:8002:8080'
+    volumes:
+      - files:/data/files
+    networks: [shared]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 512m
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/ready').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  web:
+    image: ghcr.io/pprasai/petcare-web:${PETCARE_TAG}
+    restart: unless-stopped
+    network_mode: service:api
+    depends_on: [api]
+    read_only: true
+    tmpfs: [/data, /config]
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 64m
+
+volumes:
+  files:
+    name: petcare-files
+
+networks:
+  shared:
+    external: true
