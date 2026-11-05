@@ -33,6 +33,7 @@ import { createHealthRepository } from './repositories/health-repository';
 import { createUnitOfWork } from './repositories';
 import { createAccountService } from './services/account-service';
 import { createHouseholdService } from './services/household-service';
+import { createExportService } from './services/export-service';
 import { createEmergencyService } from './services/emergency-service';
 import { createCalendarService } from './services/calendar-service';
 import type { Dispatcher } from './services/notification-dispatcher';
@@ -128,7 +129,8 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   const newId = () => uuidv7();
   const metrics = createMetrics();
   const directory = createMembershipDirectory({ unitOfWork, cache });
-  const accounts = createAccountService({ unitOfWork, newId });
+  const fileStore = createFileStore(config.filesDir);
+  const accounts = createAccountService({ unitOfWork, newId, files: fileStore, directory });
   const households = createHouseholdService({
     unitOfWork,
     directory,
@@ -180,7 +182,15 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   });
 
   registerAuthRoutes(app, auth.handler, config.appOrigin);
-  registerMeRoutes(app, accounts);
+  registerMeRoutes(
+    app,
+    accounts,
+    createExportService({
+      unitOfWork,
+      files: fileStore,
+      clock: options.clock ?? (() => new Date()),
+    }),
+  );
   registerHouseholdRoutes(app, households, invites);
   registerSyncRoutes(app, sync);
   await registerFileRoutes(

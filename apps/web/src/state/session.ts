@@ -45,6 +45,7 @@ interface SessionState {
   setHouseholds: (households: SessionHousehold[]) => void;
   setActiveHousehold: (id: string) => void;
   setConfig: (config: PublicConfig | null) => void;
+  setPreferences: (preferences: Preferences) => void;
 }
 
 const ACTIVE_KEY = 'petcare-active-household';
@@ -93,6 +94,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
     set({ activeHouseholdId: id });
   },
   setConfig: (config) => set({ config }),
+  setPreferences: (preferences) => set({ preferences }),
 }));
 
 /** The household the app is showing: the chosen one if the user still belongs to it, else the first. */
