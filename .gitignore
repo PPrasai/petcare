@@ -1,0 +1,18 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vite/
+.turbo/
+
+# AEOM harness and planning artifacts (kept local, never in the product repo)
+.aeom/
+PROJECT-INPUT.md
+.claude/
+CLAUDE.md
+AGENTS.md
