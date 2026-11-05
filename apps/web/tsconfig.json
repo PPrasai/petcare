@@ -2,12 +2,19 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "tsBuildInfoFile": "dist/.tsbuildinfo",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": []
+    "types": ["vite/client"]
   },
-  "include": ["src"],
-  "references": [{ "path": "../../packages/domain" }, { "path": "../../packages/contracts" }]
+  "include": ["src", "vite.config.ts"],
+  "references": [
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/contracts"
+    }
+  ]
 }

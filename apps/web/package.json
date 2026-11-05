@@ -3,8 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
   "dependencies": {
     "@petcare/contracts": "workspace:^",
     "@petcare/domain": "workspace:^",
@@ -33,5 +31,10 @@
     "tailwindcss": "4.3.4",
     "vite": "8.3.6",
     "vite-plugin-pwa": "2.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   }
 }
