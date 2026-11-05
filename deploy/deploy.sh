@@ -20,14 +20,19 @@ flock -w 900 9
 
 prev=$(cat .deployed-tag 2>/dev/null || true)
 
-# Registry login for this run only, in a throwaway Docker config that is deleted on exit.
+# Registry login for this run only. The token is the CI job's own GITHUB_TOKEN (expires with the
+# job). It is written only to a root-only folder on /run, which is in memory (tmpfs), never to disk,
+# and the folder is deleted on exit. Docker's "stored unencrypted" warning refers to that file.
 token=""
 if [[ ! -t 0 ]]; then IFS= read -r token || true; fi
 pull_config="${DOCKER_CONFIG:-$HOME/.docker}"
 if [[ -n "$token" ]]; then
-  pull_config=$(mktemp -d)
+  pull_config=$(mktemp -d -p /run petcare-pull.XXXXXX)
   trap 'rm -rf "$pull_config"' EXIT
-  printf '%s' "$token" | DOCKER_CONFIG="$pull_config" docker login ghcr.io -u github-actions --password-stdin >/dev/null
+  if ! out=$(printf '%s' "$token" | DOCKER_CONFIG="$pull_config" docker login ghcr.io -u github-actions --password-stdin 2>&1); then
+    echo "$out" >&2
+    exit 1
+  fi
 fi
 unset token
 
