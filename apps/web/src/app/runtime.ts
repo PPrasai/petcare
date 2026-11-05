@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { HealthService } from '../application/health-service';
+import { createPushRemote } from '../data/remote/push-remote';
 import { TodayService } from '../application/today-service';
 import { MeasurementService } from '../application/measurement-service';
 import { PetService } from '../application/pet-service';
@@ -149,6 +150,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     measurements: new MeasurementService(records),
     health: new HealthService(records),
     today: new TodayService(records),
+    push: createPushRemote(),
   };
 
   return {

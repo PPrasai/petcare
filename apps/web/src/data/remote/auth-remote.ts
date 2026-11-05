@@ -26,6 +26,7 @@ export function createAuthRemote(): AuthApi {
       return {
         providers: field<string[]>(body, 'providers') ?? [],
         emailPasswordEnabled: field<boolean>(body, 'emailPasswordEnabled') ?? true,
+        vapidPublicKey: field<string | null>(body, 'vapidPublicKey') ?? null,
       };
     },
 

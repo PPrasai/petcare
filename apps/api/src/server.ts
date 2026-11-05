@@ -9,6 +9,8 @@ import { registerActorResolution } from './http/actor';
 import { registerAuthRoutes } from './http/auth-routes';
 import { registerHouseholdRoutes } from './http/household-routes';
 import { registerSyncRoutes } from './http/sync-routes';
+import { registerCalendarRoutes } from './http/calendar-routes';
+import { registerPushRoutes } from './http/push-routes';
 import { registerMeRoutes } from './http/me-routes';
 import { registerErrorHandling } from './http/error-handler';
 import { registerOriginHook } from './http/origin-hook';
@@ -22,12 +24,19 @@ import { createFileStore } from './infra/file-store';
 import { createLimiter } from './infra/limiter';
 import { createLogger } from './infra/logger';
 import { createMetrics } from './infra/metrics';
+import { createPushSender } from './infra/push-sender';
 import { createRateLimitStore } from './infra/rate-limit-store';
 import { v7 as uuidv7 } from 'uuid';
 import { createHealthRepository } from './repositories/health-repository';
 import { createUnitOfWork } from './repositories';
 import { createAccountService } from './services/account-service';
 import { createHouseholdService } from './services/household-service';
+import { createCalendarService } from './services/calendar-service';
+import type { Dispatcher } from './services/notification-dispatcher';
+import { createDispatcher } from './services/notification-dispatcher';
+import { createNotificationDeriver, extendSchedules } from './services/notification-derivation';
+import type { PushSender } from './services/ports';
+import { createPushService } from './services/push-service';
 import { createInviteService } from './services/invite-service';
 import { createSyncService } from './services/sync-service';
 import { createMembershipDirectory } from './services/membership-directory';
@@ -45,6 +54,10 @@ export interface BuildServerOptions {
   logStream?: DestinationStream;
   /** Test seam: replaces parts of a social provider's options (a fake identity provider). */
   socialOverrides?: AuthDeps['socialOverrides'];
+  /** Test seam: replaces the web push client (a fake push service). */
+  pushSender?: PushSender;
+  /** Test seam: the current time (a controlled clock). */
+  clock?: () => Date;
   /** Test seam: lifts the 300/min per-user limit (suites that send thousands of requests). */
   relaxRateLimits?: boolean;
   /** Test seam: runs after all routes are registered, before the server is ready. */
@@ -55,6 +68,8 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** Every registered route (method + URL template), for the route-coverage check. */
     routeList: RouteEntry[];
+    /** Background work the job runner calls; tests call it directly with a controlled clock. */
+    notifications: { dispatcher: Dispatcher; extend: () => Promise<number> };
   }
 }
 
@@ -116,12 +131,25 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
     files: createFileStore(config.filesDir),
     newId,
   });
+  const clock = options.clock ?? (() => new Date());
+  const pushSender: PushSender =
+    options.pushSender ??
+    (config.vapid
+      ? createPushSender(config.vapid)
+      : { send: async () => ({ ok: false as const, gone: false }) });
+  const dispatcher = createDispatcher({
+    unitOfWork,
+    sender: pushSender,
+    clock,
+    batch: config.dispatchBatch,
+  });
   const sync = createSyncService({
     unitOfWork,
     directory,
     metrics,
     newId,
-    clock: () => new Date(),
+    clock,
+    onRecordChanged: createNotificationDeriver({ clock, newId }),
   });
   const invites = createInviteService({
     unitOfWork,
@@ -151,6 +179,16 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerMeRoutes(app, accounts);
   registerHouseholdRoutes(app, households, invites);
   registerSyncRoutes(app, sync);
+  const limiter = createLimiter(redis, config.redisKeyPrefix);
+  registerPushRoutes(app, createPushService({ unitOfWork, dispatcher, limiter, newId }));
+  registerCalendarRoutes(
+    app,
+    createCalendarService({ unitOfWork, cache, limiter, clock, appOrigin: config.appOrigin }),
+  );
+  app.decorate('notifications', {
+    dispatcher,
+    extend: () => extendSchedules(unitOfWork, { clock, newId }),
+  });
 
   app.addHook('onClose', async () => {
     redis.disconnect();
