@@ -4,7 +4,7 @@
 # Pulls that commit's images, starts them, waits for /api/ready, and rolls back on failure.
 set -euo pipefail
 
-dir=/opt/petcare
+dir=/opt/pprasai/projects/petcare
 registry=ghcr.io/pprasai
 tag="${1:-}"
 if [[ ! "$tag" =~ ^[0-9a-f]{40}$ || $# -ne 1 ]]; then

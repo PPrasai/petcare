@@ -1,6 +1,6 @@
-# Production stack for petcare.pprasai.io, run from /opt/petcare on the VPS by deploy.sh.
+# Production stack for petcare.pprasai.io, run from /opt/pprasai/projects/petcare on the VPS by deploy.sh.
 # The deploy script copies this file out of the API image, so the repository is the source of truth.
-# Secrets live in /opt/petcare/.env (see deploy/README.md); compose also reads it for ${...} below.
+# Secrets live in .env next to it (see deploy/README.md); compose also reads it for ${...} below.
 name: petcare
 
 services:

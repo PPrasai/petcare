@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time VPS setup for CI deploys. Run on the VPS as the admin user:
-#   sudo bash bootstrap-vps.sh petcare_ci.pub
+#   sudo bash bootstrap-vps.sh ci.pub
 #
 # Creates the user "petcare-ci". It is NOT in the docker or sudo groups. Its SSH key can only run
 # a wrapper that validates "deploy <sha>" and then runs /usr/local/bin/petcare-deploy as root,
@@ -16,7 +16,8 @@ user=petcare-ci
 
 id "$user" >/dev/null 2>&1 || adduser --disabled-password --gecos "" "$user"
 
-install -d -o root -g root -m 700 /opt/petcare
+mkdir -p /opt/pprasai/projects
+install -d -o root -g root -m 700 /opt/pprasai/projects/petcare
 install -o root -g root -m 755 "$here/deploy.sh" /usr/local/bin/petcare-deploy
 
 cat >/usr/local/bin/petcare-deploy-ssh <<'WRAP'
@@ -54,4 +55,4 @@ if [[ -n "$conf" ]] && ! grep -qE "^\s*AllowUsers\b.*\b$user\b" "$conf"; then
   echo "Added $user to AllowUsers in $conf"
 fi
 
-echo "Done. Next: create /opt/petcare/.env and log root in to ghcr.io (deploy/README.md steps 4-5)."
+echo "Done. Next: create /opt/pprasai/projects/petcare/.env and log root in to ghcr.io (deploy/README.md steps 4-5)."
