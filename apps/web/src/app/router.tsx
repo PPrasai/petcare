@@ -12,6 +12,7 @@ import { PetDetailPage, parseTab } from '../features/pets/PetDetailPage';
 import { PetsPage } from '../features/pets/PetsPage';
 import { AppShell } from '../features/shell/AppShell';
 import { SimplePage } from '../features/shared/SimplePage';
+import { TodayPage } from '../features/today/TodayPage';
 import { SyncPage } from '../features/sync/SyncPage';
 import { t } from '../i18n/t';
 import { useSessionStore } from '../state/session';
@@ -44,11 +45,7 @@ const app = createRoute({
 const leaf = <P extends string>(path: P, component: () => React.ReactNode) =>
   createRoute({ getParentRoute: () => app, path, component });
 
-const today = leaf('/', () => (
-  <SimplePage title={t('today.title')}>
-    <p>{t('today.placeholder')}</p>
-  </SimplePage>
-));
+const today = leaf('/', TodayPage);
 const pets = leaf('/pets', PetsPage);
 const newPet = leaf('/pets/new', NewPetPage);
 const petDetail = createRoute({

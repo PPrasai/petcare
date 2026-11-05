@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { HealthService } from '../application/health-service';
+import { TodayService } from '../application/today-service';
 import { MeasurementService } from '../application/measurement-service';
 import { PetService } from '../application/pet-service';
 import { AuthError } from '../application/ports/auth-api';
@@ -46,6 +47,8 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
 
   const invalidate = (types: string[]) => {
     for (const type of types) void queryClient.invalidateQueries({ queryKey: [type] });
+    // The Today page is derived from several record types.
+    void queryClient.invalidateQueries({ queryKey: ['today'] });
   };
 
   function open(me: MeSnapshot): void {
@@ -145,6 +148,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     pets: new PetService(records),
     measurements: new MeasurementService(records),
     health: new HealthService(records),
+    today: new TodayService(records),
   };
 
   return {
