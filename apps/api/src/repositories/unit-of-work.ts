@@ -5,6 +5,7 @@ import { createExportRepository } from './export-repository';
 import { createFileRepository } from './file-repository';
 import { createHouseholdRepository } from './household-repository';
 import { createInviteRepository } from './invite-repository';
+import { createMaintenanceRepository } from './maintenance-repository';
 import { createNotificationRepository } from './notification-repository';
 import { createPreferencesRepository } from './preferences-repository';
 import { createRecordRepository } from './record-repository';
@@ -19,6 +20,7 @@ export function createRepositories(db: Db) {
     files: createFileRepository(db),
     households: createHouseholdRepository(db),
     invites: createInviteRepository(db),
+    maintenance: createMaintenanceRepository(db),
     notifications: createNotificationRepository(db),
     preferences: createPreferencesRepository(db),
     records: createRecordRepository(db),
