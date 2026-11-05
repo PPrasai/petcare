@@ -2,6 +2,7 @@ import type { Db } from '../db/connection';
 import { createAccountRepository } from './account-repository';
 import { createHouseholdRepository } from './household-repository';
 import { createInviteRepository } from './invite-repository';
+import { createNotificationRepository } from './notification-repository';
 import { createPreferencesRepository } from './preferences-repository';
 import { createRecordRepository } from './record-repository';
 import { createSyncRepository } from './sync-repository';
@@ -12,6 +13,7 @@ export function createRepositories(db: Db) {
     accounts: createAccountRepository(db),
     households: createHouseholdRepository(db),
     invites: createInviteRepository(db),
+    notifications: createNotificationRepository(db),
     preferences: createPreferencesRepository(db),
     records: createRecordRepository(db),
     sync: createSyncRepository(db),

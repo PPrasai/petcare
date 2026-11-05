@@ -27,6 +27,8 @@ export async function createTestApp(
     extraRoutes?: (app: FastifyInstance) => void;
     socialOverrides?: BuildServerOptions['socialOverrides'];
     relaxRateLimits?: boolean;
+    pushSender?: BuildServerOptions['pushSender'];
+    clock?: BuildServerOptions['clock'];
   } = {},
 ): Promise<TestApp> {
   const chunks: string[] = [];
@@ -41,6 +43,8 @@ export async function createTestApp(
     logStream,
     ...(options.socialOverrides ? { socialOverrides: options.socialOverrides } : {}),
     ...(options.relaxRateLimits ? { relaxRateLimits: true } : {}),
+    ...(options.pushSender ? { pushSender: options.pushSender } : {}),
+    ...(options.clock ? { clock: options.clock } : {}),
     beforeReady(instance) {
       options.extraRoutes?.(instance);
       instance.addHook('onSend', async (request, reply, payload) => {

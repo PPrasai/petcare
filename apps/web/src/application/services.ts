@@ -1,4 +1,8 @@
+import type { HealthService } from './health-service';
+import type { TodayService } from './today-service';
+import type { MeasurementService } from './measurement-service';
 import type { PetService } from './pet-service';
+import type { PushControl } from './ports/push-control';
 import type { SyncControl } from './ports/sync-control';
 
 export type SignInResult = { ok: true } | { ok: false; reason: 'invalid' | 'exists' | 'other' };
@@ -18,4 +22,8 @@ export interface Services {
   session: SessionControl;
   sync: SyncControl;
   pets: PetService;
+  measurements: MeasurementService;
+  health: HealthService;
+  today: TodayService;
+  push: PushControl;
 }

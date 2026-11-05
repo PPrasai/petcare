@@ -1,0 +1,104 @@
+import { describe, expect, it } from 'vitest';
+import { buildToday } from './today';
+import type { StoredRecord } from './ports/record-store';
+
+let n = 0;
+const rec = (
+  type: StoredRecord['type'],
+  data: Record<string, unknown>,
+  extra: Partial<StoredRecord> = {},
+): StoredRecord => ({
+  id: extra.id ?? `id-${n++}`,
+  type,
+  householdId: 'h',
+  version: 1,
+  createdBy: 'me',
+  updatedAt: '2026-01-01T00:00:00Z',
+  deletedAt: null,
+  pending: false,
+  data,
+  ...extra,
+});
+
+const pet = rec('pet', { name: 'Momo', species: 'dog' }, { id: 'pet1' });
+const daily = (id: string, title: string, startOn = '2026-06-01') =>
+  rec(
+    'careRoutine',
+    {
+      petId: 'pet1',
+      kind: 'feeding',
+      title,
+      active: true,
+      schedule: { tz: 'UTC', kind: 'daily', times: ['08:00'], startOn },
+    },
+    { id },
+  );
+
+const opts = { now: new Date('2026-06-10T12:00:00Z'), tz: 'UTC', userId: 'me', petId: null };
+
+describe('buildToday', () => {
+  it('sorts items into overdue, today, upcoming', () => {
+    const view = buildToday([pet, daily('r1', 'Breakfast')], opts);
+    expect(view.today.map((i) => i.occurrenceAt)).toEqual(['2026-06-10T08:00:00Z']);
+    expect(view.overdue.map((i) => i.occurrenceAt)).toContain('2026-06-09T08:00:00Z');
+    expect(view.upcoming.map((i) => i.occurrenceAt)).toContain('2026-06-11T08:00:00Z');
+    expect(view.today[0]).toMatchObject({ title: 'Breakfast', petName: 'Momo' });
+  });
+
+  it('moves a completed occurrence to done and records who did it', () => {
+    const done = rec('careCompletion', {
+      routineId: 'r1',
+      petId: 'pet1',
+      occurrenceAt: '2026-06-10T08:00:00Z',
+      completedAt: '2026-06-10T08:30:00Z',
+      skipped: false,
+    });
+    const other = { ...done, id: 'x', createdBy: 'someone' };
+    const mine = buildToday([pet, daily('r1', 'Breakfast'), done], opts);
+    expect(mine.today).toHaveLength(0);
+    expect(mine.done[0]).toMatchObject({ doneBy: 'me', skipped: false });
+    expect(buildToday([pet, daily('r1', 'Breakfast'), other], opts).done[0]?.doneBy).toBe('other');
+  });
+
+  it('hides a snoozed occurrence for the snoozing user only', () => {
+    const snooze = rec('reminderSnooze', {
+      sourceType: 'careRoutine',
+      sourceId: 'r1',
+      occurrenceAt: '2026-06-10T08:00:00Z',
+      snoozedUntil: '2026-06-10T15:00:00Z',
+      userId: 'me',
+    });
+    const mine = buildToday([pet, daily('r1', 'Breakfast'), snooze], opts);
+    expect(mine.today).toHaveLength(0);
+    expect(mine.snoozed[0]?.snoozedUntil).toBe('2026-06-10T15:00:00.000Z');
+    const theirs = buildToday([pet, daily('r1', 'Breakfast'), snooze], { ...opts, userId: 'you' });
+    expect(theirs.today).toHaveLength(1);
+  });
+
+  it('lists a vaccination due date and filters by pet', () => {
+    const vac = rec('vaccination', {
+      petId: 'pet1',
+      vaccineName: 'Rabies',
+      givenOn: '2025-06-01',
+      nextDueOn: '2026-06-08',
+    });
+    expect(buildToday([pet, vac], opts).overdue[0]).toMatchObject({
+      sourceType: 'vaccination',
+      title: 'Rabies',
+    });
+    expect(buildToday([pet, vac], { ...opts, petId: 'other' }).overdue).toHaveLength(0);
+  });
+
+  it('ignores inactive routines and deleted records', () => {
+    const off = { ...daily('r2', 'Off'), data: { ...daily('r2', 'Off').data, active: false } };
+    const gone = { ...daily('r3', 'Gone'), deletedAt: '2026-06-02T00:00:00Z' };
+    const view = buildToday([pet, off, gone], opts);
+    expect([...view.today, ...view.overdue, ...view.upcoming]).toHaveLength(0);
+  });
+
+  it('stops listing overdue items after 30 days', () => {
+    const view = buildToday([pet, daily('r1', 'Breakfast', '2026-01-01')], opts);
+    const oldest = view.overdue[0]?.occurrenceAt ?? '';
+    expect(oldest >= '2026-05-11').toBe(true);
+  });
+});

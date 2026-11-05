@@ -1,11 +1,16 @@
+import type { Preferences } from '@petcare/domain';
+
 export interface MeSnapshot {
   user: { id: string; name: string; email: string };
   households: { id: string; name: string; role: 'owner' | 'caretaker' | 'viewer' }[];
+  preferences: Preferences;
 }
 
 export interface ClientConfig {
   providers: string[];
   emailPasswordEnabled: boolean;
+  /** The VAPID public key for web push; null when the server has push turned off. */
+  vapidPublicKey: string | null;
 }
 
 /** A sign-in/up failure the form can explain. */

@@ -1,3 +1,4 @@
+import { DEFAULT_PREFERENCES } from '@petcare/domain';
 import type { MeSnapshot } from '../../application/ports/auth-api';
 
 const KEY = 'petcare-last-session';
@@ -17,7 +18,9 @@ export function rememberSession(me: MeSnapshot): void {
 export function recalledSession(): MeSnapshot | null {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as MeSnapshot) : null;
+    if (!raw) return null;
+    const me = JSON.parse(raw) as MeSnapshot;
+    return { ...me, preferences: me.preferences ?? DEFAULT_PREFERENCES };
   } catch {
     return null;
   }
