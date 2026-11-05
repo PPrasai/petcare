@@ -1,4 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
+import { ConflictService } from '../application/conflict-service';
+import { HouseholdService } from '../application/household-service';
+import { createHouseholdRemote } from '../data/remote/household-remote';
 import { ContactService } from '../application/contact-service';
 import { DocumentService } from '../application/document-service';
 import { ExpenseService } from '../application/expense-service';
@@ -142,6 +145,16 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     remove: (type, id) => current().records.remove(type, id),
   };
 
+  const householdApi = createHouseholdRemote();
+  /** Re-reads the user's households (after joining, leaving or a transfer) and syncs. */
+  async function refreshHouseholds(): Promise<void> {
+    const me = await auth.me();
+    if (!me) return;
+    rememberSession(me);
+    useSessionStore.getState().setHouseholds(me.households);
+    scheduler?.request();
+  }
+
   // The services read `data` lazily, so they keep working across sign-out and sign-in.
   const services: Services = {
     session,
@@ -163,6 +176,15 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     documents: new DocumentService(records),
     expenses: new ExpenseService(records),
     contacts: new ContactService(records),
+    households: new HouseholdService(householdApi, refreshHouseholds),
+    conflicts: new ConflictService(
+      {
+        list: (householdId) => current().conflicts.list(householdId),
+        markResolved: (id, at) => current().conflicts.markResolved(id, at),
+      },
+      records,
+      householdApi,
+    ),
   };
 
   return {

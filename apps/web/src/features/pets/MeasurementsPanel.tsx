@@ -7,7 +7,7 @@ import type { Kind } from '../../application/measurement-service';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatDate, formatMeasurement, toDisplay, toStored, unitLabel } from '../../lib/format';
-import { useSessionStore } from '../../state/session';
+import { activeHousehold, useSessionStore } from '../../state/session';
 import { Banner, Button, SelectField, TextField } from '../../ui';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
@@ -26,7 +26,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'measurement');
-  const role = useSessionStore((s) => s.households[0]?.role);
+  const role = useSessionStore((s) => activeHousehold(s)?.role);
   const userId = useSessionStore((s) => s.user?.id ?? '');
   const canDelete = (createdBy: string) =>
     role !== undefined && can(role, 'delete', 'measurement', { actorId: userId, createdBy });

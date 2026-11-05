@@ -2,7 +2,7 @@ import { Link, Outlet } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
-import { useSessionStore } from '../../state/session';
+import { activeHousehold, useSessionStore } from '../../state/session';
 import { SignOutButton } from '../sync/SignOutButton';
 import { SyncIndicator } from '../sync/SyncIndicator';
 
@@ -16,7 +16,7 @@ const tabs: { to: string; label: MessageKey }[] = [
 
 /** Bottom tab bar on phones, left rail from 1024 px. The sync indicator is always visible. */
 export function AppShell(): ReactNode {
-  const householdName = useSessionStore((s) => s.households[0]?.name ?? '');
+  const householdName = useSessionStore((s) => activeHousehold(s)?.name ?? '');
   const userName = useSessionStore((s) => s.user?.name ?? '');
 
   return (
@@ -57,6 +57,9 @@ export function AppShell(): ReactNode {
             <span className="hidden text-sm text-muted sm:inline">
               {t('auth.signedInAs', { name: userName })}
             </span>
+            <Link to="/sync" className="inline-flex min-h-11 items-center underline">
+              {t('nav.sync')}
+            </Link>
             <SignOutButton />
           </div>
         </header>
