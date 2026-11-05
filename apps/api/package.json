@@ -4,5 +4,39 @@
   "version": "0.0.0",
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts"
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@fastify/cookie": "~11",
+    "@fastify/helmet": "~13",
+    "@fastify/otel": "~0.21",
+    "@fastify/rate-limit": "~11",
+    "@opentelemetry/api": "~1.10",
+    "@opentelemetry/auto-instrumentations-node": "~0.82",
+    "@opentelemetry/sdk-node": "~0.300",
+    "@petcare/domain": "workspace:^",
+    "drizzle-orm": "~0.45",
+    "fastify": "~5.12",
+    "ioredis": "~6.0",
+    "pg": "~8.23",
+    "pino": "~10",
+    "pino-opentelemetry-transport": "~4",
+    "uuid": "~14",
+    "zod": "~4.6"
+  },
+  "devDependencies": {
+    "@petcare/contracts": "workspace:^",
+    "@testcontainers/postgresql": "~12.2",
+    "@types/pg": "^8.23.1",
+    "ajv": "^8.0.0",
+    "ajv-formats": "^3.0.1",
+    "drizzle-kit": "~0.31",
+    "testcontainers": "~12.2",
+    "tsx": "^4.23.15",
+    "yaml": "^2.9.1"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "db:generate": "drizzle-kit generate"
+  }
 }
