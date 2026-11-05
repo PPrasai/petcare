@@ -6,9 +6,6 @@
 export const PENDING_OPERATIONS: string[] = [
   'deleteMe',
   'exportMe',
-  'syncPush',
-  'syncPull',
-  'resolveConflict',
   'uploadFile',
   'downloadFile',
   'subscribePush',

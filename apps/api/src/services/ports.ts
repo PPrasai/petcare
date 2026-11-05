@@ -13,6 +13,8 @@ export interface Limiter {
 
 export interface Metrics {
   inviteAttempt(result: 'ok' | 'notFound' | 'rateLimited'): void;
+  syncMutation(status: 'applied' | 'merged' | 'rejected'): void;
+  syncConflicts(recordType: string, count: number): void;
 }
 
 export interface HouseholdFiles {

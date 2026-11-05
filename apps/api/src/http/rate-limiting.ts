@@ -1,5 +1,12 @@
 import rateLimit from '@fastify/rate-limit';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Test seam: lifts the per-user limit so suites that send thousands of requests can run. */
+    rateLimitsRelaxed: boolean;
+  }
+}
 
 interface Options {
   /** A store class from createRateLimitStore, or undefined for the in-memory default. */
@@ -12,9 +19,13 @@ interface Options {
  * Routes with their own row in the table use their own values. Public routes without a row
  * (health, ready, config) have no limit.
  */
-export const AUTHENTICATED_LIMIT = { max: 300, timeWindow: '1 minute' } as const;
+export const AUTHENTICATED_LIMIT = {
+  max: (request: FastifyRequest) => (request.server.rateLimitsRelaxed ? 1_000_000 : 300),
+  timeWindow: '1 minute',
+} as const;
 
 export async function registerRateLimiting(app: FastifyInstance, options: Options): Promise<void> {
+  app.decorate('rateLimitsRelaxed', false);
   await app.register(rateLimit, {
     global: false,
     // The signed-in user when there is one (resolved by registerActorResolution), else the client IP.

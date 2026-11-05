@@ -8,6 +8,7 @@ import { runMigrations } from './db/migrate';
 import { registerActorResolution } from './http/actor';
 import { registerAuthRoutes } from './http/auth-routes';
 import { registerHouseholdRoutes } from './http/household-routes';
+import { registerSyncRoutes } from './http/sync-routes';
 import { registerMeRoutes } from './http/me-routes';
 import { registerErrorHandling } from './http/error-handler';
 import { registerOriginHook } from './http/origin-hook';
@@ -28,6 +29,7 @@ import { createUnitOfWork } from './repositories';
 import { createAccountService } from './services/account-service';
 import { createHouseholdService } from './services/household-service';
 import { createInviteService } from './services/invite-service';
+import { createSyncService } from './services/sync-service';
 import { createMembershipDirectory } from './services/membership-directory';
 import { getPublicConfig } from './services/public-config-service';
 import { checkReadiness } from './services/readiness-service';
@@ -43,6 +45,8 @@ export interface BuildServerOptions {
   logStream?: DestinationStream;
   /** Test seam: replaces parts of a social provider's options (a fake identity provider). */
   socialOverrides?: AuthDeps['socialOverrides'];
+  /** Test seam: lifts the 300/min per-user limit (suites that send thousands of requests). */
+  relaxRateLimits?: boolean;
   /** Test seam: runs after all routes are registered, before the server is ready. */
   beforeReady?: (app: FastifyInstance) => void | Promise<void>;
 }
@@ -103,6 +107,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
 
   const unitOfWork = createUnitOfWork(db);
   const newId = () => uuidv7();
+  const metrics = createMetrics();
   const directory = createMembershipDirectory({ unitOfWork, cache });
   const accounts = createAccountService({ unitOfWork, newId });
   const households = createHouseholdService({
@@ -111,11 +116,18 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
     files: createFileStore(config.filesDir),
     newId,
   });
+  const sync = createSyncService({
+    unitOfWork,
+    directory,
+    metrics,
+    newId,
+    clock: () => new Date(),
+  });
   const invites = createInviteService({
     unitOfWork,
     directory,
     limiter: createLimiter(redis, config.redisKeyPrefix),
-    metrics: createMetrics(),
+    metrics,
     newId,
     clock: () => new Date(),
     appOrigin: config.appOrigin,
@@ -138,12 +150,14 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerAuthRoutes(app, auth.handler, config.appOrigin);
   registerMeRoutes(app, accounts);
   registerHouseholdRoutes(app, households, invites);
+  registerSyncRoutes(app, sync);
 
   app.addHook('onClose', async () => {
     redis.disconnect();
     await pool.end();
   });
 
+  if (options.relaxRateLimits) app.rateLimitsRelaxed = true;
   await options.beforeReady?.(app);
   await app.ready();
   return app;
