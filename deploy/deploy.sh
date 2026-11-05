@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Installed on the VPS as /usr/local/bin/petcare-deploy (root-owned) by bootstrap-vps.sh.
 # CI reaches it only through the petcare-ci SSH key:  ssh petcare-ci@<vps> "deploy <commit sha>"
+# CI sends its short-lived GITHUB_TOKEN on stdin; it is used for this pull only and never stored.
 # Pulls that commit's images, starts them, waits for /api/ready, and rolls back on failure.
 set -euo pipefail
 
@@ -19,9 +20,20 @@ flock -w 900 9
 
 prev=$(cat .deployed-tag 2>/dev/null || true)
 
+# Registry login for this run only, in a throwaway Docker config that is deleted on exit.
+token=""
+if [[ ! -t 0 ]]; then IFS= read -r token || true; fi
+pull_config="${DOCKER_CONFIG:-$HOME/.docker}"
+if [[ -n "$token" ]]; then
+  pull_config=$(mktemp -d)
+  trap 'rm -rf "$pull_config"' EXIT
+  printf '%s' "$token" | DOCKER_CONFIG="$pull_config" docker login ghcr.io -u github-actions --password-stdin >/dev/null
+fi
+unset token
+
 echo "Pulling $tag"
-docker pull -q "$registry/petcare-api:$tag" >/dev/null
-docker pull -q "$registry/petcare-web:$tag" >/dev/null
+DOCKER_CONFIG="$pull_config" docker pull -q "$registry/petcare-api:$tag" >/dev/null
+DOCKER_CONFIG="$pull_config" docker pull -q "$registry/petcare-web:$tag" >/dev/null
 
 # Take compose.yaml from the image so it always matches the code being deployed.
 [[ -f compose.yaml ]] && cp compose.yaml compose.prev.yaml

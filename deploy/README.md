@@ -10,7 +10,7 @@
    Both are tagged with the commit SHA and pushed to GHCR (private).
 
 3. deploy then connects to the VPS over SSH as `petcare-ci` and sends `deploy <sha>`. The VPS script:
-   - pulls the images;
+   - pulls the images, using the job's own GitHub token, which is sent over the SSH connection, expires when the job ends and is never stored;
    - takes `compose.yaml` from the image;
    - starts the stack in `/opt/pprasai/projects/petcare`;
    - waits for `/api/ready`.
@@ -95,7 +95,7 @@ PS> ssh-keygen -p -f $env:USERPROFILE\.ssh\ci@petcare.pprasai.io
 # enter the old passphrase, then press Enter twice for an empty one
 ```
 
-The private key (the file without `.pub`) goes **only** to GitHub, in step 7. Never copy it to the VPS.
+The private key (the file without `.pub`) goes **only** to GitHub, in step 6. Never copy it to the VPS.
 
 ### 3. CI user on the VPS
 
@@ -155,29 +155,16 @@ To see the Redis password without printing the rest of the file:
 $ sudo grep '^REDIS_PASSWORD=' /opt/pprasai/infra/.env
 ```
 
-Optional:
+Added later:
 
-- OAuth providers: set `AUTH_GOOGLE_CLIENT_ID` and `AUTH_GOOGLE_CLIENT_SECRET`, and likewise for `GITHUB` and `MICROSOFT`. A provider turns on only when both are set. The callback URL is `https://petcare.pprasai.io/api/auth/callback/<google|github|microsoft>`.
+- Sign-in providers (Google, GitHub, Microsoft): see step 7.
 - Web push: set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT=mailto:<you>`.
 
 All other keys have production defaults. `compose.yaml` sets `APP_ORIGIN`, `PORT`, `FILES_DIR` and `TRUST_PROXY`.
 
 `ship-app.ps1` resets every `.env` under `/opt/pprasai` to root-only (600), which is what this file needs anyway.
 
-### 5. Let the VPS pull private images
-
-1. On GitHub, go to Settings → Developer settings → Personal access tokens → **Tokens (classic)**.
-2. Generate a token with only `read:packages`. Fine-grained tokens can't read packages.
-3. Then run:
-
-```bash
-$ sudo docker login ghcr.io -u PPrasai
-# paste the token at the password prompt; expect: Login Succeeded
-```
-
-The login is stored for root, which is the user the deploy script runs as. Keep the token in your password manager.
-
-### 6. Caddy
+### 5. Caddy
 
 Uncomment the `petcare.pprasai.io` block in `D:\pprasai.io\deploy\Caddyfile`, then install it as in `docs/VPS-SETUP.md` step 10:
 
@@ -193,7 +180,7 @@ $ sudo systemctl reload caddy
 
 DNS is already covered by the wildcard record. Until the first deploy, the site answers 502. That's expected.
 
-### 7. GitHub secrets and variables (on your PC)
+### 6. GitHub secrets and variables (on your PC)
 
 ```powershell
 PS> gh secret set DEPLOY_SSH_KEY -R PPrasai/petcare --body (Get-Content $env:USERPROFILE\.ssh\ci@petcare.pprasai.io -Raw)
@@ -204,9 +191,70 @@ PS> gh variable set DEPLOY_ENABLED -R PPrasai/petcare --body true
 
 SSH is on port 22, so `DEPLOY_PORT` isn't needed. If you ever move it, set `DEPLOY_PORT` and add `-p <port>` to `ssh-keyscan`.
 
-GitHub now holds the private key, and you can delete your local copy if you like. To rotate it, generate a new key and repeat steps 2, 3 and 7.
+GitHub now holds the private key, and you can delete your local copy if you like. To rotate it, generate a new key and repeat steps 2, 3 and 6.
 
 **First deploy:** go to GitHub → Actions → `deploy` → **Run workflow**. When it's green, open https://petcare.pprasai.io.
+
+### 7. Sign-in providers (Google, GitHub, Microsoft)
+
+The first deploy works without these, because email + password sign-in is on by default. They are still part of the product, and they matter for one more reason: **there is no email in v1**. A user who forgets their password can recover only through a linked Google, GitHub or Microsoft account, or by asking you to run `pnpm --filter api cli reset-link <email>` on the server. So set up at least one before inviting real users.
+
+Each provider turns on only when both its ID and secret are in `.env`. The sign-in page shows only the providers that are on. Every provider uses the same callback pattern:
+
+```
+https://petcare.pprasai.io/api/auth/callback/<google|github|microsoft>
+```
+
+**GitHub** (easiest):
+
+1. Go to your profile picture → **Settings** → **Developer settings** (bottom of the left sidebar) → **OAuth Apps** → **New OAuth App**. The direct link is https://github.com/settings/applications/new.
+2. Fill in:
+   - Application name: `PetCare`
+   - Homepage URL: `https://petcare.pprasai.io`
+   - Authorization callback URL: `https://petcare.pprasai.io/api/auth/callback/github`
+3. Choose **Register application**, then **Generate a new client secret**.
+4. Copy the client ID and secret into `.env` as `AUTH_GITHUB_CLIENT_ID` and `AUTH_GITHUB_CLIENT_SECRET`.
+
+**Google:**
+
+1. Go to https://console.cloud.google.com, create a project named `petcare`, then open **Google Auth Platform**.
+2. Under **Branding**, set the app name `PetCare`, your support email and the home page `https://petcare.pprasai.io`.
+3. Under **Audience**, choose **External**, then **Publish app**. While it's in "Testing", only the test users you list can sign in. The app asks only for name, email and profile picture, so Google doesn't require a review.
+4. Under **Clients**, choose **Create client** → **Web application**, and fill in:
+   - Authorized JavaScript origins: `https://petcare.pprasai.io`
+   - Authorized redirect URIs: `https://petcare.pprasai.io/api/auth/callback/google`
+5. Copy the client ID and secret into `.env` as `AUTH_GOOGLE_CLIENT_ID` and `AUTH_GOOGLE_CLIENT_SECRET`. Google shows the secret only once, so save it in your password manager as well.
+
+**Microsoft:**
+
+1. Go to https://entra.microsoft.com → **App registrations** → **New registration**. If it asks you to create a directory or tenant, the free one is enough.
+2. Fill in:
+   - Name: `PetCare`
+   - Supported account types: **Accounts in any organizational directory and personal Microsoft accounts**. This matches the default `AUTH_MICROSOFT_TENANT_ID=common`.
+   - Redirect URI: platform **Web**, `https://petcare.pprasai.io/api/auth/callback/microsoft`
+3. Copy the **Application (client) ID** from the Overview page.
+4. Under **Certificates & secrets**, choose **New client secret** and copy its **Value**, not its ID.
+5. Put them in `.env` as `AUTH_MICROSOFT_CLIENT_ID` and `AUTH_MICROSOFT_CLIENT_SECRET`.
+6. Microsoft secrets expire after at most 24 months. Put a renewal reminder in your calendar.
+
+**Apple** stays off: it needs a paid Apple Developer membership ($99/year).
+
+After editing `.env`, apply the change (below). Then check which providers are on:
+
+```powershell
+PS> curl.exe -s https://petcare.pprasai.io/api/config
+# expect: "providers":["github","google",...] listing the ones you configured
+```
+
+### Applying `.env` changes
+
+Docker Compose doesn't notice edits to `.env` on its own, so recreate the containers on the current version:
+
+```bash
+$ sudo bash -c 'cd /opt/pprasai/projects/petcare && PETCARE_TAG=$(cat .deployed-tag) docker compose up -d --force-recreate'
+```
+
+GitHub → Actions → `deploy` → **Run workflow** does the same thing, but for the current `main`.
 
 ## Checking it by hand
 
