@@ -1,1 +1,6 @@
 * text=auto eol=lf
+packages/contracts/openapi.yaml -text
+packages/contracts/redocly.yaml -text
+packages/contracts/records.schema.json -text
+packages/contracts/schema.sql -text
+packages/contracts/samples/*.json -text
