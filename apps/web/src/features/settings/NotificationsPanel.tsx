@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import type { PushState } from '../../application/ports/push-control';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
+import { Banner } from '../../ui';
+import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 
 /** Device notifications: enable or disable push on this device and send a test (CAP-07). */
 export function NotificationsPanel() {
   const { push } = useServices();
+  const demo = useDemo();
   const key = useSessionStore((s) => s.config?.vapidPublicKey ?? null);
   const support = push.support(key);
   const [state, setState] = useState<PushState | null>(null);
@@ -14,9 +17,9 @@ export function NotificationsPanel() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (support !== 'ready') return;
+    if (support !== 'ready' || demo) return;
     void push.state().then(setState);
-  }, [push, support]);
+  }, [push, support, demo]);
 
   const run = async (action: () => Promise<string | null>) => {
     setBusy(true);
@@ -54,10 +57,11 @@ export function NotificationsPanel() {
       <h2 id="notifications-heading" className="text-lg font-semibold">
         {t('notifications.title')}
       </h2>
+      {demo && <Banner>{t('demo.pushDisabled')}</Banner>}
       {support === 'needsInstall' && <p>{t('notifications.needsInstall')}</p>}
       {support === 'unsupported' && <p>{t('notifications.unsupported')}</p>}
       {support === 'notConfigured' && <p>{t('notifications.notConfigured')}</p>}
-      {support === 'ready' && (
+      {support === 'ready' && !demo && (
         <>
           <p>
             {state === 'subscribed'

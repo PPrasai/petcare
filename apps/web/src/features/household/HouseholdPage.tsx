@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { t } from '../../i18n/t';
 import { activeHousehold, useSessionStore } from '../../state/session';
 import { Banner, Button, Dialog, SelectField, TextField } from '../../ui';
+import { DEMO_SEED } from '@petcare/domain';
+import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 import { InvitesPanel } from './InvitesPanel';
 import { MembersPanel } from './MembersPanel';
@@ -17,8 +19,25 @@ export function HouseholdPage() {
   const { run, error, busy } = useHouseholdAction();
   const [name, setName] = useState('');
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const demo = useDemo();
 
   if (!current) return null;
+  if (demo) {
+    return (
+      <div className="flex max-w-xl flex-col gap-4">
+        <h1 className="text-2xl font-semibold">{t('household.title')}</h1>
+        <p>{t('household.current', { name: current.name })}</p>
+        <Banner>{t('demo.householdDisabled')}</Banner>
+        <ul className="flex flex-col gap-2">
+          {DEMO_SEED.members.map((m) => (
+            <li key={m.name} className="rounded-lg border border-line bg-card p-3">
+              {m.name} · {t(`household.role.${m.role}`)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   const isOwner = current.role === 'owner';
   return (
     <div className="flex max-w-xl flex-col gap-6">

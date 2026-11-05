@@ -537,6 +537,18 @@ export const en = {
   'public.ownerDisplayName': 'Owner',
   'public.ownerPhone': 'Owner phone',
   'public.notes': 'Notes',
+  'demo.region': 'Demo mode',
+  'demo.banner': 'Demo — changes stay on this device',
+  'demo.reset': 'Reset demo',
+  'demo.exit': 'Exit demo',
+  'demo.try': 'Try the demo',
+  'demo.tryHint': 'No account needed. Sample data stays on this device.',
+  'demo.householdDisabled':
+    'Inviting people and changing members needs an account, so it is turned off in the demo.',
+  'demo.pushDisabled':
+    'Phone notifications need an account and a connection, so they are turned off in the demo.',
+  'demo.emergencyDisabled':
+    'The public emergency link needs an account and a connection, so it is turned off in the demo.',
 } as const;
 
 export type MessageKey = keyof typeof en;

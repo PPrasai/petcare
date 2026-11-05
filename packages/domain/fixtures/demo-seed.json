@@ -1,0 +1,720 @@
+{
+  "household": {
+    "id": "0190e5a0-0000-7000-8000-000000000001",
+    "name": "Demo household"
+  },
+  "user": {
+    "id": "demo-user",
+    "name": "Alex (demo)",
+    "email": "alex@demo.invalid"
+  },
+  "members": [
+    {
+      "name": "Alex (demo)",
+      "role": "owner"
+    },
+    {
+      "name": "Sam",
+      "role": "caretaker"
+    },
+    {
+      "name": "Riya",
+      "role": "viewer"
+    }
+  ],
+  "records": [
+    {
+      "type": "pet",
+      "id": "0190e5a0-0000-7000-8000-000000000101",
+      "data": {
+        "name": "Momo",
+        "species": "dog",
+        "breed": "Beagle",
+        "sex": "male",
+        "neutered": true,
+        "birthDate": {
+          "$daysFromToday": -1500
+        },
+        "birthDateEstimated": true,
+        "colour": "Tan and white",
+        "markings": "White tip on the tail",
+        "microchipId": "985112000111222",
+        "adoptedOn": {
+          "$daysFromToday": -1400
+        },
+        "sizeCategory": "medium",
+        "diet": "Dry food twice a day",
+        "insurance": {
+          "provider": "Pawsure",
+          "policyNumber": "PS-48213",
+          "renewsOn": {
+            "$daysFromToday": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "pet",
+      "id": "0190e5a0-0000-7000-8000-000000000102",
+      "data": {
+        "name": "Biralo",
+        "species": "cat",
+        "breed": "Domestic shorthair",
+        "isMixedBreed": true,
+        "sex": "female",
+        "neutered": true,
+        "birthDate": {
+          "$daysFromToday": -2900
+        },
+        "birthDateEstimated": true,
+        "colour": "Grey tabby",
+        "adoptedOn": {
+          "$daysFromToday": -2800
+        },
+        "sizeCategory": "small",
+        "diet": "Wet food in the evening"
+      }
+    },
+    {
+      "type": "contact",
+      "id": "0190e5a0-0000-7000-8000-000000000201",
+      "data": {
+        "name": "Dr. Rai",
+        "role": "vet",
+        "phone": "+977 1 555 0142",
+        "email": "clinic@example.test",
+        "address": "12 Park Road",
+        "note": "Open Sunday to Friday"
+      }
+    },
+    {
+      "type": "contact",
+      "id": "0190e5a0-0000-7000-8000-000000000202",
+      "data": {
+        "name": "City Emergency Clinic",
+        "role": "emergencyClinic",
+        "phone": "+977 1 555 0199",
+        "note": "Open all night"
+      }
+    },
+    {
+      "type": "contact",
+      "id": "0190e5a0-0000-7000-8000-000000000203",
+      "data": {
+        "name": "Happy Paws Grooming",
+        "role": "groomer",
+        "phone": "+977 1 555 0110"
+      }
+    },
+    {
+      "type": "vaccination",
+      "id": "0190e5a0-0000-7000-8000-000000000601",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "vaccineName": "Rabies",
+        "givenOn": {
+          "$daysFromToday": -350
+        },
+        "nextDueOn": {
+          "$daysFromToday": 15
+        },
+        "contactId": "0190e5a0-0000-7000-8000-000000000201",
+        "batchNumber": "RB-2291"
+      }
+    },
+    {
+      "type": "vaccination",
+      "id": "0190e5a0-0000-7000-8000-000000000602",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "vaccineName": "DHPP",
+        "givenOn": {
+          "$daysFromToday": -400
+        },
+        "nextDueOn": {
+          "$daysFromToday": -35
+        },
+        "contactId": "0190e5a0-0000-7000-8000-000000000201"
+      }
+    },
+    {
+      "type": "vaccination",
+      "id": "0190e5a0-0000-7000-8000-000000000603",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "vaccineName": "FVRCP",
+        "givenOn": {
+          "$daysFromToday": -100
+        },
+        "nextDueOn": {
+          "$daysFromToday": 265
+        },
+        "contactId": "0190e5a0-0000-7000-8000-000000000201"
+      }
+    },
+    {
+      "type": "medication",
+      "id": "0190e5a0-0000-7000-8000-000000000301",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "name": "Carprofen",
+        "dose": 25,
+        "doseUnit": "mg",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "daily",
+          "startOn": {
+            "$daysFromToday": -30
+          },
+          "times": ["08:00"]
+        },
+        "prescribedByContactId": "0190e5a0-0000-7000-8000-000000000201",
+        "note": "Give with food"
+      }
+    },
+    {
+      "type": "medication",
+      "id": "0190e5a0-0000-7000-8000-000000000302",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "name": "Thyroid tablet",
+        "dose": 1,
+        "doseUnit": "tablet",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "daily",
+          "startOn": {
+            "$daysFromToday": -60
+          },
+          "times": ["20:00"]
+        },
+        "prescribedByContactId": "0190e5a0-0000-7000-8000-000000000201"
+      }
+    },
+    {
+      "type": "medicationDose",
+      "id": "0190e5a0-0000-7000-8000-000000000701",
+      "data": {
+        "medicationId": "0190e5a0-0000-7000-8000-000000000301",
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "occurrenceAt": {
+          "$daysFromToday": -1,
+          "time": "08:00"
+        },
+        "givenAt": {
+          "$daysFromToday": -1,
+          "time": "08:10"
+        },
+        "skipped": false
+      }
+    },
+    {
+      "type": "medicationDose",
+      "id": "0190e5a0-0000-7000-8000-000000000702",
+      "data": {
+        "medicationId": "0190e5a0-0000-7000-8000-000000000301",
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "occurrenceAt": {
+          "$daysFromToday": -2,
+          "time": "08:00"
+        },
+        "givenAt": {
+          "$daysFromToday": -2,
+          "time": "08:00"
+        },
+        "skipped": true,
+        "note": "Refused food"
+      }
+    },
+    {
+      "type": "measurement",
+      "id": "0190e5a0-0000-7000-8000-000000001001",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "weight",
+        "value": 11.4,
+        "measuredAt": {
+          "$daysFromToday": -120,
+          "time": "09:00"
+        }
+      }
+    },
+    {
+      "type": "measurement",
+      "id": "0190e5a0-0000-7000-8000-000000001002",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "weight",
+        "value": 11.8,
+        "measuredAt": {
+          "$daysFromToday": -80,
+          "time": "09:00"
+        }
+      }
+    },
+    {
+      "type": "measurement",
+      "id": "0190e5a0-0000-7000-8000-000000001003",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "weight",
+        "value": 12.1,
+        "measuredAt": {
+          "$daysFromToday": -40,
+          "time": "09:00"
+        }
+      }
+    },
+    {
+      "type": "measurement",
+      "id": "0190e5a0-0000-7000-8000-000000001004",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "weight",
+        "value": 12.3,
+        "measuredAt": {
+          "$daysFromToday": -5,
+          "time": "09:00"
+        }
+      }
+    },
+    {
+      "type": "measurement",
+      "id": "0190e5a0-0000-7000-8000-000000001010",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "kind": "weight",
+        "value": 4.1,
+        "measuredAt": {
+          "$daysFromToday": -60,
+          "time": "10:00"
+        }
+      }
+    },
+    {
+      "type": "measurement",
+      "id": "0190e5a0-0000-7000-8000-000000001011",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "kind": "weight",
+        "value": 4.0,
+        "measuredAt": {
+          "$daysFromToday": -10,
+          "time": "10:00"
+        }
+      }
+    },
+    {
+      "type": "measurement",
+      "id": "0190e5a0-0000-7000-8000-000000001012",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "bodyCondition",
+        "value": 5,
+        "measuredAt": {
+          "$daysFromToday": -5,
+          "time": "09:00"
+        }
+      }
+    },
+    {
+      "type": "vetVisit",
+      "id": "0190e5a0-0000-7000-8000-000000001101",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "visitedOn": {
+          "$daysFromToday": -40
+        },
+        "contactId": "0190e5a0-0000-7000-8000-000000000201",
+        "reason": "Annual check-up",
+        "findings": "Healthy, slightly overweight",
+        "costMinor": 4500,
+        "currency": "USD",
+        "followUpOn": {
+          "$daysFromToday": 20
+        }
+      }
+    },
+    {
+      "type": "vetVisit",
+      "id": "0190e5a0-0000-7000-8000-000000001102",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "visitedOn": {
+          "$daysFromToday": -100
+        },
+        "contactId": "0190e5a0-0000-7000-8000-000000000201",
+        "reason": "Vaccination",
+        "diagnosis": "None",
+        "costMinor": 3000,
+        "currency": "USD"
+      }
+    },
+    {
+      "type": "condition",
+      "id": "0190e5a0-0000-7000-8000-000000001201",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "allergy",
+        "name": "Chicken",
+        "severity": "moderate",
+        "diagnosedOn": {
+          "$daysFromToday": -600
+        }
+      }
+    },
+    {
+      "type": "condition",
+      "id": "0190e5a0-0000-7000-8000-000000001202",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "kind": "chronic",
+        "name": "Hyperthyroidism",
+        "severity": "mild",
+        "diagnosedOn": {
+          "$daysFromToday": -300
+        },
+        "note": "Managed with tablets"
+      }
+    },
+    {
+      "type": "symptomEntry",
+      "id": "0190e5a0-0000-7000-8000-000000001301",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "observedAt": {
+          "$daysFromToday": -3,
+          "time": "18:30"
+        },
+        "description": "Limping on the back left leg after a long walk",
+        "severity": "mild"
+      }
+    },
+    {
+      "type": "symptomEntry",
+      "id": "0190e5a0-0000-7000-8000-000000001302",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "observedAt": {
+          "$daysFromToday": -12,
+          "time": "07:15"
+        },
+        "description": "Skipped breakfast",
+        "severity": "mild"
+      }
+    },
+    {
+      "type": "careRoutine",
+      "id": "0190e5a0-0000-7000-8000-000000000501",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "walk",
+        "title": "Morning walk",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "daily",
+          "startOn": {
+            "$daysFromToday": -30
+          },
+          "times": ["07:30"]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "careRoutine",
+      "id": "0190e5a0-0000-7000-8000-000000000502",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "kind": "feeding",
+        "title": "Evening meal",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "daily",
+          "startOn": {
+            "$daysFromToday": -30
+          },
+          "times": ["18:00"]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "careRoutine",
+      "id": "0190e5a0-0000-7000-8000-000000000503",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "fleaTick",
+        "title": "Flea and tick treatment",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "everyNDays",
+          "startOn": {
+            "$daysFromToday": -35
+          },
+          "times": ["09:00"],
+          "everyN": 30
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "careCompletion",
+      "id": "0190e5a0-0000-7000-8000-000000001401",
+      "data": {
+        "routineId": "0190e5a0-0000-7000-8000-000000000501",
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "occurrenceAt": {
+          "$daysFromToday": -1,
+          "time": "07:30"
+        },
+        "completedAt": {
+          "$daysFromToday": -1,
+          "time": "07:45"
+        },
+        "skipped": false
+      }
+    },
+    {
+      "type": "careCompletion",
+      "id": "0190e5a0-0000-7000-8000-000000001402",
+      "data": {
+        "routineId": "0190e5a0-0000-7000-8000-000000000502",
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "occurrenceAt": {
+          "$daysFromToday": -1,
+          "time": "18:00"
+        },
+        "completedAt": {
+          "$daysFromToday": -1,
+          "time": "18:10"
+        },
+        "skipped": true,
+        "note": "Ate at the neighbours"
+      }
+    },
+    {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000401",
+      "data": {
+        "title": "Call the insurance company",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "once",
+          "startOn": {
+            "$daysFromToday": -5
+          },
+          "times": ["10:00"]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000402",
+      "data": {
+        "title": "Order dog food",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "once",
+          "startOn": {
+            "$daysFromToday": -2
+          },
+          "times": ["09:00"]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000403",
+      "data": {
+        "title": "Renew pet insurance",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "once",
+          "startOn": {
+            "$daysFromToday": 10
+          },
+          "times": ["09:00"]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000404",
+      "data": {
+        "title": "Trim nails",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "weekly",
+          "startOn": {
+            "$daysFromToday": -14
+          },
+          "times": ["17:00"],
+          "daysOfWeek": [6]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "reminderCompletion",
+      "id": "0190e5a0-0000-7000-8000-000000001501",
+      "data": {
+        "reminderId": "0190e5a0-0000-7000-8000-000000000401",
+        "occurrenceAt": {
+          "$daysFromToday": -5,
+          "time": "10:00"
+        },
+        "completedAt": {
+          "$daysFromToday": -5,
+          "time": "11:00"
+        }
+      }
+    },
+    {
+      "type": "reminderCompletion",
+      "id": "0190e5a0-0000-7000-8000-000000001502",
+      "data": {
+        "reminderId": "0190e5a0-0000-7000-8000-000000000402",
+        "occurrenceAt": {
+          "$daysFromToday": -2,
+          "time": "09:00"
+        },
+        "completedAt": {
+          "$daysFromToday": -2,
+          "time": "09:20"
+        }
+      }
+    },
+    {
+      "type": "reminderSnooze",
+      "id": "0190e5a0-0000-7000-8000-000000001601",
+      "data": {
+        "sourceType": "reminder",
+        "sourceId": "0190e5a0-0000-7000-8000-000000000403",
+        "occurrenceAt": {
+          "$daysFromToday": 10,
+          "time": "09:00"
+        },
+        "snoozedUntil": {
+          "$daysFromToday": 11,
+          "time": "09:00"
+        },
+        "userId": "demo-user"
+      }
+    },
+    {
+      "type": "reminderSnooze",
+      "id": "0190e5a0-0000-7000-8000-000000001602",
+      "data": {
+        "sourceType": "vaccination",
+        "sourceId": "0190e5a0-0000-7000-8000-000000000602",
+        "occurrenceAt": {
+          "$daysFromToday": -35,
+          "time": "09:00"
+        },
+        "snoozedUntil": {
+          "$daysFromToday": 1,
+          "time": "09:00"
+        },
+        "userId": "demo-user"
+      }
+    },
+    {
+      "type": "document",
+      "id": "0190e5a0-0000-7000-8000-000000001701",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "title": "Rabies certificate",
+        "category": "certificate",
+        "fileId": "0190e5a0-0000-7000-8000-000000000901"
+      }
+    },
+    {
+      "type": "document",
+      "id": "0190e5a0-0000-7000-8000-000000001702",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "title": "Insurance policy",
+        "category": "insurance",
+        "fileId": "0190e5a0-0000-7000-8000-000000000902"
+      }
+    },
+    {
+      "type": "expense",
+      "id": "0190e5a0-0000-7000-8000-000000001801",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "spentOn": {
+          "$daysFromToday": -40
+        },
+        "category": "vet",
+        "amountMinor": 4500,
+        "currency": "USD",
+        "note": "Annual check-up"
+      }
+    },
+    {
+      "type": "expense",
+      "id": "0190e5a0-0000-7000-8000-000000001802",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "spentOn": {
+          "$daysFromToday": -12
+        },
+        "category": "food",
+        "amountMinor": 2800,
+        "currency": "USD"
+      }
+    },
+    {
+      "type": "expense",
+      "id": "0190e5a0-0000-7000-8000-000000001803",
+      "data": {
+        "spentOn": {
+          "$daysFromToday": -20
+        },
+        "category": "insurance",
+        "amountMinor": 1900,
+        "currency": "USD"
+      }
+    },
+    {
+      "type": "emergencyCard",
+      "id": "0190e5a0-0000-7000-8000-000000001901",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "visibleFields": ["photo", "name", "species", "allergies", "ownerPhone"],
+        "ownerDisplayName": "Alex",
+        "ownerPhone": "+977 1 555 0100",
+        "isLost": false
+      }
+    },
+    {
+      "type": "emergencyCard",
+      "id": "0190e5a0-0000-7000-8000-000000001902",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "visibleFields": ["name", "species", "conditions"],
+        "ownerDisplayName": "Alex",
+        "isLost": false
+      }
+    }
+  ],
+  "files": [
+    {
+      "id": "0190e5a0-0000-7000-8000-000000000901",
+      "name": "rabies-certificate.png",
+      "mimeType": "image/png",
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "0190e5a0-0000-7000-8000-000000000902",
+      "name": "insurance-policy.png",
+      "mimeType": "image/png",
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    }
+  ]
+}

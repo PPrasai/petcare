@@ -22,6 +22,12 @@ export interface SessionControl {
   signInSocial(provider: string): Promise<string>;
   /** Signs out and wipes this device's data. Unsynced changes are lost. */
   signOut(): Promise<void>;
+  /** Opens the on-device demo (CAP-03). Makes no network request. */
+  startDemo(): Promise<void>;
+  /** Throws away the demo's changes and starts again from the sample data. */
+  resetDemo(): Promise<void>;
+  /** Leaves the demo; its data stays on this device until reset. */
+  exitDemo(): Promise<void>;
 }
 
 /** Everything the features may call. Provided once by the app layer. */
