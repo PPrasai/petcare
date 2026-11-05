@@ -10,6 +10,7 @@ import { AuthPage } from '../features/auth/AuthPage';
 import { ContactsPage } from '../features/contacts/ContactsPage';
 import { ExpensesPage } from '../features/expenses/ExpensesPage';
 import { HouseholdPage } from '../features/household/HouseholdPage';
+import { PublicEmergencyPage } from '../features/emergency/PublicEmergencyPage';
 import { JoinPage } from '../features/household/JoinPage';
 import { pendingInvite } from '../lib/pending-invite';
 import { NewPetPage } from '../features/pets/NewPetPage';
@@ -95,6 +96,14 @@ const publicRoute = (path: '/sign-in' | '/sign-up', mode: 'signIn' | 'signUp') =
     component: () => <AuthPage mode={mode} />,
   });
 
+const publicEmergency = createRoute({
+  getParentRoute: () => root,
+  path: '/e/$token',
+  component: function EmergencyRoute() {
+    return <PublicEmergencyPage token={publicEmergency.useParams().token} />;
+  },
+});
+
 const routeTree = root.addChildren([
   app.addChildren([
     today,
@@ -108,6 +117,7 @@ const routeTree = root.addChildren([
     syncActivity,
   ]),
   createRoute({ getParentRoute: () => root, path: '/join', component: JoinPage }),
+  publicEmergency,
   publicRoute('/sign-in', 'signIn'),
   publicRoute('/sign-up', 'signUp'),
 ]);

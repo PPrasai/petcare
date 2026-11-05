@@ -11,3 +11,4 @@ export * from './recurrence';
 export * from './due';
 export * from './vaccine-suggestions';
 export * from './preferences';
+export { EMERGENCY_FIELDS } from './entities/emergency-card';

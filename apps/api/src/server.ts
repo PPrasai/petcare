@@ -10,6 +10,7 @@ import { registerAuthRoutes } from './http/auth-routes';
 import { registerHouseholdRoutes } from './http/household-routes';
 import { registerSyncRoutes } from './http/sync-routes';
 import { registerCalendarRoutes } from './http/calendar-routes';
+import { registerEmergencyRoutes } from './http/emergency-routes';
 import { registerFileRoutes } from './http/file-routes';
 import { registerPushRoutes } from './http/push-routes';
 import { registerMeRoutes } from './http/me-routes';
@@ -32,6 +33,7 @@ import { createHealthRepository } from './repositories/health-repository';
 import { createUnitOfWork } from './repositories';
 import { createAccountService } from './services/account-service';
 import { createHouseholdService } from './services/household-service';
+import { createEmergencyService } from './services/emergency-service';
 import { createCalendarService } from './services/calendar-service';
 import type { Dispatcher } from './services/notification-dispatcher';
 import { createDispatcher } from './services/notification-dispatcher';
@@ -197,6 +199,16 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerCalendarRoutes(
     app,
     createCalendarService({ unitOfWork, cache, limiter, clock, appOrigin: config.appOrigin }),
+  );
+  registerEmergencyRoutes(
+    app,
+    createEmergencyService({
+      unitOfWork,
+      directory,
+      files: createFileStore(config.filesDir),
+      clock,
+      appOrigin: config.appOrigin,
+    }),
   );
   app.decorate('notifications', {
     dispatcher,
