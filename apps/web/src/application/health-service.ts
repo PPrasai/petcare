@@ -4,7 +4,14 @@ import { InvalidInput } from './pet-service';
 import type { RecordStore, StoredRecord } from './ports/record-store';
 
 export type HealthType =
-  'vaccination' | 'medication' | 'medicationDose' | 'vetVisit' | 'condition' | 'symptomEntry';
+  | 'vaccination'
+  | 'medication'
+  | 'medicationDose'
+  | 'vetVisit'
+  | 'condition'
+  | 'symptomEntry'
+  | 'careRoutine'
+  | 'reminder';
 
 /** The field each type is shown in order of (newest first). */
 const ORDER_FIELD: Record<HealthType, string> = {
@@ -14,6 +21,8 @@ const ORDER_FIELD: Record<HealthType, string> = {
   vetVisit: 'visitedOn',
   condition: 'name',
   symptomEntry: 'observedAt',
+  careRoutine: 'title',
+  reminder: 'title',
 };
 
 const isEmpty = (v: unknown): boolean => v === undefined || v === null || v === '';
@@ -28,9 +37,17 @@ export class HealthService {
       (r) => r.deletedAt === null && r.data.petId === petId,
     );
     const field = ORDER_FIELD[type];
-    const sign = field === 'name' ? 1 : -1;
+    const sign = field === 'name' || field === 'title' ? 1 : -1;
     return rows.sort(
       (a, b) => sign * String(a.data[field] ?? '').localeCompare(String(b.data[field] ?? '')),
+    );
+  }
+
+  /** Every live record of one type in the household (for example reminders not tied to a pet). */
+  async all(type: HealthType, householdId: string): Promise<StoredRecord[]> {
+    const rows = (await this.records.list(type, householdId)).filter((r) => r.deletedAt === null);
+    return rows.sort((a, b) =>
+      String(a.data.title ?? '').localeCompare(String(b.data.title ?? '')),
     );
   }
 

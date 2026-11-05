@@ -1,4 +1,5 @@
 import type { HealthService } from './health-service';
+import type { TodayService } from './today-service';
 import type { MeasurementService } from './measurement-service';
 import type { PetService } from './pet-service';
 import type { SyncControl } from './ports/sync-control';
@@ -22,4 +23,5 @@ export interface Services {
   pets: PetService;
   measurements: MeasurementService;
   health: HealthService;
+  today: TodayService;
 }
