@@ -7,7 +7,7 @@ import {
   toEnvelope,
   typesWithPetId,
 } from '../repositories';
-import type { Repositories } from '../repositories';
+import type { Repositories, Role } from '../repositories';
 import { checkReferences } from './sync-references';
 import {
   MAX_FIELDS_BYTES,
@@ -32,6 +32,7 @@ export function createPushProcessor(deps: SyncServiceDeps) {
   async function decide(
     tx: Repositories,
     actor: string,
+    role: Role | null,
     m: Mutation,
     pending: Pending,
   ): Promise<PushResult> {
@@ -42,7 +43,6 @@ export function createPushProcessor(deps: SyncServiceDeps) {
     // 2. Authorisation. A record never moves between households (resolves ISS-CON2-01).
     if (existing && existing.householdId !== m.householdId)
       return reject(m, 'notFound', 'not found');
-    const role = await directory.roleOf(actor, m.householdId);
     if (!role) return reject(m, 'notFound', 'not found');
     if (!existing && m.op !== 'create') return reject(m, 'notFound', 'record not found');
 
@@ -247,6 +247,9 @@ export function createPushProcessor(deps: SyncServiceDeps) {
   }
 
   async function applyInTransaction(actor: string, m: Mutation): Promise<PushResult> {
+    // Resolved before the transaction: on a cache miss it reads the database, and doing that
+    // while this transaction holds a pooled connection can exhaust the pool under load.
+    const role = await directory.roleOf(actor, m.householdId);
     return unitOfWork.run(async (tx) => {
       // 1. Idempotency: a replayed mutationId returns the first result unchanged.
       const stored = await tx.sync.findMutation(m.mutationId);
@@ -255,7 +258,7 @@ export function createPushProcessor(deps: SyncServiceDeps) {
         return reject(m, 'invalid', 'mutationId already used', '/mutationId');
       }
       const pending: Pending = { changes: [], conflicts: [] };
-      const result = await decide(tx, actor, m, pending);
+      const result = await decide(tx, actor, role, m, pending);
       await tx.sync.storeMutation(m.mutationId, actor, result);
       if (pending.changes.length > 0 || pending.conflicts.length > 0) {
         // seq order must equal commit order, or a pull could skip a change that commits late.
