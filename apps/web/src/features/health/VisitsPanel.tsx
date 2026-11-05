@@ -5,6 +5,7 @@ import { t } from '../../i18n/t';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Banner, Button } from '../../ui';
+import { useContactName, useContactOptions } from '../contacts/hooks';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { errorsFor, useHealthList, useToday } from './hooks';
@@ -24,6 +25,11 @@ const FIELDS: FieldSpec[] = [
 /** Vet visits of one pet. */
 export function VisitsPanel({ petId }: { petId: string }) {
   const { health } = useServices();
+  const contactOptions = useContactOptions();
+  const fields: FieldSpec[] = [
+    ...FIELDS,
+    { name: 'contactId', label: t('visit.contact'), type: 'select', options: contactOptions },
+  ];
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'vetVisit');
@@ -65,7 +71,7 @@ export function VisitsPanel({ petId }: { petId: string }) {
       {canCreate ? (
         <RecordForm
           title={t('visit.add')}
-          fields={FIELDS}
+          fields={fields}
           values={values}
           errors={errors}
           onChange={setValues}
@@ -97,6 +103,7 @@ export function VisitsPanel({ petId }: { petId: string }) {
                 {typeof v.data.costMinor === 'number' ? (
                   <p>{formatMoney(v.data.costMinor, String(v.data.currency ?? prefs.currency))}</p>
                 ) : null}
+                <ContactLine id={v.data.contactId} />
                 {v.data.followUpOn ? (
                   <p>
                     {t('visit.followUpValue', {
@@ -120,4 +127,9 @@ export function VisitsPanel({ petId }: { petId: string }) {
       </ul>
     </section>
   );
+}
+
+function ContactLine({ id }: { id: unknown }) {
+  const name = useContactName(id);
+  return name ? <p>{t('visit.contactValue', { name })}</p> : null;
 }

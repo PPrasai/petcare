@@ -20,6 +20,11 @@ export interface Metrics {
 export interface HouseholdFiles {
   /** Deletes every stored blob of a household. */
   removeAll(householdId: string): Promise<void>;
+  /** Stores a blob; the path is built from the two ids only. */
+  write(householdId: string, fileId: string, bytes: Buffer): Promise<void>;
+  /** Reads a blob, or null when it is missing. */
+  read(householdId: string, fileId: string): Promise<Buffer | null>;
+  remove(householdId: string, fileId: string): Promise<void>;
 }
 
 export interface PushTarget {

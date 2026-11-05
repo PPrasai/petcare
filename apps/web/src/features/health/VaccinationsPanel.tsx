@@ -7,6 +7,7 @@ import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Banner, Button } from '../../ui';
+import { useContactName, useContactOptions } from '../contacts/hooks';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { errorsFor, useHealthList, useToday } from './hooks';
@@ -24,6 +25,11 @@ const FIELDS: FieldSpec[] = [
 /** Vaccinations of one pet: suggestions by species, an overdue/due-soon badge, and the record list. */
 export function VaccinationsPanel({ petId, species }: { petId: string; species: string }) {
   const { health } = useServices();
+  const contactOptions = useContactOptions();
+  const fields: FieldSpec[] = [
+    ...FIELDS,
+    { name: 'contactId', label: t('vaccine.contact'), type: 'select', options: contactOptions },
+  ];
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'vaccination');
@@ -76,7 +82,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
           ) : null}
           <RecordForm
             title={t('vaccine.add')}
-            fields={FIELDS}
+            fields={fields}
             values={values}
             errors={errors}
             onChange={setValues}
@@ -113,6 +119,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
                     ? ` · ${t('vaccine.batchValue', { batch: String(v.data.batchNumber) })}`
                     : ''}
                 </p>
+                <ContactLine id={v.data.contactId} />
               </div>
               {canDelete(v.createdBy) ? (
                 <Button
@@ -129,4 +136,9 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
       </ul>
     </section>
   );
+}
+
+function ContactLine({ id }: { id: unknown }) {
+  const name = useContactName(id);
+  return name ? <p className="text-sm">{t('vaccine.contactValue', { name })}</p> : null;
 }

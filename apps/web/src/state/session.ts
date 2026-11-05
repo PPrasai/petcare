@@ -18,6 +18,8 @@ export interface PublicConfig {
   providers: string[];
   emailPasswordEnabled: boolean;
   vapidPublicKey: string | null;
+  maxFileBytes: number;
+  householdQuotaBytes: number;
 }
 
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn';

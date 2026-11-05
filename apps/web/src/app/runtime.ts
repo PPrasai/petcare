@@ -1,5 +1,9 @@
 import { QueryClient } from '@tanstack/react-query';
+import { ContactService } from '../application/contact-service';
+import { DocumentService } from '../application/document-service';
+import { ExpenseService } from '../application/expense-service';
 import { HealthService } from '../application/health-service';
+import { createFilesRemote } from '../data/remote/files-remote';
 import { createPushRemote } from '../data/remote/push-remote';
 import { TodayService } from '../application/today-service';
 import { MeasurementService } from '../application/measurement-service';
@@ -54,7 +58,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
 
   function open(me: MeSnapshot): void {
     close();
-    const opened = openUserData(me.user.id, remote, {
+    const opened = openUserData(me.user.id, remote, createFilesRemote(), {
       onChanged: (types) => {
         invalidate(types);
         scheduler?.request();
@@ -151,6 +155,14 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     health: new HealthService(records),
     today: new TodayService(records),
     push: createPushRemote(),
+    files: {
+      attach: (householdId, file) => current().files.attach(householdId, file),
+      open: (fileId) => current().files.open(fileId),
+      release: (url) => URL.revokeObjectURL(url),
+    },
+    documents: new DocumentService(records),
+    expenses: new ExpenseService(records),
+    contacts: new ContactService(records),
   };
 
   return {

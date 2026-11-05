@@ -1,3 +1,7 @@
+import type { ContactService } from './contact-service';
+import type { DocumentService } from './document-service';
+import type { ExpenseService } from './expense-service';
+import type { FileGateway } from './ports/file-gateway';
 import type { HealthService } from './health-service';
 import type { TodayService } from './today-service';
 import type { MeasurementService } from './measurement-service';
@@ -26,4 +30,8 @@ export interface Services {
   health: HealthService;
   today: TodayService;
   push: PushControl;
+  files: FileGateway;
+  documents: DocumentService;
+  expenses: ExpenseService;
+  contacts: ContactService;
 }

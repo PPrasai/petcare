@@ -5,6 +5,8 @@ import type { Clock, IdGenerator } from '../../application/ports/runtime';
 import type { LocalDb, OutboxEntry } from '../local/local-db';
 import { CURSOR_KEY, applyPullPage, applyPushResults, syncTables } from './apply';
 import { nextBatch, pendingCount } from './outbox';
+import { uploadPendingFiles } from './pending-files';
+import type { FileApi } from '../../application/ports/file-api';
 
 export interface SyncStatus {
   online: boolean;
@@ -21,6 +23,8 @@ export interface SyncEngineDeps {
   ids: IdGenerator;
   /** Called with the record types that changed locally, so Query can invalidate them. */
   onChanged?: (types: string[]) => void;
+  /** Where files chosen on this device are uploaded before the changes that refer to them. */
+  files?: { api: FileApi; userId: string };
 }
 
 export interface SyncEngine {
@@ -126,6 +130,7 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
   async function run(): Promise<SyncStatus> {
     setStatus({ syncing: true });
     try {
+      if (deps.files) await uploadPendingFiles(db, deps.files.api, deps.files.userId, changed);
       await pushAll();
       await pullAll();
       setStatus({ online: true, error: null, lastSyncedAt: clock.now().toISOString() });

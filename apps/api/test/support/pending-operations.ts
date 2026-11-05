@@ -6,8 +6,6 @@
 export const PENDING_OPERATIONS: string[] = [
   'deleteMe',
   'exportMe',
-  'uploadFile',
-  'downloadFile',
   'createEmergencyLink',
   'revokeEmergencyLink',
   'getPublicEmergencyCard',

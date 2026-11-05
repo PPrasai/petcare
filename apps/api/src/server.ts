@@ -10,6 +10,7 @@ import { registerAuthRoutes } from './http/auth-routes';
 import { registerHouseholdRoutes } from './http/household-routes';
 import { registerSyncRoutes } from './http/sync-routes';
 import { registerCalendarRoutes } from './http/calendar-routes';
+import { registerFileRoutes } from './http/file-routes';
 import { registerPushRoutes } from './http/push-routes';
 import { registerMeRoutes } from './http/me-routes';
 import { registerErrorHandling } from './http/error-handler';
@@ -36,6 +37,7 @@ import type { Dispatcher } from './services/notification-dispatcher';
 import { createDispatcher } from './services/notification-dispatcher';
 import { createNotificationDeriver, extendSchedules } from './services/notification-derivation';
 import type { PushSender } from './services/ports';
+import { createFileService } from './services/file-service';
 import { createPushService } from './services/push-service';
 import { createInviteService } from './services/invite-service';
 import { createSyncService } from './services/sync-service';
@@ -179,6 +181,17 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerMeRoutes(app, accounts);
   registerHouseholdRoutes(app, households, invites);
   registerSyncRoutes(app, sync);
+  await registerFileRoutes(
+    app,
+    createFileService({
+      unitOfWork,
+      directory,
+      files: createFileStore(config.filesDir),
+      newId,
+      quotaBytes: config.householdQuotaBytes,
+    }),
+    { maxFileBytes: config.maxFileBytes },
+  );
   const limiter = createLimiter(redis, config.redisKeyPrefix);
   registerPushRoutes(app, createPushService({ unitOfWork, dispatcher, limiter, newId }));
   registerCalendarRoutes(

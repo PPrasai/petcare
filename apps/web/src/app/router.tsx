@@ -7,6 +7,8 @@ import {
   redirect,
 } from '@tanstack/react-router';
 import { AuthPage } from '../features/auth/AuthPage';
+import { ContactsPage } from '../features/contacts/ContactsPage';
+import { ExpensesPage } from '../features/expenses/ExpensesPage';
 import { NewPetPage } from '../features/pets/NewPetPage';
 import { PetDetailPage, parseTab } from '../features/pets/PetDetailPage';
 import { PetsPage } from '../features/pets/PetsPage';
@@ -59,11 +61,8 @@ const petDetail = createRoute({
     return <PetDetailPage petId={petId} tab={tab} />;
   },
 });
-const expenses = leaf('/expenses', () => (
-  <SimplePage title={t('expenses.title')}>
-    <p>{t('expenses.placeholder')}</p>
-  </SimplePage>
-));
+const expenses = leaf('/expenses', ExpensesPage);
+const contacts = leaf('/contacts', ContactsPage);
 const household = leaf('/household', () => (
   <SimplePage title={t('household.title')}>
     <p>{t('household.current', { name: useSessionStore.getState().households[0]?.name ?? '' })}</p>
@@ -72,6 +71,9 @@ const household = leaf('/household', () => (
 const settings = leaf('/settings', () => (
   <SimplePage title={t('settings.title')}>
     <NotificationsPanel />
+    <Link to="/contacts" className="underline">
+      {t('contacts.title')}
+    </Link>
   </SimplePage>
 ));
 const syncActivity = leaf('/sync', SyncPage);
@@ -87,7 +89,17 @@ const publicRoute = (path: '/sign-in' | '/sign-up', mode: 'signIn' | 'signUp') =
   });
 
 const routeTree = root.addChildren([
-  app.addChildren([today, pets, newPet, petDetail, expenses, household, settings, syncActivity]),
+  app.addChildren([
+    today,
+    pets,
+    newPet,
+    petDetail,
+    expenses,
+    contacts,
+    household,
+    settings,
+    syncActivity,
+  ]),
   publicRoute('/sign-in', 'signIn'),
   publicRoute('/sign-up', 'signUp'),
 ]);

@@ -8,12 +8,16 @@ import type { HouseholdRow, LocalRecord } from './local-db';
 import { createSyncEngine } from '../sync/engine';
 import type { SyncEngine, SyncStatus } from '../sync/engine';
 import { LocalStore } from '../sync/local-store';
+import type { FileApi } from '../../application/ports/file-api';
+import type { FileGateway } from '../../application/ports/file-gateway';
 import { clearFileCaches } from './file-cache';
+import { createFileGateway } from './file-access';
 
 export interface UserData {
   records: RecordStore;
   sync: SyncControl;
   engine: SyncEngine;
+  files: FileGateway;
   households(): Promise<HouseholdRow[]>;
   /** Closes the database and deletes it and every cached file (sign-out). */
   wipe(): Promise<void>;
@@ -38,11 +42,23 @@ const present = (r: LocalRecord): StoredRecord => ({
 });
 
 /** Opens (creating if needed) the signed-in user's database and wires the sync engine to it. */
-export function openUserData(userId: string, remote: RemoteApi, hooks: UserDataHooks): UserData {
+export function openUserData(
+  userId: string,
+  remote: RemoteApi,
+  fileApi: FileApi,
+  hooks: UserDataHooks,
+): UserData {
   const db = new LocalDb(userId);
   const clock = { now: () => new Date() };
   const ids = { next: () => uuidv7() };
-  const engine = createSyncEngine({ db, remote, clock, ids, onChanged: hooks.onChanged });
+  const engine = createSyncEngine({
+    db,
+    remote,
+    clock,
+    ids,
+    onChanged: hooks.onChanged,
+    files: { api: fileApi, userId },
+  });
   engine.subscribe(hooks.onStatus);
   const store = new LocalStore({
     db,
@@ -95,6 +111,7 @@ export function openUserData(userId: string, remote: RemoteApi, hooks: UserDataH
     records,
     sync,
     engine,
+    files: createFileGateway(db, fileApi, userId, () => hooks.onChanged([])),
     households: () => db.households.toArray(),
     async wipe() {
       await db.wipe();
