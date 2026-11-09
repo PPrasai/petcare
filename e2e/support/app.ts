@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 
 let counter = 0;
 export const uniqueEmail = (label: string) => `${label}-${Date.now()}-${counter++}@example.test`;
@@ -42,4 +42,41 @@ export async function userId(page: Page): Promise<string> {
 /** Opens the "Details" disclosure on a pet's Overview tab. */
 export async function openDetails(page: Page) {
   await page.locator('summary').filter({ hasText: 'Details' }).click();
+}
+
+/**
+ * Makes an account with a pet whose emergency card is shared, and returns the public path a
+ * finder would open. With `lost` the pet is marked as lost with a message.
+ */
+export async function shareEmergencyCard(
+  browser: Browser,
+  options: { lost?: boolean } = {},
+): Promise<string> {
+  const context = await browser.newContext({ baseURL: 'http://localhost:4173' });
+  try {
+    const page = await context.newPage();
+    await signUp(page, 'public-card');
+    await addPet(page, 'Momo');
+    await page.getByRole('link', { name: 'Emergency card' }).click();
+    await page.getByLabel('My name', { exact: true }).check();
+    await page.getByLabel('Name to show').fill('Sam Owner');
+    await page.getByLabel('My phone number', { exact: true }).check();
+    await page.getByLabel('Phone number to show').fill('+1 555 0100');
+    await page.getByLabel('Notes', { exact: true }).check();
+    await page.getByLabel('Notes for a finder').fill('Shy, will hide');
+    await page.getByRole('button', { name: 'Save card' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+    await waitSynced(page);
+    await page.getByRole('button', { name: 'Create link' }).click();
+    const link = (await page.getByTestId('emergency-link').textContent()) ?? '';
+    if (options.lost) {
+      await page.getByLabel('Message for a finder').fill('Please call me');
+      await page.getByRole('button', { name: 'Mark as lost' }).click();
+      await expect(page.getByRole('button', { name: 'Mark as found' })).toBeVisible();
+      await waitSynced(page);
+    }
+    return new URL(link).pathname;
+  } finally {
+    await context.close();
+  }
 }
