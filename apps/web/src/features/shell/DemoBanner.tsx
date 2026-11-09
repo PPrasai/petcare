@@ -8,13 +8,9 @@ export function DemoBanner() {
   const { session } = useServices();
   const navigate = useNavigate();
   return (
-    <div
-      role="region"
-      aria-label={t('demo.region')}
-      className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-warn-bg text-warn px-4 py-2 print:hidden"
-    >
-      <p className="font-semibold">{t('demo.banner')}</p>
-      <div className="flex gap-2">
+    <div role="region" aria-label={t('demo.region')} className="demo print:hidden">
+      <p style={{ fontWeight: 800 }}>{t('demo.banner')}</p>
+      <div className="acts">
         <Button variant="secondary" onClick={() => void session.resetDemo()}>
           {t('demo.reset')}
         </Button>

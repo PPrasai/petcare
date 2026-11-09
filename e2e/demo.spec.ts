@@ -66,24 +66,25 @@ test('the demo works end to end with no request to /api, and reset restores the 
   const banner = page.getByRole('region', { name: 'Demo mode' });
   await expect(banner).toContainText('Demo — changes stay on this device');
 
-  // Today shows overdue and upcoming items from the sample data.
-  await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible();
-  await expect(page.getByText('Morning walk').first()).toBeVisible();
+  // Home ranks the sample pets by what needs doing.
+  await expect(
+    page.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+  ).toBeVisible();
+  const row = (name: string) => page.getByTestId('pet-row').filter({ hasText: name });
+  await expect(row('Momo')).toBeVisible();
+  await expect(row('Biralo')).toBeVisible();
 
-  // Pets, with every section of a pet.
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
-  await expect(page.getByRole('link', { name: /Momo/ })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Biralo/ })).toBeVisible();
-  await page.getByRole('link', { name: /Momo/ }).click();
+  // The profile, with every section of a pet.
+  await row('Momo').click();
   for (const [tab, text] of [
-    ['Vaccinations', 'Rabies'],
-    ['Medications', 'Carprofen'],
-    ['Vet visits', 'Annual check-up'],
-    ['Conditions', 'Chicken'],
-    ['Care routines', 'Morning walk'],
-    ['Documents', 'Rabies certificate'],
+    ['Health', 'Rabies'],
+    ['Health', 'Carprofen'],
+    ['Health', 'Annual check-up'],
+    ['Health', 'Chicken'],
+    ['Care', 'Morning walk'],
+    ['Files', 'Rabies certificate'],
   ] as const) {
-    await page.getByRole('link', { name: tab, exact: true }).click();
+    await page.getByRole('tab', { name: tab, exact: true }).click();
     await expect(page.getByText(text).first()).toBeVisible();
   }
 
@@ -105,13 +106,14 @@ test('the demo works end to end with no request to /api, and reset restores the 
   await expect(page.getByText(/Phone notifications need an account/)).toBeVisible();
   await page.getByRole('link', { name: 'Contacts' }).click();
   await expect(page.getByText('Dr. Rai')).toBeVisible();
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByRole('link', { name: 'Sync activity' }).click();
   await expect(page.getByRole('button', { name: 'Sync now' })).toBeVisible();
   await page.getByRole('button', { name: 'Sync now' }).click();
 
   // Changes stay on the device, survive a reload, and are gone after a reset.
   const fresh = await snapshot(page);
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await page.getByRole('link', { name: 'Add a pet' }).click();
   await page.getByLabel('Pet name').fill('Pixel');
   await page.getByRole('button', { name: 'Save pet' }).click();
@@ -120,12 +122,12 @@ test('the demo works end to end with no request to /api, and reset restores the 
 
   await page.reload();
   await expect(banner).toBeVisible();
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
-  await expect(page.getByRole('link', { name: /Pixel/ })).toBeVisible();
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await expect(row('Pixel')).toBeVisible();
 
   await page.getByRole('button', { name: 'Reset demo' }).click();
-  await expect(page.getByRole('link', { name: /Pixel/ })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /Momo/ })).toBeVisible();
+  await expect(row('Pixel')).toHaveCount(0);
+  await expect(row('Momo')).toBeVisible();
   expect(await snapshot(page)).toEqual(fresh);
 
   // The whole session, reload included, sent nothing to the server.

@@ -34,7 +34,7 @@ export function FilePicker({ label, onPick, error, onRefused }: Props) {
         id={id}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,.heic"
-        className="min-h-11 rounded-lg border border-line bg-card px-3 py-2"
+        className="min-h-11 rounded-lg border border-line bg-surface px-3 py-2"
         aria-invalid={error ? true : undefined}
         onChange={(e) => {
           const file = e.target.files?.[0] ?? null;
@@ -51,7 +51,7 @@ export function FilePicker({ label, onPick, error, onRefused }: Props) {
           }
         }}
       />
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-bad">{error}</p> : null}
     </div>
   );
 }

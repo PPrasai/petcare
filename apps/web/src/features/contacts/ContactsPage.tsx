@@ -63,7 +63,7 @@ export function ContactsPage() {
       {canCreate ? (
         <form
           aria-label={t('contacts.add')}
-          className="flex flex-col gap-3 rounded-lg border border-line bg-card p-3"
+          className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3"
           onSubmit={(e) => {
             e.preventDefault();
             void submit();
@@ -122,7 +122,7 @@ export function ContactsPage() {
           return (
             <li
               key={c.id}
-              className="flex items-start justify-between gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex items-start justify-between gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <div className="flex flex-col gap-1">
                 <strong>{name}</strong>

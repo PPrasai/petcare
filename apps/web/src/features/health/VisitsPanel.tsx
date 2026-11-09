@@ -86,7 +86,7 @@ export function VisitsPanel({ petId }: { petId: string }) {
           return (
             <li
               key={v.id}
-              className="flex items-start justify-between gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex items-start justify-between gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <div className="flex flex-col gap-1">
                 <strong>

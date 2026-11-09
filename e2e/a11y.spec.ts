@@ -23,9 +23,8 @@ test('sign-in page', async ({ page }) => {
   await expectAccessible(page, 'sign-in');
 });
 
-test('add pet, add vaccination, Today and reminders', async ({ page }) => {
+test('add pet, health, care, files, emergency, more and the log sheet', async ({ page }) => {
   await signUp(page, 'a11y');
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
   await page.getByRole('link', { name: 'Add a pet' }).click();
   await expect(page.getByLabel('Pet name')).toBeVisible();
   await expectAccessible(page, 'add pet');
@@ -34,27 +33,40 @@ test('add pet, add vaccination, Today and reminders', async ({ page }) => {
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Vaccinations' }).click();
+  await expectAccessible(page, 'profile overview');
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Vaccine', { exact: true }).fill('Rabies');
   await page.getByLabel('Given on').fill('2024-03-01');
   await page.getByRole('button', { name: 'Add vaccination' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Rabies' })).toBeVisible();
   await expectAccessible(page, 'vaccinations');
 
-  await page.getByRole('link', { name: 'Care routines' }).click();
+  await page.getByRole('tab', { name: 'Care' }).click();
   await expect(page.getByLabel('Routine name')).toBeVisible();
   await expectAccessible(page, 'care routines and reminders');
 
-  await page.getByRole('link', { name: 'Today', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible();
-  await expectAccessible(page, 'today');
+  await page.getByRole('tab', { name: 'Files' }).click();
+  await expect(page.getByLabel('Title')).toBeVisible();
+  await expectAccessible(page, 'files');
+
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expectAccessible(page, 'home');
+
+  await page.getByRole('link', { name: 'Emergency', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Emergency card' })).toBeVisible();
+  await expectAccessible(page, 'emergency');
+
+  await page.getByTestId('log-open').click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expectAccessible(page, 'log sheet');
 });
 
-test('demo banner and the demo Today page', async ({ page }) => {
+test('demo banner and the demo Home page', async ({ page }) => {
   await page.goto('/sign-in');
   await page.getByRole('button', { name: 'Try the demo' }).click();
   await expect(page.getByRole('region', { name: 'Demo mode' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expectAccessible(page, 'demo');
 });
 

@@ -97,7 +97,7 @@ export function MedicationsPanel({ petId }: { petId: string }) {
           return (
             <li
               key={m.id}
-              className="flex flex-col gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <div className="flex items-center justify-between gap-2">
                 <div>

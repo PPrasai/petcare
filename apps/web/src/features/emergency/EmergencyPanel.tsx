@@ -39,7 +39,7 @@ function CardForm({ card, petId }: { card: StoredRecord | null; petId: string })
   return (
     <form
       aria-label={t('emergency.title')}
-      className="flex flex-col gap-3 rounded-lg border border-line bg-card p-3 print:hidden"
+      className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3 print:hidden"
       onSubmit={(e) => {
         e.preventDefault();
         void emergency
@@ -109,7 +109,7 @@ function LostMode({ card, petId }: { card: StoredRecord | null; petId: string })
   return (
     <section
       aria-labelledby="lost-title"
-      className="flex flex-col gap-2 rounded-lg border border-line bg-card p-3 print:hidden"
+      className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3 print:hidden"
     >
       <h3 id="lost-title" className="text-lg font-semibold">
         {t('emergency.lostTitle')}

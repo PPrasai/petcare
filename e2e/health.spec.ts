@@ -13,7 +13,7 @@ test('vaccinations: suggestions fill name and interval, overdue shows at a glanc
 }) => {
   await signUp(page, 'vacc');
   await addPet(page, 'Momo');
-  await page.getByRole('link', { name: 'Vaccinations' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
 
   await expect(page.getByText('Suggestions — confirm intervals with your vet')).toBeVisible();
   await page.getByLabel('Given on').fill('2024-03-01');
@@ -45,7 +45,7 @@ test('vaccinations: suggestions fill name and interval, overdue shows at a glanc
 test('medications: a scheduled dose can be given or skipped and syncs', async ({ page }) => {
   await signUp(page, 'meds');
   await addPet(page, 'Momo');
-  await page.getByRole('link', { name: 'Medications' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
 
   await page.getByLabel('Medication', { exact: true }).fill('Amoxicillin');
   await page.getByLabel('Dose', { exact: true }).fill('5');
@@ -72,7 +72,7 @@ test('visits, conditions and symptoms are recorded and shown', async ({ page }) 
   await signUp(page, 'visits');
   await addPet(page, 'Momo');
 
-  await page.getByRole('link', { name: 'Vet visits' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Visit date').fill('2026-02-10');
   await page.getByLabel('Reason').fill('Annual check');
   await page.getByLabel('Diagnosis').fill('Healthy');
@@ -83,7 +83,7 @@ test('visits, conditions and symptoms are recorded and shown', async ({ page }) 
   await expect(page.getByText('Diagnosis: Healthy')).toBeVisible();
   await expect(page.getByText('$45.50')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Conditions' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Condition name').fill('Chicken');
   await page.getByLabel('Severity', { exact: true }).selectOption('moderate');
   await page.getByRole('button', { name: 'Add condition' }).click();
@@ -107,11 +107,11 @@ test('health records can be added offline and sync later', async ({ page, contex
   await signUp(page, 'healthoff');
   await addPet(page, 'Momo');
   await waitSynced(page);
-  await page.getByRole('link', { name: 'Conditions' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await context.setOffline(true);
   await page.getByLabel('Condition name').fill('Asthma');
   await page.getByRole('button', { name: 'Add condition' }).click();
-  await expect(page.getByText('Asthma')).toBeVisible();
+  await expect(page.getByText('Asthma').first()).toBeVisible();
   await expect(page.getByTestId('pending-count')).toHaveAttribute('data-count', '1');
   await context.setOffline(false);
   await waitSynced(page);

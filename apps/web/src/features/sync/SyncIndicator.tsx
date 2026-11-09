@@ -1,7 +1,11 @@
+import { Link } from '@tanstack/react-router';
 import { t } from '../../i18n/t';
 import { useConnectivityStore } from '../../state/connectivity';
 
-/** Offline indicator and pending count. Rendered in the shell, so it is on every route. */
+/**
+ * The sync pill in the header: connection state and how many changes are waiting. It is the way to
+ * the sync activity page, and it is on every signed-in route (QA-16).
+ */
 export function SyncIndicator() {
   const online = useConnectivityStore((s) => s.online);
   const pending = useConnectivityStore((s) => s.pendingCount);
@@ -17,22 +21,15 @@ export function SyncIndicator() {
         : t('sync.pending', { count: pending });
 
   return (
-    <section
-      aria-label={t('sync.indicatorLabel')}
-      className="flex flex-wrap items-center gap-x-3 text-sm"
-    >
-      <span
-        data-testid="connectivity"
-        className={`rounded-full border px-2 py-0.5 font-medium ${online ? 'border-line' : 'border-warn bg-warn-bg text-warn'}`}
-      >
-        {state}
+    <Link to="/sync" className={`sync ${online ? '' : 'off'}`} title={t('nav.sync')}>
+      <span data-testid="connectivity">{state}</span>
+      <span className="sep" aria-hidden="true">
+        ·
       </span>
       <span data-testid="pending-count" data-count={pending}>
         {detail}
       </span>
-      {error && online ? (
-        <span className="text-danger">{t('sync.error', { code: error })}</span>
-      ) : null}
-    </section>
+      {error && online ? <span>{t('sync.error', { code: error })}</span> : null}
+    </Link>
   );
 }

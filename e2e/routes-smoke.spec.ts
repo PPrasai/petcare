@@ -14,7 +14,16 @@ test('every route renders without console errors', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   }
   await signUp(page, 'smoke');
-  for (const path of ['/', '/pets', '/expenses', '/household', '/settings', '/sync']) {
+  for (const path of [
+    '/',
+    '/pets',
+    '/emergency',
+    '/more',
+    '/expenses',
+    '/household',
+    '/settings',
+    '/sync',
+  ]) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByTestId('pending-count')).toBeVisible();

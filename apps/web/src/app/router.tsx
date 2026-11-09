@@ -8,17 +8,19 @@ import {
 } from '@tanstack/react-router';
 import { AuthPage } from '../features/auth/AuthPage';
 import { ContactsPage } from '../features/contacts/ContactsPage';
+import { EmergencyPage } from '../features/emergency/EmergencyPage';
 import { ExpensesPage } from '../features/expenses/ExpensesPage';
 import { HouseholdPage } from '../features/household/HouseholdPage';
 import { PublicEmergencyPage } from '../features/emergency/PublicEmergencyPage';
 import { JoinPage } from '../features/household/JoinPage';
 import { pendingInvite } from '../lib/pending-invite';
 import { NewPetPage } from '../features/pets/NewPetPage';
-import { PetDetailPage, parseTab } from '../features/pets/PetDetailPage';
-import { PetsPage } from '../features/pets/PetsPage';
+import { HomePage } from '../features/home/HomePage';
+import { parseTab } from '../features/pets/profile-tabs';
+import { WIDE_QUERY } from '../features/shared/use-wide-screen';
+import { MorePage } from '../features/shell/MorePage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { AppShell } from '../features/shell/AppShell';
-import { TodayPage } from '../features/today/TodayPage';
 import { SyncPage } from '../features/sync/SyncPage';
 import { t } from '../i18n/t';
 import { useSessionStore } from '../state/session';
@@ -51,26 +53,60 @@ const app = createRoute({
 const leaf = <P extends string>(path: P, component: () => React.ReactNode) =>
   createRoute({ getParentRoute: () => app, path, component });
 
-const today = createRoute({
+const home = createRoute({
   getParentRoute: () => app,
   path: '/',
   beforeLoad: () => {
     // An invite link opened before signing in is picked up right after.
     if (pendingInvite()) throw redirect({ to: '/join' });
   },
-  component: TodayPage,
+  component: () => <HomePage />,
 });
-const pets = leaf('/pets', PetsPage);
+// The old pet list: kept so bookmarks and push links still land somewhere sensible.
+const pets = createRoute({
+  getParentRoute: () => app,
+  path: '/pets',
+  beforeLoad: () => {
+    throw redirect({ to: '/' });
+  },
+});
 const newPet = leaf('/pets/new', NewPetPage);
 const petDetail = createRoute({
   getParentRoute: () => app,
   path: '/pets/$petId',
-  validateSearch: (search: Record<string, unknown>) => ({ tab: parseTab(search.tab) }),
+  // `emergency` was a tab; it is a page now, so the old value is kept long enough to redirect.
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab === 'emergency' ? ('emergency' as const) : parseTab(search.tab),
+  }),
+  beforeLoad: ({ params, search }) => {
+    if (search.tab === 'emergency') {
+      throw redirect({ to: '/emergency', search: { pet: params.petId } });
+    }
+  },
   component: function PetRoute() {
     const { petId } = petDetail.useParams();
     const { tab } = petDetail.useSearch();
-    return <PetDetailPage petId={petId} tab={tab} />;
+    return <HomePage petId={petId} tab={tab === 'emergency' ? 'overview' : tab} />;
   },
+});
+const emergency = createRoute({
+  getParentRoute: () => app,
+  path: '/emergency',
+  validateSearch: (search: Record<string, unknown>) => ({
+    pet: typeof search.pet === 'string' ? search.pet : undefined,
+  }),
+  component: function EmergencyRoute() {
+    return <EmergencyPage petId={emergency.useSearch().pet} />;
+  },
+});
+const more = createRoute({
+  getParentRoute: () => app,
+  path: '/more',
+  beforeLoad: () => {
+    // The desktop top nav has Household and Settings itself, so there is no More page there.
+    if (window.matchMedia(WIDE_QUERY).matches) throw redirect({ to: '/settings' });
+  },
+  component: MorePage,
 });
 const expenses = leaf('/expenses', ExpensesPage);
 const contacts = leaf('/contacts', ContactsPage);
@@ -98,10 +134,12 @@ const publicEmergency = createRoute({
 
 const routeTree = root.addChildren([
   app.addChildren([
-    today,
+    home,
     pets,
     newPet,
     petDetail,
+    emergency,
+    more,
     expenses,
     contacts,
     household,

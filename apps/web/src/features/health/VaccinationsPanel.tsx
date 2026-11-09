@@ -99,13 +99,13 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
           return (
             <li
               key={v.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <div>
                 <strong>{name}</strong>{' '}
                 {badge !== 'none' ? (
                   <span
-                    className={`rounded border px-1 text-sm ${badge === 'overdue' ? 'border-danger text-danger' : 'border-line'}`}
+                    className={`rounded border px-1 text-sm ${badge === 'overdue' ? 'border-bad text-bad' : 'border-line'}`}
                   >
                     {t(`vaccine.badge.${badge}` as MessageKey)}
                   </span>

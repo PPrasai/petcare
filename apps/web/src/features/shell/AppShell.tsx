@@ -1,76 +1,132 @@
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Outlet, useLocation } from '@tanstack/react-router';
+import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
-import { activeHousehold, useSessionStore } from '../../state/session';
+import { Icon } from '../../ui';
+import type { IconName } from '../../ui';
+import { LogSheet } from '../log/LogSheet';
+import { useLogSheet } from '../log/log-sheet';
+import { useCan } from '../shared/permissions';
 import { useDemo } from '../shared/demo';
-import { DemoBanner } from './DemoBanner';
-import { SignOutButton } from '../sync/SignOutButton';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { SyncIndicator } from '../sync/SyncIndicator';
+import { DemoBanner } from './DemoBanner';
+import { ToastHost } from './ToastHost';
 
-const tabs: { to: string; label: MessageKey }[] = [
-  { to: '/', label: 'nav.today' },
-  { to: '/pets', label: 'nav.pets' },
-  { to: '/expenses', label: 'nav.expenses' },
-  { to: '/household', label: 'nav.household' },
-  { to: '/settings', label: 'nav.settings' },
-];
+interface Destination {
+  to: '/' | '/expenses' | '/emergency' | '/household' | '/settings' | '/more';
+  icon: IconName;
+  label: MessageKey;
+  /** Paths that belong to this destination besides its own. */
+  also: string[];
+}
 
-/** Bottom tab bar on phones, left rail from 1024 px. The sync indicator is always visible. */
+const HOME: Destination = { to: '/', icon: 'home', label: 'nav.home', also: ['/pets'] };
+const EXPENSES: Destination = { to: '/expenses', icon: 'wallet', label: 'nav.expenses', also: [] };
+const EMERGENCY: Destination = {
+  to: '/emergency',
+  icon: 'shield',
+  label: 'nav.emergency',
+  also: [],
+};
+const HOUSEHOLD: Destination = {
+  to: '/household',
+  icon: 'users',
+  label: 'nav.household',
+  also: [],
+};
+const SETTINGS: Destination = {
+  to: '/settings',
+  icon: 'sliders',
+  label: 'nav.settings',
+  also: ['/contacts', '/sync'],
+};
+const MORE: Destination = {
+  to: '/more',
+  icon: 'more',
+  label: 'nav.more',
+  also: ['/household', '/settings', '/contacts', '/sync'],
+};
+
+const isCurrent = (dest: Destination, pathname: string) =>
+  dest.to === '/'
+    ? pathname === '/' || dest.also.some((p) => pathname.startsWith(p))
+    : pathname === dest.to || dest.also.some((p) => pathname.startsWith(p));
+
+/**
+ * The frame around every signed-in page. A phone gets a bottom bar with a centre + that opens the
+ * Log sheet; from 860 px a top nav with a Log button. Only one of the two is ever in the page,
+ * so there is exactly one Log control per viewport (QA-27).
+ */
 export function AppShell(): ReactNode {
-  const householdName = useSessionStore((s) => activeHousehold(s)?.name ?? '');
-  const userName = useSessionStore((s) => s.user?.name ?? '');
   const demo = useDemo();
+  const wide = useWideScreen();
+  const { pathname } = useLocation();
+  const logSheet = useLogSheet();
+  const canLog = useCan('create', 'measurement');
+
+  const destinations = wide
+    ? [HOME, EXPENSES, EMERGENCY, HOUSEHOLD, SETTINGS]
+    : [HOME, EXPENSES, null, EMERGENCY, MORE];
+
+  const link = (dest: Destination) => (
+    <Link
+      key={dest.to}
+      to={dest.to}
+      className="lnk"
+      aria-current={isCurrent(dest, pathname) ? 'page' : undefined}
+    >
+      <Icon name={dest.icon} />
+      <span>{t(dest.label)}</span>
+    </Link>
+  );
+
+  const logButton = (
+    <button
+      type="button"
+      data-testid="log-open"
+      className={wide ? 'btn primary' : 'lnk log'}
+      aria-label={t('log.open')}
+      onClick={() => logSheet.open()}
+    >
+      <Icon name="plus" />
+      {wide ? <span>{t('log.openShort')}</span> : null}
+    </button>
+  );
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
-      <a
-        href="#content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-card focus:p-2"
-      >
+    <div className="app">
+      <a href="#content" className="skip">
         {t('app.skipToContent')}
       </a>
-      <nav
-        aria-label={t('nav.main')}
-        className="fixed inset-x-0 bottom-0 z-10 print:hidden flex border-t border-line bg-card lg:static lg:w-52 lg:flex-col lg:border-r lg:border-t-0 lg:p-3"
-      >
-        {tabs.map((tab) => (
-          <Link
-            key={tab.to}
-            to={tab.to}
-            activeOptions={{ exact: tab.to === '/' }}
-            className="flex min-h-14 flex-1 items-center justify-center px-2 text-sm lg:min-h-11 lg:flex-none lg:justify-start lg:rounded-lg"
-            activeProps={{
-              className: 'font-semibold text-brand underline',
-              'aria-current': 'page',
-            }}
-          >
-            {t(tab.label)}
-          </Link>
-        ))}
-      </nav>
-      <div className="flex flex-1 flex-col pb-16 lg:pb-0">
-        {demo ? <DemoBanner /> : null}
-        <header className="flex flex-wrap print:hidden items-center justify-between gap-2 border-b border-line bg-card px-4 py-2">
-          <div>
-            <p className="font-semibold">{t('app.name')}</p>
-            {householdName ? <p className="text-sm text-muted">{householdName}</p> : null}
-          </div>
-          {demo ? <span /> : <SyncIndicator />}
-          <div className="flex items-center gap-2">
-            <span className="hidden text-sm text-muted sm:inline">
-              {t('auth.signedInAs', { name: userName })}
+      {demo ? <DemoBanner /> : null}
+      <div className="shell">
+        <div className="chrome">
+          <div className="topbar">
+            <span className="brand">
+              <span className="logo">
+                <Icon name="paw" />
+              </span>
+              {t('app.name')}
             </span>
-            <Link to="/sync" className="inline-flex min-h-11 items-center underline">
-              {t('nav.sync')}
-            </Link>
-            {demo ? null : <SignOutButton />}
+            {demo ? null : <SyncIndicator />}
           </div>
-        </header>
-        <main id="content" className="flex-1 p-4">
+          <nav className="nav" aria-label={t('nav.main')}>
+            <div className="links">
+              {destinations.map((dest) =>
+                dest ? link(dest) : canLog ? <Fragment key="log">{logButton}</Fragment> : null,
+              )}
+            </div>
+          </nav>
+          {wide && canLog ? <div className="foot">{logButton}</div> : null}
+        </div>
+        <main id="content" className="main">
           <Outlet />
         </main>
       </div>
+      <LogSheet />
+      <ToastHost />
     </div>
   );
 }

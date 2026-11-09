@@ -1,0 +1,47 @@
+/* Pebble design tokens (SPEC-petcare-002 5.3). Change colours here only; QA-24 (tokens.test.ts) checks contrast. */
+:root {
+  --bg: #f2f1ef;
+  --surface: #fcfbfa;
+  --line: #e1ded9;
+  --line-strong: #8a8680;
+  --ink: #1d2230;
+  --muted: #626877;
+  --accent: #3a58a8;
+  --on-accent: #ffffff;
+  --ok: #287048;
+  --warn: #8a5a12;
+  --bad: #b0352f;
+  --r: 10px;
+  --fd: 'Fraunces', 'Fraunces Fallback', Georgia, serif;
+  --fb: 'Hanken Grotesk', 'Hanken Grotesk Fallback', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #14161c;
+    --surface: #1c1f27;
+    --line: #2b2f3a;
+    --line-strong: #70768a;
+    --ink: #ecedf1;
+    --muted: #9aa0af;
+    --accent: #8fa8f0;
+    --on-accent: #0e1426;
+    --ok: #66c08c;
+    --warn: #e3ae59;
+    --bad: #f2877f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #14161c;
+  --surface: #1c1f27;
+  --line: #2b2f3a;
+  --line-strong: #70768a;
+  --ink: #ecedf1;
+  --muted: #9aa0af;
+  --accent: #8fa8f0;
+  --on-accent: #0e1426;
+  --ok: #66c08c;
+  --warn: #e3ae59;
+  --bad: #f2877f;
+  color-scheme: dark;
+}

@@ -3,9 +3,9 @@ import type { ButtonHTMLAttributes } from 'react';
 type Variant = 'primary' | 'secondary' | 'danger';
 
 const styles: Record<Variant, string> = {
-  primary: 'bg-brand text-brand-ink border-brand',
-  secondary: 'bg-card text-ink border-line',
-  danger: 'bg-card text-danger border-danger',
+  primary: 'btn primary',
+  secondary: 'btn',
+  danger: 'btn danger',
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -19,11 +19,5 @@ export function Button({
   type = 'button',
   ...rest
 }: ButtonProps) {
-  return (
-    <button
-      type={type}
-      className={`min-h-11 min-w-11 cursor-pointer rounded-lg border px-4 py-2 font-medium disabled:cursor-not-allowed disabled:opacity-60 ${styles[variant]} ${className}`}
-      {...rest}
-    />
-  );
+  return <button type={type} className={`${styles[variant]} ${className}`} {...rest} />;
 }

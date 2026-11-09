@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, signUp, waitSynced } from './support/app';
+import { addPet, openDetails, signUp, waitSynced } from './support/app';
 
 // A real 1x1 PNG, so the server's content sniffing accepts it.
 const PNG = Buffer.from(
@@ -18,13 +18,13 @@ const pullAll = async (page: Page): Promise<Change[]> =>
   (await (await page.request.get('/api/sync/pull')).json()).changes as Change[];
 
 const openPet = async (page: Page) => {
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
-  await page.getByRole('link', { name: 'Momo' }).click();
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await page.getByTestId('pet-row').filter({ hasText: 'Momo' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
 };
 const tab = async (page: Page, name: string) => {
   await openPet(page);
-  await page.getByRole('link', { name, exact: true }).click();
+  await page.getByRole('tab', { name, exact: true }).click();
 };
 
 // QA-02: every record type can be created, edited and deleted offline (CAP-04 to CAP-15), survives
@@ -39,7 +39,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   await addPet(page, 'Momo');
   // Records that exist on the server before going offline, so deleting them offline must sync
   // (deleting a record whose create was never sent is eliminated from the outbox by design).
-  await page.getByRole('link', { name: 'Health', exact: true }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel(/^Value/).fill('12.5');
   await page.getByRole('button', { name: 'Add measurement' }).click();
   await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
@@ -57,26 +57,26 @@ test('every record type works offline, survives a reload, and syncs when back on
 
   // CAP-04: edit the pet.
   await openPet(page);
+  await openDetails(page);
   await page.getByRole('button', { name: 'Edit' }).click();
   await page.getByLabel('Colour').fill('Brindle');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Brindle')).toBeVisible();
 
   // Measurements (create, then delete one).
-  await openPet(page);
-  await page.getByRole('link', { name: 'Health', exact: true }).click();
+  await tab(page, 'Health');
   await page.getByRole('button', { name: /^Delete Weight from/ }).click();
   await page.getByLabel(/^Value/).fill('13');
   await page.getByRole('button', { name: 'Add measurement' }).click();
 
   // Vaccination, medication, vet visit.
-  await page.getByRole('link', { name: 'Vaccinations', exact: true }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Vaccine', { exact: true }).fill('Rabies');
   await page.getByLabel('Given on').fill('2025-01-15');
   await page.getByRole('button', { name: 'Add vaccination' }).click();
   await expect(page.getByText('Given 2025-01-15')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Medications', exact: true }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Medication', { exact: true }).fill('Amoxicillin');
   await page.getByLabel('Dose', { exact: true }).fill('5');
   await page.getByLabel('Dose unit').selectOption('mg');
@@ -84,28 +84,36 @@ test('every record type works offline, survives a reload, and syncs when back on
   await page.getByRole('button', { name: 'Add medication' }).click();
   await expect(page.getByText('Amoxicillin').first()).toBeVisible();
 
-  await page.getByRole('link', { name: 'Vet visits', exact: true }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Reason', { exact: true }).fill('Annual check');
   await page.getByRole('button', { name: 'Add visit' }).click();
   await expect(page.getByText('Annual check')).toBeVisible();
 
   // Condition, symptom.
-  await page.getByRole('link', { name: 'Conditions', exact: true }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Condition name').fill('Asthma');
   await page.getByRole('button', { name: 'Add condition' }).click();
-  await expect(page.getByText('Asthma')).toBeVisible();
+  await expect(page.getByText('Asthma').first()).toBeVisible();
   await page.getByLabel('What you noticed').fill('Coughing at night');
   await page.getByRole('button', { name: 'Add symptom' }).click();
   await expect(page.getByText('Coughing at night')).toBeVisible();
 
   // Care routine, document with a file (kept on the device until it can upload).
-  await page.getByRole('link', { name: 'Care routines', exact: true }).click();
+  await page.getByRole('tab', { name: 'Care' }).click();
   await page.getByLabel('Routine name').fill('Breakfast');
-  await page.getByLabel('Times (24-hour, comma separated)').fill('08:00');
+  await page
+    .getByRole('region', { name: 'Care routines' })
+    .getByLabel('Times (24-hour, comma separated)')
+    .fill('08:00');
   await page.getByRole('button', { name: 'Add routine' }).click();
-  await expect(page.getByRole('listitem').filter({ hasText: 'Breakfast' })).toBeVisible();
+  await expect(
+    page
+      .getByRole('region', { name: 'Care routines' })
+      .getByRole('listitem')
+      .filter({ hasText: 'Breakfast' }),
+  ).toBeVisible();
 
-  await page.getByRole('link', { name: 'Documents', exact: true }).click();
+  await page.getByRole('tab', { name: 'Files' }).click();
   await page.getByLabel('Title').fill('Insurance card');
   await page
     .getByLabel('File (photo or PDF)')
@@ -116,7 +124,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   );
 
   // Custom reminder (on Today), expense, contact (created, then deleted).
-  await page.getByRole('link', { name: 'Today', exact: true }).click();
+  await page.getByRole('tab', { name: 'Care' }).click();
   await page.getByLabel('Reminder', { exact: true }).fill('Order food');
   await page.getByRole('button', { name: 'Add reminder' }).click();
   await expect(page.getByText('Order food').first()).toBeVisible();
@@ -137,13 +145,14 @@ test('every record type works offline, survives a reload, and syncs when back on
   // Reload while still offline: everything is still there.
   await page.reload();
   await expect(page.getByText('Dr Rao')).toBeVisible();
-  await tab(page, 'Vaccinations');
+  await tab(page, 'Health');
   await expect(page.getByText('Given 2025-01-15')).toBeVisible();
-  await tab(page, 'Conditions');
-  await expect(page.getByText('Asthma')).toBeVisible();
-  await tab(page, 'Documents');
+  await tab(page, 'Health');
+  await expect(page.getByText('Asthma').first()).toBeVisible();
+  await tab(page, 'Files');
   await expect(page.getByRole('listitem').filter({ hasText: 'Insurance card' })).toBeVisible();
   await openPet(page);
+  await openDetails(page);
   await expect(page.getByText('Brindle')).toBeVisible();
 
   // Back online: the server has every change.

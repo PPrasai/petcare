@@ -10,8 +10,7 @@ import { Banner, Button, SelectField, TextField } from '../../ui';
 import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 
-const opts = (keys: string[], prefix: string) =>
-  keys.map((k) => ({ value: k, label: t(`${prefix}.${k}` as MessageKey) }));
+const opts = (pairs: [string, string][]) => pairs.map(([value, label]) => ({ value, label }));
 
 /** Units, time zone, date format, currency, theme and reminder lead times (CAP-19). */
 export function PreferencesPanel() {
@@ -53,19 +52,28 @@ export function PreferencesPanel() {
         <SelectField
           label={t('settings.prefs.weight')}
           value={draft.weightUnit}
-          options={opts(['kg', 'lb'], 'unit')}
+          options={opts([
+            ['kg', t('unit.kg')],
+            ['lb', t('unit.lb')],
+          ])}
           onChange={(e) => set({ weightUnit: e.target.value === 'lb' ? 'lb' : 'kg' })}
         />
         <SelectField
           label={t('settings.prefs.length')}
           value={draft.lengthUnit}
-          options={opts(['cm', 'in'], 'unit')}
+          options={opts([
+            ['cm', t('unit.cm')],
+            ['in', t('unit.in')],
+          ])}
           onChange={(e) => set({ lengthUnit: e.target.value === 'in' ? 'in' : 'cm' })}
         />
         <SelectField
           label={t('settings.prefs.temperature')}
           value={draft.temperatureUnit}
-          options={opts(['c', 'f'], 'unit')}
+          options={opts([
+            ['c', t('unit.c')],
+            ['f', t('unit.f')],
+          ])}
           onChange={(e) => set({ temperatureUnit: e.target.value === 'f' ? 'f' : 'c' })}
         />
         <TextField
@@ -76,7 +84,11 @@ export function PreferencesPanel() {
         <SelectField
           label={t('settings.prefs.dateFormat')}
           value={draft.dateFormat}
-          options={opts(['iso', 'dmy', 'mdy'], 'dateFormat')}
+          options={opts([
+            ['iso', t('dateFormat.iso')],
+            ['dmy', t('dateFormat.dmy')],
+            ['mdy', t('dateFormat.mdy')],
+          ])}
           onChange={(e) => {
             const v = e.target.value;
             set({ dateFormat: v === 'dmy' || v === 'mdy' ? v : 'iso' });
@@ -91,7 +103,11 @@ export function PreferencesPanel() {
         <SelectField
           label={t('settings.prefs.theme')}
           value={draft.theme}
-          options={opts(['system', 'light', 'dark'], 'theme')}
+          options={opts([
+            ['system', t('theme.system')],
+            ['light', t('theme.light')],
+            ['dark', t('theme.dark')],
+          ])}
           onChange={(e) => {
             const v = e.target.value;
             set({ theme: v === 'light' || v === 'dark' ? v : 'system' });

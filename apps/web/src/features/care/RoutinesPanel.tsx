@@ -87,7 +87,7 @@ export function RoutinesPanel({ petId }: { petId: string }) {
           return (
             <li
               key={r.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <div>
                 <strong>{title}</strong>{' '}

@@ -48,7 +48,7 @@ export function CalendarPanel() {
             readOnly
             aria-label={t('settings.calendar.address')}
             value={created.url}
-            className="min-h-11 rounded-lg border border-line bg-card px-3"
+            className="min-h-11 rounded-lg border border-line bg-surface px-3"
             onFocus={(e) => e.currentTarget.select()}
           />
         </div>

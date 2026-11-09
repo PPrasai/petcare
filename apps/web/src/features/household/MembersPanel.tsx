@@ -42,7 +42,7 @@ export function MembersPanel({ householdId, isOwner }: Props) {
           return (
             <li
               key={m.userId}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <div>
                 <strong>{m.name}</strong>

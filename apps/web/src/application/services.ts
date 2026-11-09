@@ -8,6 +8,7 @@ import type { HealthService } from './health-service';
 import type { AccountService } from './account-service';
 import type { HouseholdService } from './household-service';
 import type { TodayService } from './today-service';
+import type { LogService } from './log-service';
 import type { MeasurementService } from './measurement-service';
 import type { PetService } from './pet-service';
 import type { PushControl } from './ports/push-control';
@@ -48,4 +49,5 @@ export interface Services {
   conflicts: ConflictService;
   emergency: EmergencyService;
   account: AccountService;
+  log: LogService;
 }
