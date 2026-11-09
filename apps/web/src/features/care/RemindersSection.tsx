@@ -14,7 +14,14 @@ import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 
 /** Custom reminders for the household or one pet. */
-export function RemindersSection({ pets }: { pets: { id: string; name: string }[] }) {
+export function RemindersSection({
+  pets,
+  petId = '',
+}: {
+  pets: { id: string; name: string }[];
+  /** Shows this pet's reminders and the household's own; empty shows all. */
+  petId?: string;
+}) {
   const { health } = useServices();
   const householdId = useHouseholdId();
   const tz = useSessionStore((s) => s.preferences.timeZone);
@@ -27,7 +34,7 @@ export function RemindersSection({ pets }: { pets: { id: string; name: string }[
     queryFn: () => health.all('reminder', householdId),
     enabled: householdId !== '',
   });
-  const [values, setValues] = useState<Record<string, string>>({ petId: '' });
+  const [values, setValues] = useState<Record<string, string>>({ petId });
   const [schedule, setSchedule] = useState<ScheduleFormValues>({
     ...emptyScheduleForm(today),
     kind: 'once',
@@ -68,7 +75,9 @@ export function RemindersSection({ pets }: { pets: { id: string; name: string }[
     }
   };
 
-  const rows = list.data ?? [];
+  const rows = (list.data ?? []).filter(
+    (r) => petId === '' || r.data.petId === petId || !r.data.petId,
+  );
   return (
     <section className="flex flex-col gap-4" aria-labelledby="reminders-title">
       <h2 id="reminders-title" className="text-xl font-semibold">
@@ -95,7 +104,7 @@ export function RemindersSection({ pets }: { pets: { id: string; name: string }[
           return (
             <li
               key={r.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <span>
                 <strong>{title}</strong>

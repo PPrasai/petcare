@@ -40,7 +40,7 @@ export function RecordForm({
     <form
       aria-label={title}
       onSubmit={submit}
-      className="flex flex-col gap-3 rounded-lg border border-line bg-card p-3"
+      className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3"
     >
       {fields.map((f) =>
         f.type === 'select' ? (

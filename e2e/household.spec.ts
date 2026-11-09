@@ -150,6 +150,7 @@ test('a conflict can be reviewed and its replaced value restored', async ({ page
   );
   await other.close();
 
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByRole('link', { name: 'Sync activity' }).click();
   await page.getByRole('button', { name: 'Sync now' }).click();
   const card = page.getByRole('listitem').filter({ hasText: 'pet: breed' });

@@ -116,7 +116,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
             return (
               <li
                 key={c.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-line bg-card p-3"
+                className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
               >
                 <div>
                   <strong>{name}</strong>{' '}
@@ -178,7 +178,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
             return (
               <li
                 key={s.id}
-                className="flex items-start justify-between gap-2 rounded-lg border border-line bg-card p-3"
+                className="flex items-start justify-between gap-2 rounded-lg border border-line bg-surface p-3"
               >
                 <div>
                   <strong>{date}</strong>

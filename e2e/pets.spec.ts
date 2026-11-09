@@ -1,12 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { addPet, signUp, waitSynced } from './support/app';
+import { addPet, openDetails, signUp, waitSynced } from './support/app';
 
 // CAP-04: pet profiles, edit, archive and restore, including offline.
 test('add, edit, archive and restore a pet; data survives a reload and reaches the server', async ({
   page,
 }) => {
   await signUp(page, 'pets');
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
   await page.getByRole('link', { name: 'Add a pet' }).click();
   await page.getByLabel('Pet name').fill('Momo');
   await page.getByLabel('Species').selectOption('dog');
@@ -21,6 +20,7 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   await page.getByRole('button', { name: 'Save pet' }).click();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
+  await openDetails(page);
   await expect(page.getByText('Terrier · Mixed breed')).toBeVisible();
   await expect(page.getByText('2020-03-04 (estimated)')).toBeVisible();
   await expect(page.getByText('985112003456789')).toBeVisible();
@@ -48,11 +48,12 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   await page.getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(page.getByText('This pet is archived')).toBeVisible();
   await page.reload();
+  await openDetails(page);
   await expect(page.getByText('This pet is archived')).toBeVisible();
-  await page.getByRole('link', { name: 'All pets' }).click();
-  await expect(page.getByText('Archived', { exact: true })).toBeVisible();
-
-  await page.getByRole('link', { name: /Momo/ }).click();
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await page.locator('summary').filter({ hasText: 'Archived pets' }).click();
+  await page.getByRole('link', { name: 'Momo' }).click();
+  await openDetails(page);
   await page.getByRole('button', { name: 'Restore pet' }).click();
   await expect(page.getByText('This pet is archived')).toHaveCount(0);
 });

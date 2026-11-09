@@ -59,7 +59,7 @@ export function InvitesPanel({ householdId }: { householdId: string }) {
         <div
           role="region"
           aria-label={t('household.newInvite')}
-          className="flex flex-col gap-2 rounded-lg border border-line bg-card p-3"
+          className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3"
         >
           <p className="text-sm">{t('household.shownOnce')}</p>
           <p>
@@ -80,7 +80,7 @@ export function InvitesPanel({ householdId }: { householdId: string }) {
         {(invites.data ?? []).map((i) => (
           <li
             key={i.id}
-            className="flex items-center justify-between gap-2 rounded-lg border border-line bg-card p-3"
+            className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
           >
             <span>
               {t(`household.role.${i.role}` as MessageKey)} ·{' '}

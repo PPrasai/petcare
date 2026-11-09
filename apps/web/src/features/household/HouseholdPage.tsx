@@ -30,7 +30,7 @@ export function HouseholdPage() {
         <Banner>{t('demo.householdDisabled')}</Banner>
         <ul className="flex flex-col gap-2">
           {DEMO_SEED.members.map((m) => (
-            <li key={m.name} className="rounded-lg border border-line bg-card p-3">
+            <li key={m.name} className="rounded-lg border border-line bg-surface p-3">
               {m.name} · {t(`household.role.${m.role}`)}
             </li>
           ))}

@@ -1,0 +1,5 @@
+{
+  "note": "Measured on origin/main e79bd8c before the Pebble redesign (SPEC-002 5.2). Used by the P8 growth budgets.",
+  "precacheBytes": 1251775,
+  "entryChunkGzipBytes": 247732
+}

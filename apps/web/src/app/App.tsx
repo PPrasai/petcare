@@ -15,6 +15,12 @@ export function App({ runtime }: { runtime: Runtime }) {
       theme === 'dark' ||
       (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     root.dataset.theme = dark ? 'dark' : 'light';
+    // The browser bar follows the theme: the page's own choice, or the system's when there is none.
+    const bars = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+    bars.forEach((bar) => {
+      bar.dataset.original ??= bar.content;
+      bar.content = theme === 'system' ? bar.dataset.original : dark ? '#14161c' : '#f2f1ef';
+    });
   }, [theme]);
 
   return (

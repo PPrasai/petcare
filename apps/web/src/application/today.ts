@@ -40,6 +40,8 @@ export interface TodayOptions {
   userId: string;
   /** Only this pet's items (reminders without a pet are hidden); null for the whole household. */
   petId: string | null;
+  /** How far ahead upcoming items are listed; defaults to UPCOMING_DAYS. */
+  horizonDays?: number;
 }
 
 const keyOf = (type: string, id: string, at: string): string => `${type}:${id}:${Date.parse(at)}`;
@@ -86,7 +88,7 @@ export function buildToday(all: StoredRecord[], opts: TodayOptions): TodayView {
     if (c) doneBy.set(keyOf(c.sourceType, c.sourceId, c.occurrenceAt), r);
   }
   const snoozes = snoozeMap(envelopes, opts.userId);
-  const to = new Date(opts.now.getTime() + UPCOMING_DAYS * 86_400_000);
+  const to = new Date(opts.now.getTime() + (opts.horizonDays ?? UPCOMING_DAYS) * 86_400_000);
   const occurrences = dueOccurrences(
     envelopes,
     { from: overdueWindowStart(opts.now), to },

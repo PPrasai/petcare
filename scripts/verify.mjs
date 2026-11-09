@@ -6,6 +6,7 @@ const hasE2e = globSync('e2e/**/*.spec.ts').length > 0;
 const steps = [
   ['typecheck', 'pnpm typecheck'],
   ['lint', 'pnpm lint'],
+  ['i18n', 'node scripts/check-i18n.mjs'],
   ['lint:deps', 'pnpm lint:deps'],
   ['lint:openapi', 'pnpm lint:openapi'],
   [
@@ -17,6 +18,8 @@ const steps = [
   ['runtime-deps', 'node scripts/check-deps.mjs'],
   ['test', 'pnpm test'],
   ['e2e', hasE2e ? 'pnpm e2e' : null],
+  // After e2e: it reads the production build that the e2e run just made (SPEC-002 5.4).
+  ['bundle-budget', 'node scripts/check-bundle-budget.mjs'],
   ['audit', 'pnpm audit --prod --audit-level high'],
 ];
 

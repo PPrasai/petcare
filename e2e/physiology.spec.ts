@@ -8,7 +8,7 @@ test('weight is shown in the preferred unit with a chart and a table', async ({
 }) => {
   await signUp(page, 'physio');
   await addPet(page, 'Momo');
-  await page.getByRole('link', { name: 'Health' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
 
   await page.getByLabel('Value (kg)').fill('10');
   await page.getByLabel('Measured on').fill('2026-01-10T09:00');
@@ -62,7 +62,7 @@ test('weight is shown in the preferred unit with a chart and a table', async ({
   });
   expect([put.status(), await put.text()]).toEqual([200, expect.anything()]);
   await page.reload();
-  await page.getByRole('link', { name: 'Health' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await expect(
     page.getByRole('table', { name: 'All measurements' }).getByText('23.15 lb'),
   ).toBeVisible();

@@ -84,7 +84,7 @@ export function ScheduleFields({ values, onChange, error }: Props) {
         onChange={(e) => set({ endOn: e.target.value })}
       />
       {error ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-sm text-bad">
           {error}
         </p>
       ) : null}

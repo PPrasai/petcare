@@ -84,7 +84,7 @@ export function ExpensesPage() {
       {canCreate ? (
         <form
           aria-label={t('expenses.add')}
-          className="flex flex-col gap-3 rounded-lg border border-line bg-card p-3"
+          className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3"
           onSubmit={(e) => {
             e.preventDefault();
             void submit();
@@ -148,7 +148,7 @@ export function ExpensesPage() {
           return (
             <li
               key={x.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-card p-3"
+              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
             >
               <div>
                 <strong>{formatMoney(Number(x.data.amountMinor), String(x.data.currency))}</strong>

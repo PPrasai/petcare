@@ -15,7 +15,7 @@ export function NewPetPage() {
       <PetForm
         initial={emptyPetForm}
         submitLabel={t('petForm.save')}
-        onCancel={() => void navigate({ to: '/pets' })}
+        onCancel={() => void navigate({ to: '/' })}
         onSubmit={async (values) => {
           const pet = await pets.create(householdId, values);
           await navigate({

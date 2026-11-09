@@ -25,8 +25,8 @@ function CardView({ card, token }: { card: PublicEmergencyCard; token: string })
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
       <h1 className="text-2xl font-semibold">{card.name ?? t('public.title')}</h1>
       {card.isLost ? (
-        <div role="alert" className="rounded-lg border-2 border-danger bg-card p-4">
-          <p className="text-xl font-bold text-danger">{t('public.lost')}</p>
+        <div role="alert" className="rounded-lg border-2 border-bad bg-surface p-4">
+          <p className="text-xl font-bold text-bad">{t('public.lost')}</p>
           {card.lostSince ? (
             <p>{t('public.lostSince', { date: formatDate(card.lostSince, own) })}</p>
           ) : null}
@@ -60,7 +60,7 @@ function CardView({ card, token }: { card: PublicEmergencyCard; token: string })
       {card.ownerPhone ? (
         <a
           href={`tel:${card.ownerPhone.replace(/[^+\d]/g, '')}`}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 text-lg font-semibold text-white"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-4 py-2 text-lg font-semibold text-white"
         >
           {t('public.call', { phone: card.ownerPhone })}
         </a>

@@ -43,11 +43,8 @@ async function seedPets(page: Page): Promise<void> {
 
 async function timeToFirstPet(page: Page): Promise<number> {
   const started = Date.now();
-  await page.goto('/pets');
-  await page
-    .getByRole('link', { name: /^Pet \d\d/ })
-    .first()
-    .waitFor({ state: 'visible' });
+  await page.goto('/');
+  await page.getByTestId('pet-row').first().waitFor({ state: 'visible' });
   return Date.now() - started;
 }
 
@@ -61,8 +58,8 @@ test('the first pet card shows within 2 s on a throttled CPU, online and offline
   await seedPets(page);
 
   // Pull the pets into this device's database, then check that they are all there.
-  await page.goto('/pets');
-  await expect(page.getByRole('link', { name: /^Pet \d\d/ })).toHaveCount(PETS, {
+  await page.goto('/');
+  await expect(page.getByTestId('pet-row')).toHaveCount(PETS, {
     timeout: 30_000,
   });
   await waitSynced(page);
@@ -71,6 +68,15 @@ test('the first pet card shows within 2 s on a throttled CPU, online and offline
     .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
     .toBe(true);
 
+  // QA-36: the font swap must not shift the layout (cumulative layout shift of the Home list).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __cls: number };
+    w.__cls = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[])
+        if (!e.hadRecentInput) w.__cls += e.value;
+    }).observe({ type: 'layout-shift', buffered: true });
+  });
   const cdp = await context.newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
 
@@ -80,6 +86,13 @@ test('the first pet card shows within 2 s on a throttled CPU, online and offline
   await context.setOffline(true);
   const offline: number[] = [];
   for (let run = 0; run < RUNS; run++) offline.push(await timeToFirstPet(page));
+
+  await page.goto('/');
+  await page.getByTestId('pet-row').first().waitFor({ state: 'visible' });
+  await page.waitForTimeout(500);
+  const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+  console.log(`layout shift on the Home list: ${cls}`);
+  expect(cls).toBeLessThanOrEqual(0.1);
 
   console.log(
     `time to first pet card (ms) online ${online.join(', ')}; offline ${offline.join(', ')}`,

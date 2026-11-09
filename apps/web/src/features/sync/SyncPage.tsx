@@ -21,7 +21,7 @@ function ConflictCard({ conflict, onDone }: { conflict: ConflictItem; onDone: ()
   const open = conflict.resolvedAt === null;
   const field = conflict.field ?? conflict.recordType;
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-line bg-card p-3">
+    <li className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3">
       <p>
         <strong>{t('conflict.what', { type: conflict.recordType, field })}</strong>{' '}
         <span className="text-sm">{formatDate(conflict.createdAt, prefs)}</span>
@@ -115,7 +115,7 @@ export function SyncPage() {
         {problems.data?.length === 0 ? <p>{t('syncPage.noProblems')}</p> : null}
         <ul className="flex flex-col gap-2">
           {problems.data?.map((p) => (
-            <li key={p.id} className="rounded-lg border border-line bg-card p-3 text-sm">
+            <li key={p.id} className="rounded-lg border border-line bg-surface p-3 text-sm">
               <strong>{p.code}</strong> · {p.recordType} · {p.at}
             </li>
           ))}

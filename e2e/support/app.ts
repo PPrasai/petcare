@@ -20,7 +20,7 @@ export async function signUp(page: Page, label = 'e2e') {
 }
 
 export async function addPet(page: Page, name: string) {
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await page.getByRole('link', { name: 'Add a pet' }).click();
   await page.getByLabel('Pet name').fill(name);
   await page.getByRole('button', { name: 'Save pet' }).click();
@@ -37,4 +37,9 @@ export async function waitSynced(page: Page) {
 export async function userId(page: Page): Promise<string> {
   const res = await page.request.get('/api/me');
   return (await res.json()).user.id as string;
+}
+
+/** Opens the "Details" disclosure on a pet's Overview tab. */
+export async function openDetails(page: Page) {
+  await page.locator('summary').filter({ hasText: 'Details' }).click();
 }

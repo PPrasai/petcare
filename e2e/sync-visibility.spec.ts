@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { addPet, signUp } from './support/app';
 
 // QA-16: offline indicator and pending count on every top-level route; sign-out warning.
-const routes = ['Today', 'Pets', 'Expenses', 'Household', 'Settings'];
+const routes = ['Home', 'Expenses', 'Emergency', 'Household', 'Settings'];
 
 test('offline edit shows the indicator and count on every route, and sign-out warns', async ({
   page,
@@ -37,6 +37,7 @@ test('discarding changes signs out', async ({ page, context }) => {
   await signUp(page, 'disc');
   await context.setOffline(true);
   await addPet(page, 'Ghost');
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.getByRole('button', { name: 'Discard changes and sign out' }).click();
   await expect(page).toHaveURL(/sign-in/);

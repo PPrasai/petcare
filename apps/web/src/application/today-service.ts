@@ -26,7 +26,7 @@ export class TodayService {
 
   async view(
     householdId: string,
-    opts: { now: Date; tz: string; userId: string; petId: string | null },
+    opts: { now: Date; tz: string; userId: string; petId: string | null; horizonDays?: number },
   ): Promise<TodayView> {
     const all = (
       await Promise.all(SOURCE_TYPES.map((type) => this.records.list(type, householdId)))

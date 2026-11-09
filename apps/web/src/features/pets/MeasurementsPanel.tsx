@@ -94,7 +94,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
       {canCreate ? (
         <form
           aria-label={t('measure.add')}
-          className="flex flex-col gap-3 rounded-lg border border-line bg-card p-3"
+          className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3"
           onSubmit={(e) => {
             e.preventDefault();
             void form.handleSubmit();

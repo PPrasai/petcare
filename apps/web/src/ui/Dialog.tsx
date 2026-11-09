@@ -18,13 +18,8 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
     if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby="dialog-title"
-      onClose={onClose}
-      className="m-auto w-[min(92vw,28rem)] rounded-xl border border-line bg-card p-5 text-ink"
-    >
-      <h2 id="dialog-title" className="mb-3 text-lg font-semibold">
+    <dialog ref={ref} aria-labelledby="dialog-title" onClose={onClose} className="modal">
+      <h2 id="dialog-title" className="mb-3 text-lg">
         {title}
       </h2>
       {children}

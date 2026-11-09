@@ -22,7 +22,7 @@ test('documents upload, open offline, and a file chosen offline syncs later', as
 }) => {
   await signUp(page, 'docs');
   await addPet(page, 'Momo');
-  await page.getByRole('link', { name: 'Documents' }).click();
+  await page.getByRole('tab', { name: 'Files' }).click();
 
   await page.getByLabel('Title').fill('Rabies certificate');
   await page.getByLabel('File (photo or PDF)').setInputFiles(png('rabies.png'));
@@ -65,7 +65,7 @@ test('documents upload, open offline, and a file chosen offline syncs later', as
 test('an unsupported file is refused before upload', async ({ page }) => {
   await signUp(page, 'badfile');
   await addPet(page, 'Momo');
-  await page.getByRole('link', { name: 'Documents' }).click();
+  await page.getByRole('tab', { name: 'Files' }).click();
   await page.getByLabel('File (photo or PDF)').setInputFiles({
     name: 'notes.txt',
     mimeType: 'text/plain',
@@ -122,9 +122,9 @@ test('a contact can be added and linked to a vet visit', async ({ page }) => {
   await page.getByRole('button', { name: 'Add contact' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Dr. Rai' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Pets', exact: true }).click();
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await page.getByRole('link', { name: 'Momo' }).click();
-  await page.getByRole('link', { name: 'Vet visits' }).click();
+  await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByLabel('Reason').fill('Annual check');
   await page.getByLabel('Vet or clinic').selectOption({ label: 'Dr. Rai' });
   await page.getByRole('button', { name: 'Add visit' }).click();

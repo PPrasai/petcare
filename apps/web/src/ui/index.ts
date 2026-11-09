@@ -1,5 +1,17 @@
+export { Avatar } from './avatar/Avatar';
 export { Banner } from './Banner';
 export { Button } from './Button';
+export { Card } from './Card';
+export { Chip } from './Chip';
 export { Dialog } from './Dialog';
+export { Disclosure } from './Disclosure';
+export { Icon } from './icons';
+export type { IconName } from './icons';
+export { Pill } from './Pill';
+export type { Tone } from './Pill';
 export { SelectField } from './SelectField';
+export { Sheet } from './Sheet';
+export { Stepper } from './Stepper';
+export { Tabs, panelId, tabId } from './Tabs';
+export type { TabItem } from './Tabs';
 export { TextField } from './TextField';

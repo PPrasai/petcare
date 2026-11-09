@@ -14,6 +14,7 @@ import { HealthService } from '../application/health-service';
 import { createFilesRemote } from '../data/remote/files-remote';
 import { createPushRemote } from '../data/remote/push-remote';
 import { TodayService } from '../application/today-service';
+import { LogService } from '../application/log-service';
 import { MeasurementService } from '../application/measurement-service';
 import { PetService } from '../application/pet-service';
 import { AuthError } from '../application/ports/auth-api';
@@ -247,6 +248,15 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
   }
 
   // The services read `data` lazily, so they keep working across sign-out and sign-in.
+  const measurements = new MeasurementService(records);
+  const health = new HealthService(records);
+  const documents = new DocumentService(records);
+  const expenses = new ExpenseService(records);
+  const files: Services['files'] = {
+    attach: (householdId, file) => current().files.attach(householdId, file),
+    open: (fileId) => current().files.open(fileId),
+    release: (url) => URL.revokeObjectURL(url),
+  };
   const services: Services = {
     session,
     sync: {
@@ -255,17 +265,14 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       problems: () => (data ? data.sync.problems() : Promise.resolve([])),
     },
     pets: new PetService(records),
-    measurements: new MeasurementService(records),
-    health: new HealthService(records),
+    measurements,
+    health,
     today: new TodayService(records),
     push: createPushRemote(),
-    files: {
-      attach: (householdId, file) => current().files.attach(householdId, file),
-      open: (fileId) => current().files.open(fileId),
-      release: (url) => URL.revokeObjectURL(url),
-    },
-    documents: new DocumentService(records),
-    expenses: new ExpenseService(records),
+    files,
+    documents,
+    expenses,
+    log: new LogService(measurements, health, expenses, documents, files),
     contacts: new ContactService(records),
     households: new HouseholdService(householdApi, refreshHouseholds),
     emergency: new EmergencyService(records, createEmergencyRemote()),

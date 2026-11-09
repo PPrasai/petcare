@@ -17,6 +17,7 @@ test('sign-out wipes the local database and file cache', async ({ page }) => {
   }, a);
   expect(await databases(page)).toContain(`petcare-u-${a}`);
 
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/sign-in/);
   expect(await databases(page)).not.toContain(`petcare-u-${a}`);
@@ -25,7 +26,7 @@ test('sign-out wipes the local database and file cache', async ({ page }) => {
   expect(await page.evaluate(() => localStorage.getItem('petcare-last-session'))).toBeNull();
 
   await signUp(page, 'wipeb');
-  await page.getByRole('link', { name: 'Pets' }).click();
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await expect(page.getByText('No pets yet')).toBeVisible();
   await expect(page.getByText('SecretPet')).toHaveCount(0);
   expect(await databases(page)).not.toContain(`petcare-u-${a}`);
