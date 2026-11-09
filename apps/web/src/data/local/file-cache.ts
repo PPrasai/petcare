@@ -27,6 +27,16 @@ export async function cachedFile(userId: string, fileId: string): Promise<Blob |
   }
 }
 
+/** Forgets one cached file. */
+export async function uncacheFile(userId: string, fileId: string): Promise<void> {
+  if (!available()) return;
+  try {
+    await (await caches.open(fileCacheName(userId))).delete(keyOf(fileId));
+  } catch {
+    // Nothing to forget.
+  }
+}
+
 /** Deletes every file cache on this device (sign-out wipe, QA-22). */
 export async function clearFileCaches(): Promise<void> {
   if (!available()) return;

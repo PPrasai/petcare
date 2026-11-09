@@ -3,7 +3,13 @@ import { NetworkError, RemoteError, isCursorExpired } from '../../application/po
 import type { PushMutation, RemoteApi } from '../../application/ports/remote-api';
 import type { Clock, IdGenerator } from '../../application/ports/runtime';
 import type { LocalDb, OutboxEntry } from '../local/local-db';
-import { CURSOR_KEY, applyPullPage, applyPushResults, syncTables } from './apply';
+import {
+  CURSOR_KEY,
+  applyPullPage,
+  applyPushResults,
+  reconcileUnknownTypes,
+  syncTables,
+} from './apply';
 import { nextBatch, pendingCount } from './outbox';
 import { uploadPendingFiles } from './pending-files';
 import type { FileApi } from '../../application/ports/file-api';
@@ -86,6 +92,8 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
   }
 
   async function pullAll(): Promise<void> {
+    // After an upgrade that knows more record types, fetch again what was skipped before.
+    await reconcileUnknownTypes(db);
     let cursor = ((await db.meta.get(CURSOR_KEY))?.value as string | undefined) || undefined;
     let rebuild: Set<string> | null = null;
     for (;;) {

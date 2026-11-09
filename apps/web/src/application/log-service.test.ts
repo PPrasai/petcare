@@ -50,6 +50,7 @@ function setup() {
     attach: () => Promise.resolve({ fileId: '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2c' }),
     open: () => Promise.resolve(null),
     release: () => undefined,
+    discard: () => Promise.resolve(),
   };
   const service = new LogService(
     new MeasurementService(store),

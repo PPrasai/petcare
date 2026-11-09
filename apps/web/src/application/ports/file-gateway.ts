@@ -35,4 +35,10 @@ export interface FileGateway {
   /** The file's contents for display: from this device when held, else downloaded and kept. */
   open(fileId: string): Promise<FileView | null>;
   release(url: string): void;
+  /**
+   * Lets go of a file no record refers to any more (a replaced or removed pet photo): its copy
+   * on this device goes, and so does an upload that has not happened yet. The server's copy is
+   * left for its own clean-up.
+   */
+  discard(fileId: string): Promise<void>;
 }

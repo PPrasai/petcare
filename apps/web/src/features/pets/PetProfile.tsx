@@ -16,6 +16,7 @@ import { CarePane, FilesPane, HealthPane, OverviewPane } from './ProfilePanes';
 import { PROFILE_TABS } from './profile-tabs';
 import type { ProfileTab } from './profile-tabs';
 import { ageText } from './age';
+import { usePetPhoto } from './PetPhoto';
 
 export interface StripPet {
   id: string;
@@ -55,6 +56,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
   });
   const conditions = useHealthList('condition', petId);
   const start = useRef<{ x: number; y: number } | null>(null);
+  const photo = usePetPhoto(pet.data);
 
   const tabs: TabItem<ProfileTab>[] = PROFILE_TABS.map((id) => ({
     id,
@@ -120,7 +122,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         </nav>
       ) : null}
       <div className="ph">
-        <PetAvatar pet={record} size={96} />
+        <PetAvatar pet={record} size={96} badge={photo.badge} />
         <div className="meta">
           <Heading>{name}</Heading>
           <p className="muted">{facts.join(' · ')}</p>
@@ -136,6 +138,8 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         </div>
       </div>
       <div className="acts">
+        {photo.fileInput}
+        {photo.addButton}
         <Link to="/emergency" search={{ pet: petId }} className="btn">
           <Icon name="shield" /> {t('profile.emergencyCard')}
         </Link>

@@ -64,4 +64,16 @@ describe('demo seed', () => {
     expect(due.some((o) => new Date(o.occurrenceAt).getTime() < now)).toBe(true);
     expect(due.some((o) => new Date(o.occurrenceAt).getTime() > now)).toBe(true);
   });
+
+  it('has four pets and one photo: a small JPEG on one of them', () => {
+    const pets = records.filter((r) => r.type === 'pet');
+    expect(pets).toHaveLength(4);
+    const withPhoto = pets.filter((p) => typeof p.data.photoFileId === 'string');
+    expect(withPhoto).toHaveLength(1);
+    const file = DEMO_SEED.files.find((f) => f.id === withPhoto[0]?.data.photoFileId);
+    expect(file?.mimeType).toBe('image/jpeg');
+    const bytes = Buffer.from(file?.base64 ?? '', 'base64');
+    expect(bytes.length).toBeLessThanOrEqual(30 * 1024);
+    expect([...bytes.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+  });
 });

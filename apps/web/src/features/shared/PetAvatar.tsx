@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { t } from '../../i18n/t';
 import { Avatar } from '../../ui';
 import { useServices } from './services-context';
@@ -7,10 +8,11 @@ interface PetAvatarProps {
   pet: { id: string; data: Record<string, unknown> };
   size: number;
   dot?: 'overdue' | 'today' | 'soon' | 'ok';
+  badge?: ReactNode;
 }
 
 /** A pet's photo when it has one on this device or on the server, else its species illustration. */
-export function PetAvatar({ pet, size, dot }: PetAvatarProps) {
+export function PetAvatar({ pet, size, dot, badge }: PetAvatarProps) {
   const { files } = useServices();
   const fileId = typeof pet.data.photoFileId === 'string' ? pet.data.photoFileId : '';
   const photo = useQuery({
@@ -29,6 +31,7 @@ export function PetAvatar({ pet, size, dot }: PetAvatarProps) {
       photoUrl={photo.data ?? null}
       photoAlt={t('pet.photoAlt', { name })}
       {...(dot ? { dot } : {})}
+      badge={badge}
     />
   );
 }

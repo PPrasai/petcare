@@ -10,6 +10,37 @@ export function syncTables(db: LocalDb) {
 }
 
 export const CURSOR_KEY = 'cursor';
+/** Record types a pull delivered that this bundle does not know (CON-petcare-003 2.5.1). */
+export const UNKNOWN_TYPES_KEY = 'unknownTypes';
+
+export const registryTypes = (): Set<string> => new Set(entities.map((e) => e.type as string));
+
+/** The record types this bundle skipped in earlier pulls, oldest first. */
+export async function unknownTypes(db: LocalDb): Promise<string[]> {
+  const row = await db.meta.get(UNKNOWN_TYPES_KEY);
+  return Array.isArray(row?.value) ? (row.value as string[]) : [];
+}
+
+/**
+ * Re-pull after an upgrade (tolerant reader): when a type skipped earlier is now in the
+ * registry, the cursor goes back to the start so those records are fetched, and the list is
+ * cleared. Types that are still unknown stay listed. Returns whether the cursor was reset.
+ */
+export async function reconcileUnknownTypes(
+  db: LocalDb,
+  known: ReadonlySet<string> = registryTypes(),
+): Promise<boolean> {
+  const listed = await unknownTypes(db);
+  const nowKnown = listed.filter((type) => known.has(type));
+  if (nowKnown.length === 0) return false;
+  const stillUnknown = listed.filter((type) => !known.has(type));
+  await db.transaction('rw', db.meta, async () => {
+    await db.meta.delete(CURSOR_KEY);
+    if (stillUnknown.length > 0) await db.meta.put({ key: UNKNOWN_TYPES_KEY, value: stillUnknown });
+    else await db.meta.delete(UNKNOWN_TYPES_KEY);
+  });
+  return true;
+}
 
 /** The server envelope with the unsent local edits laid back on top, for display. */
 export function withPending(server: RecordEnvelope, pending: OutboxEntry[]): LocalRecord {
@@ -32,7 +63,11 @@ export interface PullApplyResult {
  * Applies one pull page and persists its cursor in the same transaction (2.5.3, 2.5.4).
  * Households absent from the snapshot are removed with all their local records.
  */
-export async function applyPullPage(db: LocalDb, page: PullPage): Promise<PullApplyResult> {
+export async function applyPullPage(
+  db: LocalDb,
+  page: PullPage,
+  known: ReadonlySet<string> = registryTypes(),
+): Promise<PullApplyResult> {
   const changedTypes = new Set<string>();
   const seen: string[] = [];
   await db.transaction('rw', syncTables(db), async () => {
@@ -50,13 +85,29 @@ export async function applyPullPage(db: LocalDb, page: PullPage): Promise<PullAp
     await db.outbox.filter((e) => !keep.has(e.householdId)).delete();
     await db.conflicts.filter((c) => !keep.has(c.householdId)).delete();
 
+    // Tolerant reader: a record of a type this bundle does not know is skipped and its type
+    // noted, so the cursor still advances and the rest of the page is applied.
+    const skipped = new Set<string>();
     for (const change of page.changes) {
+      if (!known.has(change.type)) {
+        skipped.add(change.type);
+        continue;
+      }
       const pending = await entriesFor(db, change.type, change.id);
       await db.records(change.type).put(withPending(change, pending));
       changedTypes.add(change.type);
       seen.push(change.id);
     }
-    if (page.conflicts.length > 0) await db.conflicts.bulkPut(page.conflicts);
+    const conflicts = page.conflicts.filter((c) => known.has(c.recordType));
+    for (const conflict of page.conflicts) {
+      if (!known.has(conflict.recordType)) skipped.add(conflict.recordType);
+    }
+    if (conflicts.length > 0) await db.conflicts.bulkPut(conflicts);
+    if (skipped.size > 0) {
+      const listed = new Set(await unknownTypes(db));
+      for (const type of skipped) listed.add(type);
+      await db.meta.put({ key: UNKNOWN_TYPES_KEY, value: [...listed] });
+    }
     await db.meta.put({ key: CURSOR_KEY, value: page.cursor });
   });
   return { changedTypes, seen };
