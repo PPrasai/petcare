@@ -78,7 +78,7 @@ async function enter(page: Page, screen: Screen, browser: Browser) {
     await page.goto('about:blank');
   await page.goto(path);
   await screen.ready(page);
-  await screen.open?.(page);
+  await screen.open?.(page, browser);
 }
 
 /**

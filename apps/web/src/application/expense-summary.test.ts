@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { grandTotals, inPeriod, summarise } from './expense-summary';
+import {
+  categoryTotals,
+  displayCurrency,
+  grandTotals,
+  inPeriod,
+  summarise,
+} from './expense-summary';
 import type { StoredRecord } from './ports/record-store';
 
 const expense = (
@@ -60,5 +66,36 @@ describe('inPeriod', () => {
     expect(inPeriod('2026-06-30', '2026-06-01', 'month')).toBe(true);
     expect(inPeriod('2026-07-01', '2026-06-01', 'month')).toBe(false);
     expect(inPeriod('2026-01-01', '2026-12-31', 'year')).toBe(true);
+  });
+});
+
+describe('the headline currency and category split', () => {
+  it('prefers the preference when it has spending, else the busiest currency, ties alphabetical', () => {
+    expect(displayCurrency(ALL, '2026-06-15', 'month', 'NPR')).toBe('NPR');
+    expect(displayCurrency(ALL, '2026-06-15', 'month', 'EUR')).toBe('USD');
+    const tie = [expense('2026-06-02', 100, 'NPR', null), expense('2026-06-03', 100, 'GBP', null)];
+    expect(displayCurrency(tie, '2026-06-15', 'month', 'USD')).toBe('GBP');
+    expect(displayCurrency(ALL, '2025-01-01', 'month', 'USD')).toBeNull();
+  });
+
+  it('adds one currency per category, largest first, ignoring the others', () => {
+    const rows = [
+      {
+        ...expense('2026-06-02', 500, 'USD', null),
+        id: 'a',
+        data: { spentOn: '2026-06-02', amountMinor: 500, currency: 'USD', category: 'food' },
+      },
+      { ...expense('2026-06-03', 900, 'USD', null), id: 'b' },
+      {
+        ...expense('2026-06-04', 300, 'USD', null),
+        id: 'c',
+        data: { spentOn: '2026-06-04', amountMinor: 300, currency: 'USD', category: 'food' },
+      },
+      expense('2026-06-05', 99999, 'NPR', null),
+    ];
+    expect(categoryTotals(rows, '2026-06-15', 'month', 'USD')).toEqual([
+      { category: 'vet', totalMinor: 900 },
+      { category: 'food', totalMinor: 800 },
+    ]);
   });
 });

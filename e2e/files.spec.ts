@@ -81,23 +81,33 @@ test('expenses are totalled per pet and per currency', async ({ page }) => {
   await page.getByRole('link', { name: 'Expenses' }).click();
 
   const add = async (amount: string, currency: string, category: string, receipt?: boolean) => {
+    await page.getByRole('button', { name: 'Add an expense' }).click();
     await page.getByLabel('Pet', { exact: true }).selectOption({ label: 'Momo' });
     await page.getByLabel('Category').selectOption({ label: category });
     await page.getByLabel('Amount').fill(amount);
     await page.getByLabel('Currency').fill(currency);
     if (receipt) await page.getByLabel('Receipt (optional)').setInputFiles(png('receipt.png'));
     await page.getByRole('button', { name: 'Add expense' }).click();
-    await expect(page.getByLabel('Amount')).toHaveValue('');
+    // The sheet closes and a toast confirms what was added.
+    await expect(page.getByRole('dialog', { name: 'Add expense' })).toBeHidden();
+    await expect(page.locator('.toast')).toContainText(/Added .* for Momo/);
   };
   await add('12.50', 'USD', 'Vet', true);
   await add('7.25', 'USD', 'Food');
   await add('1500', 'NPR', 'Grooming');
 
+  // The headline is in one currency; the other is listed under it. Nothing is added across them.
   const summary = page.getByRole('region', { name: 'Spending' });
-  await expect(summary.getByText('Total in USD')).toBeVisible();
-  await expect(summary.getByRole('row', { name: /Total in USD/ })).toContainText('$19.75');
-  await expect(summary.getByRole('row', { name: /Total in NPR/ })).toContainText('1,500.00');
-  await expect(summary.getByRole('row', { name: /Momo USD/ })).toContainText('$19.75');
+  const total = (currency: string) =>
+    summary.getByTestId('expense-total').and(page.locator(`[data-currency="${currency}"]`));
+  await expect(total('USD')).toContainText('$19.75');
+  await expect(total('NPR')).toContainText('1,500.00');
+  await expect(summary.getByText(/Also spent:/)).toBeVisible();
+  await expect(summary.getByTestId('expense-total')).toHaveCount(2);
+
+  await page.locator('summary').filter({ hasText: 'By pet' }).click();
+  await expect(page.getByRole('row', { name: /Momo.*\$19\.75/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Momo.*1,500\.00/ })).toBeVisible();
 
   await page.getByRole('button', { name: 'View Receipt (optional)' }).click();
   await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
@@ -117,10 +127,15 @@ test('a contact can be added and linked to a vet visit', async ({ page }) => {
   await addPet(page, 'Momo');
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('link', { name: 'Contacts' }).click();
+  await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name').fill('Dr. Rai');
   await page.getByLabel('Phone').fill('+977 1 555 0100');
   await page.getByRole('button', { name: 'Add contact' }).click();
-  await expect(page.getByRole('listitem').filter({ hasText: 'Dr. Rai' })).toBeVisible();
+  await expect(page.getByTestId('contact-row').filter({ hasText: 'Dr. Rai' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Call Dr. Rai' })).toHaveAttribute(
+    'href',
+    'tel:+977 1 555 0100',
+  );
 
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await page.getByRole('link', { name: 'Momo' }).click();

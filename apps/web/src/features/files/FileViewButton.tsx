@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FileView } from '../../application/ports/file-gateway';
 import { t } from '../../i18n/t';
-import { Button, Dialog } from '../../ui';
+import { Dialog, EmptyState } from '../../ui';
 import { useServices } from '../shared/services-context';
 
 /** Opens a stored file: images in a dialog, PDFs as a link that opens in a new tab. */
@@ -13,9 +13,9 @@ export function FileViewButton({ fileId, label }: { fileId: string; label: strin
   const close = () => {
     if (view) files.release(view.url);
     setView(null);
+    setMissing(false);
   };
   const open = async () => {
-    setMissing(false);
     try {
       const found = await files.open(fileId);
       if (found) setView(found);
@@ -28,30 +28,31 @@ export function FileViewButton({ fileId, label }: { fileId: string; label: strin
   const isPdf = view?.mimeType === 'application/pdf';
   return (
     <>
-      <Button
-        variant="secondary"
+      <button
+        type="button"
+        className="linkbtn"
         aria-label={t('files.viewLabel', { name: label })}
         onClick={() => void open()}
       >
         {t('files.view')}
-      </Button>
-      {missing ? (
-        <span role="status" className="text-sm text-muted">
-          {t('files.unavailable')}
-        </span>
-      ) : null}
-      <Dialog open={view !== null} title={label} onClose={close}>
+      </button>
+      <Dialog open={view !== null || missing} title={label} onClose={close}>
         {view && !isPdf ? (
-          <img src={view.url} alt={label} className="mb-3 max-h-[70vh] w-full object-contain" />
+          <div className="imgview">
+            <img src={view.url} alt={label} />
+          </div>
         ) : null}
         {view && isPdf ? (
-          <a href={view.url} target="_blank" rel="noreferrer" className="mb-3 block underline">
+          <a href={view.url} target="_blank" rel="noreferrer" className="btn primary">
             {t('files.openPdf')}
           </a>
         ) : null}
-        <Button variant="secondary" onClick={close}>
-          {t('files.close')}
-        </Button>
+        {missing ? <EmptyState>{t('files.unavailable')}</EmptyState> : null}
+        <div className="acts">
+          <button type="button" className="btn" onClick={close}>
+            {t('files.close')}
+          </button>
+        </div>
       </Dialog>
     </>
   );

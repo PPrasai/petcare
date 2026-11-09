@@ -1,14 +1,15 @@
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 
-/** The QR code of a link, drawn as inline SVG (no external request). */
+/** The QR code of a link, drawn as inline SVG (no external request). It stays white in dark mode. */
 export function LinkQr({
   link,
   label,
-  className = 'h-40 w-40',
+  className = '',
 }: {
   link: string;
   label: string;
+  /** Extra classes for a caller that sizes the code itself. */
   className?: string;
 }) {
   const [svg, setSvg] = useState('');
@@ -25,7 +26,7 @@ export function LinkQr({
     <div
       role="img"
       aria-label={label}
-      className={`${className} bg-white p-1 [&>svg]:h-full [&>svg]:w-full`}
+      className={`qr ${className}`}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

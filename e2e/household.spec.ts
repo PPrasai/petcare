@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, signUp, uniqueEmail, waitSynced } from './support/app';
+import { addPet, createInvite, signUp, uniqueEmail, waitSynced } from './support/app';
 
 const ORIGIN = 'http://localhost:4173';
 const octet = () => Math.floor(Math.random() * 250) + 1;
@@ -35,8 +35,8 @@ test('an owner invites a member by link; roles, transfer and leaving work', asyn
   await signUp(page, 'owner');
   await page.getByRole('link', { name: 'Household', exact: true }).click();
 
-  // Invite as a caretaker: link, code and QR are shown once.
-  await page.getByRole('button', { name: 'Create invite' }).click();
+  // Invite as a caretaker (the default): link, code and QR are shown once.
+  await createInvite(page);
   const region = page.getByRole('region', { name: 'New invite' });
   const link = (await region.getByTestId('invite-link').textContent()) ?? '';
   expect(link).toMatch(/\/join#[A-Za-z0-9_-]{43}$/);
@@ -66,11 +66,13 @@ test('an owner invites a member by link; roles, transfer and leaving work', asyn
   // The owner sees the new member and makes them a viewer, then transfers ownership.
   await page.reload();
   await expect(page.getByRole('listitem').filter({ hasText: 'guest Person' })).toBeVisible();
+  await page.getByRole('button', { name: 'Manage guest Person' }).click();
   await page.getByLabel('Role of guest Person').selectOption('viewer');
   await expect(page.getByLabel('Role of guest Person')).toHaveValue('viewer');
+  await expect(page.locator('.toast')).toContainText('guest Person is now a viewer');
   await page.getByRole('button', { name: 'Make guest Person the owner' }).click();
   await page.getByRole('button', { name: 'Transfer ownership' }).click();
-  await expect(page.getByRole('button', { name: 'Create invite' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(0);
 
   // The old owner (now a caretaker) can leave.
   await page.getByRole('button', { name: 'Leave household' }).click();
@@ -82,8 +84,7 @@ test('an owner invites a member by link; roles, transfer and leaving work', asyn
 test('a code typed by hand works, and the last owner cannot leave', async ({ page, browser }) => {
   await signUp(page, 'coder');
   await page.getByRole('link', { name: 'Household', exact: true }).click();
-  await page.getByLabel('Invite as').selectOption('viewer');
-  await page.getByRole('button', { name: 'Create invite' }).click();
+  await createInvite(page, 'Viewer');
   const code = (await page.getByTestId('invite-code').textContent()) ?? '';
 
   const other = await browser.newContext();
@@ -109,7 +110,7 @@ test('a conflict can be reviewed and its replaced value restored', async ({ page
   await addPet(page, 'Momo');
   await waitSynced(page);
   await page.getByRole('link', { name: 'Household', exact: true }).click();
-  await page.getByRole('button', { name: 'Create invite' }).click();
+  await createInvite(page);
   const link = (await page.getByTestId('invite-link').textContent()) ?? '';
 
   const other = await browser.newContext();
