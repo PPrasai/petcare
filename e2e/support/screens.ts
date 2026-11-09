@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { createInvite, shareEmergencyCard, signUp } from './app';
+import { createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
 
 /**
  * The table of screen states that QA-39 (axe), QA-40 (layout) and QA-32 walk. One entry per
@@ -390,6 +390,8 @@ export const SCREENS: Screen[] = [
       await addExpense(page, '12.50', 'USD', true);
       await addExpense(page, '1500', 'NPR');
       await expect(page.getByTestId('expense-total')).toHaveCount(2);
+      // Let the receipt upload finish, so the viewer finds the file.
+      await waitSynced(page);
     },
   },
   {
