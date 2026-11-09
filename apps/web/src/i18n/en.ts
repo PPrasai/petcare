@@ -681,6 +681,19 @@ export const en = {
   'log.vet.toast': 'Vet visit added for {name}',
   'log.photo.choose': 'Choose a photo',
   'log.photo.toast': 'New photo for {name}',
+  'home.check': 'Mark done: {name}',
+  'home.checkUndo': 'Mark not done: {name}',
+  'home.checkDone': 'Done: {task} ({pet})',
+  'home.checkFailed': 'Could not mark that done. Try again.',
+  'toast.undo': 'Undo',
+  'photo.change': 'Change {name}’s photo',
+  'photo.add': 'Add a photo',
+  'photo.choose': 'Choose a new photo',
+  'photo.remove': 'Remove photo',
+  'photo.saved': 'New photo for {name}',
+  'photo.removed': 'Photo removed for {name}',
+  'photo.unusable': "This photo can't be used. Try a JPEG or PNG.",
+  'photo.failed': 'Something went wrong. Try again.',
 } as const;
 
 export type MessageKey = keyof typeof en;

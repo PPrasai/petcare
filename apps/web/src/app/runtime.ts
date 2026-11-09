@@ -17,6 +17,8 @@ import { TodayService } from '../application/today-service';
 import { LogService } from '../application/log-service';
 import { MeasurementService } from '../application/measurement-service';
 import { PetService } from '../application/pet-service';
+import { PetPhotoService } from '../application/photo-service';
+import { CanvasImageReducer } from '../data/media/canvas-image-reducer';
 import { AuthError } from '../application/ports/auth-api';
 import type { AuthApi, MeSnapshot } from '../application/ports/auth-api';
 import { NetworkError } from '../application/ports/remote-api';
@@ -256,6 +258,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     attach: (householdId, file) => current().files.attach(householdId, file),
     open: (fileId) => current().files.open(fileId),
     release: (url) => URL.revokeObjectURL(url),
+    discard: (fileId) => current().files.discard(fileId),
   };
   const services: Services = {
     session,
@@ -265,6 +268,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       problems: () => (data ? data.sync.problems() : Promise.resolve([])),
     },
     pets: new PetService(records),
+    photos: new PetPhotoService(records, files, new CanvasImageReducer()),
     measurements,
     health,
     today: new TodayService(records),

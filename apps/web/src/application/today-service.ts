@@ -68,6 +68,11 @@ export class TodayService {
     }
   }
 
+  /** Takes back a completion made a moment ago (the Undo toast): the record is deleted. */
+  undo(completion: StoredRecord): Promise<void> {
+    return this.records.remove(completion.type, completion.id);
+  }
+
   /** Hides one occurrence for this user until `until` ("hour" or tomorrow 09:00 local). */
   snooze(
     householdId: string,

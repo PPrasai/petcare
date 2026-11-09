@@ -11,6 +11,7 @@ import type { TodayService } from './today-service';
 import type { LogService } from './log-service';
 import type { MeasurementService } from './measurement-service';
 import type { PetService } from './pet-service';
+import type { PetPhotoService } from './photo-service';
 import type { PushControl } from './ports/push-control';
 import type { SyncControl } from './ports/sync-control';
 
@@ -37,6 +38,7 @@ export interface Services {
   session: SessionControl;
   sync: SyncControl;
   pets: PetService;
+  photos: PetPhotoService;
   measurements: MeasurementService;
   health: HealthService;
   today: TodayService;

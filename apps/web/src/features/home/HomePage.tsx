@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { VACCINE_SOON_DAYS, rankPets, summarize } from '../../application/ranking';
-import type { HomeSummary } from '../../application/ranking';
+import type { HomeSummary, RankedItem } from '../../application/ranking';
 import type { StoredRecord } from '../../application/ports/record-store';
 import type { TodayView } from '../../application/today';
 import { t } from '../../i18n/t';
@@ -13,6 +13,7 @@ import type { StripPet } from '../pets/PetProfile';
 import type { ProfileTab } from '../pets/profile-tabs';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { useToastStore } from '../shared/toast';
 import { useNow } from '../shared/use-now';
 import { useWideScreen } from '../shared/use-wide-screen';
 import { PetRow } from './PetRow';
@@ -57,6 +58,16 @@ function Lede({ summary }: { summary: HomeSummary }) {
   return <>{t('home.ledeClear')}</>;
 }
 
+/** What the order is held on while the Undo toast is open (PO-petcare-002 Q-01). */
+interface Hold {
+  /** The tasks as they were before the first tick, so rows do not jump under the finger. */
+  view: TodayView;
+  /** Ticked task keys and the completion each one wrote, for Undo. */
+  done: Map<string, StoredRecord>;
+  /** The toast that holds the order; the hold ends when it closes or is replaced. */
+  toast: number;
+}
+
 /**
  * Home: the household's pets, most urgent first. On a phone a row opens the profile; from 860 px
  * the profile sits beside the list, with the most urgent pet selected until another is chosen.
@@ -71,6 +82,11 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
   const wide = useWideScreen();
   const navigate = useNavigate();
   const [localTab, setLocalTab] = useState<ProfileTab>('overview');
+  const [hold, setHold] = useState<Hold | null>(null);
+  const showToast = useToastStore((s) => s.show);
+  const dismissToast = useToastStore((s) => s.dismiss);
+  const toastOpen = useToastStore((s) => s.message !== null);
+  const toastSerial = useToastStore((s) => s.serial);
 
   const list = useQuery({
     queryKey: ['pet', householdId],
@@ -100,9 +116,40 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
       })),
     [list.data],
   );
-  const ranked = useMemo(
-    () => rankPets(homePets, view.data ?? NOTHING, now),
-    [homePets, view.data, now],
+  // The order is held while the toast that offers Undo is the one on screen.
+  const holding = hold !== null && toastOpen && toastSerial === hold.toast;
+  const active = holding ? hold : null;
+  const shown = active ? active.view : (view.data ?? NOTHING);
+  const ranked = useMemo(() => rankPets(homePets, shown, now), [homePets, shown, now]);
+
+  const check = useCallback(
+    async (item: RankedItem, petName: string, already: boolean) => {
+      const earlier = active?.done.get(item.key);
+      if (already && earlier) {
+        // Ticking a ticked task takes it back.
+        await today.undo(earlier);
+        const rest = new Map(active?.done);
+        rest.delete(item.key);
+        if (rest.size === 0) dismissToast();
+        else if (active) setHold({ ...active, done: rest });
+        return;
+      }
+      try {
+        const completion = await today.complete(householdId, item, false, new Date());
+        const done = new Map(active?.done).set(item.key, completion);
+        showToast(t('home.checkDone', { task: item.title, pet: petName }), {
+          undo: () => void today.undo(completion),
+        });
+        setHold({
+          view: active?.view ?? view.data ?? NOTHING,
+          done,
+          toast: useToastStore.getState().serial,
+        });
+      } catch {
+        showToast(t('home.checkFailed'));
+      }
+    },
+    [active, today, householdId, view.data, showToast, dismissToast],
   );
   const archived = homePets.filter((p) => p.archived);
   const summary = useMemo(() => summarize(ranked), [ranked]);
@@ -160,6 +207,8 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
               selected={r.pet.id === selectedId}
               now={now}
               tz={tz}
+              checked={holding && r.top !== null && hold.done.has(r.top.key)}
+              onCheck={(item, already) => void check(item, r.pet.name, already)}
             />
           ))}
           {canAdd ? (

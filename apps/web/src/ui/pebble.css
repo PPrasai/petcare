@@ -996,6 +996,57 @@
     width: max-content;
     max-width: calc(100vw - 32px);
     font-size: 14px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .toast button {
+    border: 0;
+    background: none;
+    color: inherit;
+    font-weight: 800;
+    text-decoration: underline;
+    padding: 4px 8px;
+    min-height: 44px;
+  }
+  .prow.checked .l2 b {
+    text-decoration: line-through;
+  }
+  .camslot {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+  }
+  .camslot .camb {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid var(--bg);
+    background: var(--accent);
+    color: var(--on-accent);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+    list-style: none;
+  }
+  .camslot .camb::-webkit-details-marker {
+    display: none;
+  }
+  .camslot .camb::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
+  .camslot .camb svg {
+    width: 17px;
+    height: 17px;
+  }
+  .camslot .menu {
+    left: 0;
+    right: auto;
+    top: 44px;
   }
   .demo {
     display: flex;
