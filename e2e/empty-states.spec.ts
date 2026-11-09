@@ -40,3 +40,39 @@ test('an unknown address shows the 404 page, on its own and inside the shell', a
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await noEmptyLists(page);
 });
+
+test('a fresh account sees the empty copy of expenses, contacts and invites', async ({ page }) => {
+  await signUp(page, 'empty-people');
+
+  await page.goto('/expenses');
+  await expect(
+    page
+      .locator('.empty')
+      .getByText(
+        'No expenses yet. Add one here or with the + button and the month adds itself up.',
+      ),
+  ).toBeVisible();
+  await noEmptyLists(page);
+
+  // Spending in another month leaves this month empty.
+  await page.getByRole('button', { name: 'Add an expense' }).click();
+  await page.getByLabel('Date').fill('2020-01-15');
+  await page.getByLabel('Amount').fill('5');
+  await page.getByRole('button', { name: 'Add expense' }).click();
+  await expect(page.locator('.empty').getByText('Nothing spent in this period.')).toBeVisible();
+  await noEmptyLists(page);
+
+  await page.goto('/contacts');
+  await expect(
+    page
+      .locator('.empty')
+      .getByText(
+        'No contacts yet. Add your vet first, then pick them in vet visits and vaccinations.',
+      ),
+  ).toBeVisible();
+  await noEmptyLists(page);
+
+  await page.goto('/household');
+  await expect(page.locator('.empty').getByText('No open invites.')).toBeVisible();
+  await noEmptyLists(page);
+});

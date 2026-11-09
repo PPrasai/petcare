@@ -47,7 +47,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Temp clinic');
   await page.getByRole('button', { name: 'Add contact' }).click();
-  await expect(page.getByText('Temp clinic')).toBeVisible();
+  await expect(page.getByTestId('contact-row').filter({ hasText: 'Temp clinic' })).toBeVisible();
   await waitSynced(page);
   await page.reload();
   await expect
@@ -141,13 +141,13 @@ test('every record type works offline, survives a reload, and syncs when back on
   await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Dr Rao');
   await page.getByRole('button', { name: 'Add contact' }).click();
-  await expect(page.getByText('Dr Rao')).toBeVisible();
+  await expect(page.getByTestId('contact-row').filter({ hasText: 'Dr Rao' })).toBeVisible();
   await page.getByRole('button', { name: 'Delete Temp clinic' }).click();
-  await expect(page.getByText('Temp clinic')).toHaveCount(0);
+  await expect(page.getByTestId('contact-row').filter({ hasText: 'Temp clinic' })).toHaveCount(0);
 
   // Reload while still offline: everything is still there.
   await page.reload();
-  await expect(page.getByText('Dr Rao')).toBeVisible();
+  await expect(page.getByTestId('contact-row').filter({ hasText: 'Dr Rao' })).toBeVisible();
   await tab(page, 'Health');
   await expect(page.getByText('Given 2025-01-15')).toBeVisible();
   await tab(page, 'Health');

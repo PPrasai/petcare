@@ -20,7 +20,7 @@ export function SegmentedControl({ label, options, value, onChange }: SegmentedC
   };
   return (
     // The group handles the arrow keys for the buttons inside it; it is not itself interactive.
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div className="seg" role="group" aria-label={label} onKeyDown={onKeyDown}>
       {options.map((o) => (
         <button

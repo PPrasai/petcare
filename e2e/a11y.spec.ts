@@ -77,3 +77,18 @@ test('settings', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
   await expectAccessible(page, 'settings');
 });
+
+test('expenses, household and contacts', async ({ page }) => {
+  await signUp(page, 'a11y-people');
+  for (const [link, heading] of [
+    ['Expenses', 'Expenses'],
+    ['Household', 'Household'],
+  ]) {
+    await page.getByRole('link', { name: link, exact: true }).first().click();
+    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+    await expectAccessible(page, heading.toLowerCase());
+  }
+  await page.goto('/contacts');
+  await expect(page.getByRole('heading', { level: 1, name: 'Contacts' })).toBeVisible();
+  await expectAccessible(page, 'contacts');
+});
