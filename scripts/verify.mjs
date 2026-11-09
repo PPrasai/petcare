@@ -6,6 +6,7 @@ const hasE2e = globSync('e2e/**/*.spec.ts').length > 0;
 const steps = [
   ['typecheck', 'pnpm typecheck'],
   ['lint', 'pnpm lint'],
+  ['pebble-classes (QA-41)', 'node scripts/check-pebble-classes.mjs'],
   ['i18n', 'node scripts/check-i18n.mjs'],
   ['lint:deps', 'pnpm lint:deps'],
   ['lint:openapi', 'pnpm lint:openapi'],

@@ -1,12 +1,12 @@
 import { useForm } from '@tanstack/react-form';
 import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { NetworkError } from '../../application/ports/remote-api';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { useSessionStore } from '../../state/session';
-import { Banner, Button, TextField } from '../../ui';
+import { Banner, Button, Icon, TextField } from '../../ui';
 import { useServices } from '../shared/services-context';
 import { zodField } from '../shared/validators';
 
@@ -29,6 +29,11 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
   const providers = useSessionStore((s) => s.config?.providers.join(',') ?? '');
   const [problem, setProblem] = useState<MessageKey | null>(null);
   const signUp = mode === 'signUp';
+  const problemRef = useRef<HTMLDivElement>(null);
+  // A failed submit moves focus to the message, so a screen reader hears it.
+  useEffect(() => {
+    if (problem) problemRef.current?.focus();
+  }, [problem]);
 
   const form = useForm({
     defaultValues: { name: '', email: '', password: '' },
@@ -54,25 +59,53 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
     }
   };
 
+  const providerList = providers === '' ? [] : providers.split(',');
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-5">
-      <h1 className="text-2xl font-semibold">
-        {signUp ? t('auth.signUp.title') : t('auth.signIn.title')}
-      </h1>
-      {problem ? <Banner tone="warn">{t(problem)}</Banner> : null}
-      <form
-        className="flex flex-col gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        {signUp ? (
-          <form.Field name="name" validators={{ onBlur: zodField(nameRule) }}>
+    <main className="authwrap">
+      <div className="greet authbrand">
+        <span className="brand">
+          <span className="logo">
+            <Icon name="paw" />
+          </span>
+          {t('app.name')}
+        </span>
+        <p className="lede">{t('auth.tagline')}</p>
+      </div>
+      <div className="card pad authcard">
+        <h1>{signUp ? t('auth.signUp.title') : t('auth.signIn.title')}</h1>
+        {providerList.map((provider) => (
+          <Button key={provider} variant="secondary" onClick={() => void social(provider)}>
+            {t('auth.social', { provider: capitalize(provider) })}
+          </Button>
+        ))}
+        {providerList.length > 0 ? <div className="divider">{t('auth.or')}</div> : null}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+        >
+          {signUp ? (
+            <form.Field name="name" validators={{ onBlur: zodField(nameRule) }}>
+              {(field) => (
+                <TextField
+                  label={t('auth.name')}
+                  autoComplete="name"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  error={field.state.meta.errors[0]}
+                />
+              )}
+            </form.Field>
+          ) : null}
+          <form.Field name="email" validators={{ onBlur: zodField(emailRule) }}>
             {(field) => (
               <TextField
-                label={t('auth.name')}
-                autoComplete="name"
+                label={t('auth.email')}
+                type="email"
+                autoComplete="email"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
@@ -80,53 +113,47 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
               />
             )}
           </form.Field>
-        ) : null}
-        <form.Field name="email" validators={{ onBlur: zodField(emailRule) }}>
-          {(field) => (
-            <TextField
-              label={t('auth.email')}
-              type="email"
-              autoComplete="email"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-              error={field.state.meta.errors[0]}
-            />
-          )}
-        </form.Field>
-        <form.Field name="password" validators={{ onBlur: zodField(passwordRule) }}>
-          {(field) => (
-            <TextField
-              label={t('auth.password')}
-              type="password"
-              autoComplete={signUp ? 'new-password' : 'current-password'}
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-              error={field.state.meta.errors[0]}
-            />
-          )}
-        </form.Field>
-        <form.Subscribe selector={(s) => s.isSubmitting}>
-          {(submitting) => (
-            <Button type="submit" disabled={submitting}>
-              {signUp ? t('auth.signUp.submit') : t('auth.signIn.submit')}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
-      {providers ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-center text-sm text-muted">{t('auth.or')}</p>
-          {providers.split(',').map((provider) => (
-            <Button key={provider} variant="secondary" onClick={() => void social(provider)}>
-              {t('auth.social', { provider: capitalize(provider) })}
-            </Button>
-          ))}
-        </div>
-      ) : null}
+          <form.Field name="password" validators={{ onBlur: zodField(passwordRule) }}>
+            {(field) => (
+              <TextField
+                label={t('auth.password')}
+                type="password"
+                autoComplete={signUp ? 'new-password' : 'current-password'}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors[0]}
+              />
+            )}
+          </form.Field>
+          {problem ? (
+            <Banner tone="warn" ref={problemRef} tabIndex={-1}>
+              {t(problem)}
+            </Banner>
+          ) : null}
+          <form.Subscribe selector={(s) => s.isSubmitting}>
+            {(submitting) => (
+              <Button type="submit" disabled={submitting} aria-busy={submitting}>
+                {signUp ? t('auth.signUp.submit') : t('auth.signIn.submit')}
+              </Button>
+            )}
+          </form.Subscribe>
+        </form>
+        <a
+          className="authlink"
+          href={signUp ? '/sign-in' : '/sign-up'}
+          onClick={(e) => {
+            e.preventDefault();
+            void navigate({ to: signUp ? '/sign-in' : '/sign-up' });
+          }}
+        >
+          {signUp ? t('auth.signUp.switch') : t('auth.signIn.switch')}
+        </a>
+      </div>
       {signUp ? null : (
-        <div className="flex flex-col gap-1 border-t border-line pt-4">
+        <div className="card pad authcard">
+          <h2>{t('auth.demoTitle')}</h2>
+          <p className="muted">{t('demo.tryHint')}</p>
           <Button
             variant="secondary"
             disabled={demoBusy}
@@ -137,19 +164,8 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
           >
             {t('demo.try')}
           </Button>
-          <p className="text-center text-sm text-muted">{t('demo.tryHint')}</p>
         </div>
       )}
-      <a
-        className="text-center underline"
-        href={signUp ? '/sign-in' : '/sign-up'}
-        onClick={(e) => {
-          e.preventDefault();
-          void navigate({ to: signUp ? '/sign-in' : '/sign-up' });
-        }}
-      >
-        {signUp ? t('auth.signUp.switch') : t('auth.signIn.switch')}
-      </a>
     </main>
   );
 }

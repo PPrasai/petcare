@@ -23,6 +23,14 @@ const PATHS = {
     '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 9.5a4.5 4 0 017 0M12 10l1.8-1.6"/>',
   note: '<path d="M5 4h14v12l-5 5H5z"/><path d="M14 21v-5h5M8 9h8M8 13h4"/>',
   vet: '<path d="M12 20s-7-4.4-7-9.5A4 4 0 0112 8a4 4 0 017 2.5c0 5.1-7 9.5-7 9.5z"/><path d="M12 10.5v4M10 12.5h4"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 9V6.5A2.5 2.5 0 0012.5 4h-6A2.5 2.5 0 004 6.5v6A2.5 2.5 0 006.5 15H9"/>',
+  phone:
+    '<path d="M6.5 3.5h3l1.5 4-2 1.3a11 11 0 005.2 5.2l1.3-2 4 1.5v3a2 2 0 01-2.2 2A15.5 15.5 0 014.5 5.7 2 2 0 016.5 3.5z"/>',
+  mail: '<rect x="3" y="5.5" width="18" height="13" rx="3"/><path d="M4 7.5l8 6 8-6"/>',
+  globe:
+    '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.3 3.5 8.5s-1 6-3.5 8.5C9.5 18 8.5 15.2 8.5 12s1-6 3.5-8.5z"/>',
+  print:
+    '<path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="2.5"/><path d="M7 14h10v6H7z"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;

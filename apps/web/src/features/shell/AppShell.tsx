@@ -57,9 +57,10 @@ const isCurrent = (dest: Destination, pathname: string) =>
 /**
  * The frame around every signed-in page. A phone gets a bottom bar with a centre + that opens the
  * Log sheet; from 860 px a top nav with a Log button. Only one of the two is ever in the page,
- * so there is exactly one Log control per viewport (QA-27).
+ * so there is exactly one Log control per viewport (QA-27). `children` replaces the routed page,
+ * which is how the not-found page sits inside the shell.
  */
-export function AppShell(): ReactNode {
+export function AppShell({ children }: { children?: ReactNode }): ReactNode {
   const demo = useDemo();
   const wide = useWideScreen();
   const { pathname } = useLocation();
@@ -122,7 +123,7 @@ export function AppShell(): ReactNode {
           {wide && canLog ? <div className="foot">{logButton}</div> : null}
         </div>
         <main id="content" className="main">
-          <Outlet />
+          {children ?? <Outlet />}
         </main>
       </div>
       <LogSheet />
