@@ -17,6 +17,7 @@
     "gen": "pnpm --filter @petcare/contracts gen",
     "test": "vitest run",
     "e2e": "playwright test",
+    "shots": "playwright test -c playwright.shots.config.ts",
     "perf": "node scripts/perf.mjs",
     "verify": "node scripts/verify.mjs"
   },

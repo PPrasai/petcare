@@ -1,5 +1,4 @@
 import {
-  Link,
   Outlet,
   createRootRoute,
   createRoute,
@@ -19,25 +18,17 @@ import { HomePage } from '../features/home/HomePage';
 import { parseTab } from '../features/pets/profile-tabs';
 import { WIDE_QUERY } from '../features/shared/use-wide-screen';
 import { MorePage } from '../features/shell/MorePage';
+import { NotFoundPage } from '../features/shell/NotFoundPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { AppShell } from '../features/shell/AppShell';
 import { SyncPage } from '../features/sync/SyncPage';
-import { t } from '../i18n/t';
 import { useSessionStore } from '../state/session';
 
 const signedIn = () => useSessionStore.getState().status === 'signedIn';
 
 const root = createRootRoute({
   component: Outlet,
-  notFoundComponent: () => (
-    <main className="mx-auto flex max-w-md flex-col gap-3 p-6">
-      <h1 className="text-2xl font-semibold">{t('notFound.title')}</h1>
-      <p>{t('notFound.body')}</p>
-      <Link to="/" className="underline">
-        {t('notFound.home')}
-      </Link>
-    </main>
-  ),
+  notFoundComponent: NotFoundPage,
 });
 
 /** Everything behind sign-in shares the shell (navigation, sync indicator). */

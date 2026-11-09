@@ -638,6 +638,159 @@
     gap: 2px;
   }
 
+  .empty .i {
+    display: block;
+    margin-bottom: 8px;
+  }
+  .empty .et {
+    font-size: 22px;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .empty .ea {
+    margin-top: 14px;
+  }
+  .greet .acts {
+    margin-top: 6px;
+  }
+  .facts div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .facts dd {
+    margin: 0;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+  .qr {
+    width: 168px;
+    height: 168px;
+    color: #14171f;
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    flex: none;
+  }
+  .qr svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* account and public pages (SPEC-petcare-003 S-01..S-05, derived) */
+  .authwrap {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: min(100%, 420px);
+    justify-content: center;
+    place-items: start center;
+    align-content: start;
+    gap: 16px;
+    padding: 40px 16px;
+  }
+  .authwrap > * {
+    min-width: 0;
+    width: 100%;
+  }
+  .authbrand {
+    align-items: center;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .authbrand .brand {
+    font-size: 24px;
+  }
+  .authbrand .lede {
+    text-align: center;
+  }
+  .authcard {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .authcard form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .authcard .btn {
+    width: 100%;
+  }
+  .authcard h2 {
+    font-size: 19px;
+  }
+  .authlink {
+    text-align: center;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .public {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .public .alert {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .public .alert b {
+    font-size: 19px;
+    color: var(--bad);
+  }
+  .public .alert .btn {
+    margin-top: 8px;
+  }
+  .public .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .public .who {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .public .who .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .public h3 {
+    font-size: 15px;
+    margin: 10px 0 6px;
+  }
+  .public .notes {
+    padding-top: 6px;
+    overflow-wrap: anywhere;
+  }
+  .public .call {
+    margin-top: 10px;
+    width: 100%;
+  }
+
   /* home: ranked pet list and the profile beside it */
   .split {
     display: grid;
