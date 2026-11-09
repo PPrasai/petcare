@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: false,
+        // The glob below already precaches the manifest icons; without this each was listed twice.
+        includeManifestIcons: false,
         manifest: {
           name: 'PetCare',
           short_name: 'PetCare',
