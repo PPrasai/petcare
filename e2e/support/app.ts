@@ -82,17 +82,18 @@ export async function addReminder(page: Page, r: ReminderInput) {
 /**
  * Puts a care routine on the server for the account's first pet, as an increment-1 client would
  * have made it (the app no longer creates routines), and reloads so this device pulls it. It
- * started yesterday, daily at 00:01, so it is overdue now.
+ * starts today, daily at 00:01, so it is overdue now.
  */
 export async function pushRoutine(
   page: Page,
   routine: { title: string; kind: 'feeding' | 'walk' | 'grooming' },
 ) {
+  await waitSynced(page);
   const me = await (await page.request.get('/api/me')).json();
   const pull = await (await page.request.get('/api/sync/pull')).json();
   const pet = pull.changes.find((c: { type: string }) => c.type === 'pet');
   const tz = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-  const yesterday = new Date(Date.now() - 86_400_000).toLocaleDateString('en-CA', { timeZone: tz });
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
   const res = await page.request.post('/api/sync/push', {
     headers: { origin: 'http://localhost:4173' },
     data: {
@@ -110,7 +111,7 @@ export async function pushRoutine(
             kind: routine.kind,
             title: routine.title,
             active: true,
-            schedule: { tz, kind: 'daily', startOn: yesterday, times: ['00:01'] },
+            schedule: { tz, kind: 'daily', startOn: today, times: ['00:01'] },
           },
           clientTime: new Date().toISOString(),
         },

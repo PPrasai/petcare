@@ -5,8 +5,10 @@ import { addPet, addReminder, signUp, waitSynced } from './support/app';
 type Change = { type: string; deletedAt: string | null; data: Record<string, unknown> };
 const liveCompletions = async (page: Page): Promise<number> => {
   const pull = await (await page.request.get('/api/sync/pull')).json();
-  return pull.changes.filter((c: Change) => c.type === 'careCompletion' && c.deletedAt === null)
-    .length;
+  return pull.changes.filter(
+    (c: Change) =>
+      (c.type === 'reminderCompletion' || c.type === 'careCompletion') && c.deletedAt === null,
+  ).length;
 };
 
 const rows = (page: Page) => page.getByTestId('pet-row');

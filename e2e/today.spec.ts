@@ -89,5 +89,5 @@ test('Up next shows the next task, and the Care tab works offline', async ({ pag
   await expect(page.locator('.task').filter({ hasText: 'Brush teeth' })).toHaveCount(0);
   await context.setOffline(false);
   await waitSynced(page);
-  expect(await pulled(page, 'careCompletion')).toHaveLength(1);
+  expect(await pulled(page, 'reminderCompletion')).toHaveLength(1);
 });
