@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { signUp } from './support/app';
+import { addPet, signUp } from './support/app';
 
 // QA-32 (amended): the exact copy of every empty state in the SPEC-petcare-003 §5.1 inventory is
 // visible in a `.empty` element, and no list renders an empty <ul>. P1b-1 starts with the pages:
@@ -130,5 +130,26 @@ test('a pet made through the wizard shows the empty copy of Health and Files', a
       .locator('.empty')
       .getByText('No files yet. Vet records, certificates and photos for Momo live here.'),
   ).toBeVisible();
+  await noEmptyLists(page);
+});
+
+// P4: a new pet's Care tab says what Today, Reminders and Feeding are for, and offers the action.
+test('the Care tab of a new pet shows the empty copy of Today, Reminders and Feeding', async ({
+  page,
+}) => {
+  await signUp(page, 'empty-care');
+  await addPet(page, 'Momo');
+  await page.getByRole('tab', { name: 'Care' }).click();
+  await expect(page.locator('.empty').getByText('Nothing due today.')).toBeVisible();
+  await expect(
+    page
+      .locator('.empty')
+      .getByText('No reminders yet. Add one for walks, medication, grooming or anything else.'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add a reminder for Momo' })).toBeVisible();
+  await noEmptyLists(page);
+
+  await page.locator('summary').filter({ hasText: 'Feeding' }).click();
+  await expect(page.locator('.empty').getByText('No feeding routines.')).toBeVisible();
   await noEmptyLists(page);
 });

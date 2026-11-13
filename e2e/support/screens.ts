@@ -860,4 +860,79 @@ export const SCREENS: Screen[] = [
       await expect(page.locator('.empty').getByText(/^No files yet./)).toBeVisible();
     },
   },
+  // P4: the Care tab (Today, Reminders, Feeding) and the reminder sheet
+  {
+    id: 'S-14 today',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Care')(page);
+      await expect(page.getByRole('heading', { level: 2, name: 'Today' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 list, feeding open',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Care')(page);
+      await addReminder(page, { title: 'Evening walk', repeat: 'Daily', time: '18:00' });
+      await expect(
+        page.getByTestId('reminder-row').filter({ hasText: 'Evening walk' }),
+      ).toBeVisible();
+      await page.locator('summary').filter({ hasText: 'Feeding' }).click();
+      await expect(page.getByText('No feeding routines.')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 new',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Care', 'Add a reminder for', 'New reminder'),
+  },
+  {
+    id: 'S-15 new, weekly',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileOpener('Care', 'Add a reminder for', 'New reminder')(page);
+      await dialogNamed('New reminder')(page)
+        .getByRole('group', { name: 'Repeat' })
+        .getByRole('button', { name: 'Weekly' })
+        .click();
+      await expect(page.getByRole('group', { name: 'Days of the week' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 edit',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Care')(page);
+      await addReminder(page, { title: 'Evening walk', repeat: 'Daily', time: '18:00' });
+      await page.getByRole('button', { name: 'Edit reminder: Evening walk' }).click();
+      await expect(dialogNamed('Edit reminder')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 empty',
+    path: '/',
+    session: 'account',
+    two: true,
+    ready: mainReady,
+    open: async (page) => {
+      await newPetTab('Care')(page);
+      await expect(page.locator('.empty').getByText(/^No reminders yet./)).toBeVisible();
+    },
+  },
 ];

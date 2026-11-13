@@ -37,6 +37,9 @@ export interface RankedPet<P extends RankablePet = RankablePet> {
 
 const DAY_MS = 86_400_000;
 
+/** A feeding routine: meals are logged, never ranked or listed as to-dos. */
+export const isMeal = (item: TodayItem): boolean => item.routineKind === 'feeding';
+
 /** The status of an open item, or null when it is too far ahead to show. */
 export function itemStatus(item: TodayItem, bucket: 'overdue' | 'today' | 'upcoming', now: Date) {
   const at = Date.parse(item.occurrenceAt);
@@ -62,7 +65,7 @@ export function rankPets<P extends RankablePet>(
   const open = new Map<string, RankedItem[]>();
   const add = (items: TodayItem[], bucket: 'overdue' | 'today' | 'upcoming') => {
     for (const item of items) {
-      if (item.petId === null) continue;
+      if (item.petId === null || isMeal(item)) continue;
       const status = itemStatus(item, bucket, now);
       if (status === null) continue;
       const list = open.get(item.petId) ?? [];
@@ -73,7 +76,7 @@ export function rankPets<P extends RankablePet>(
   add(view.overdue, 'overdue');
   add(view.today, 'today');
   add(view.upcoming, 'upcoming');
-  const doneToday = new Set(view.done.map((i) => i.petId));
+  const doneToday = new Set(view.done.filter((i) => !isMeal(i)).map((i) => i.petId));
 
   const ranked = pets
     .filter((pet) => !pet.archived)
