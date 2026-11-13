@@ -5,6 +5,8 @@ import { HealthService } from './health-service';
 import { LogService } from './log-service';
 import { MeasurementService } from './measurement-service';
 import type { FileGateway } from './ports/file-gateway';
+import { PhotoUnusable } from './ports/image-reducer';
+import type { ImageReducer } from './ports/image-reducer';
 import type { RecordStore, StoredRecord } from './ports/record-store';
 
 const PET = '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b';
@@ -17,6 +19,10 @@ const prefs = {
   timeZone: 'UTC',
   currency: 'USD',
 } as const;
+
+const shrink: ImageReducer = {
+  reduce: () => Promise.resolve(new Blob(['small'], { type: 'image/jpeg' })),
+};
 
 function memoryStore() {
   const rows: StoredRecord[] = [];
@@ -44,7 +50,7 @@ function memoryStore() {
   return { rows, store };
 }
 
-function setup() {
+function setup(reducer: ImageReducer = shrink) {
   const { rows, store } = memoryStore();
   const files: FileGateway = {
     attach: () => Promise.resolve({ fileId: '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2c' }),
@@ -58,6 +64,7 @@ function setup() {
     new ExpenseService(store),
     new DocumentService(store),
     files,
+    reducer,
   );
   return { rows, service };
 }
@@ -111,6 +118,38 @@ describe('LogService', () => {
       type: 'document',
       data: { petId: PET, title: 'beach.jpg', category: 'photo' },
     });
+  });
+
+  it('keeps the reduced picture, not the original, and writes nothing for an unusable file', async () => {
+    const kept: File[] = [];
+    const { rows, store } = memoryStore();
+    const files: FileGateway = {
+      attach: (_h, file) => {
+        kept.push(file);
+        return Promise.resolve({ fileId: '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2c' });
+      },
+      open: () => Promise.resolve(null),
+      release: () => undefined,
+      discard: () => Promise.resolve(),
+    };
+    const build = (reducer: ImageReducer) =>
+      new LogService(
+        new MeasurementService(store),
+        new HealthService(store),
+        new ExpenseService(store),
+        new DocumentService(store),
+        files,
+        reducer,
+      );
+    await build(shrink).photo(HOUSEHOLD, PET, new File(['original-bytes'], 'a.png'));
+    expect(kept[0]?.size).toBe(5);
+    expect(kept[0]?.type).toBe('image/jpeg');
+    const broken: ImageReducer = { reduce: () => Promise.reject(new PhotoUnusable()) };
+    await expect(build(broken).photo(HOUSEHOLD, PET, new File(['x'], 'b.png'))).rejects.toThrow(
+      PhotoUnusable,
+    );
+    expect(kept).toHaveLength(1);
+    expect(rows).toHaveLength(1);
   });
 
   it('writes none of the shapes that only contract 003 allows', async () => {

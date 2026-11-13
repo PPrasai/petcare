@@ -7,6 +7,7 @@ import type { HealthService } from './health-service';
 import type { MeasurementService } from './measurement-service';
 import { InvalidInput } from './pet-service';
 import type { FileGateway } from './ports/file-gateway';
+import type { ImageReducer } from './ports/image-reducer';
 
 /** The Log sheet's kinds that write the existing record types (SPEC-petcare-002 slice P1). */
 export const LOG_KINDS = ['weight', 'note', 'expense', 'vet', 'photo'] as const;
@@ -14,6 +15,14 @@ export type LogKind = (typeof LOG_KINDS)[number];
 
 /** The expense categories offered as chips on the sheet; the Expenses page has all nine. */
 export const LOG_EXPENSE_CATEGORIES = ['food', 'vet', 'grooming', 'insurance'] as const;
+/** The other five, behind the "More" chip, so no category is lost (PO-petcare-002 Q-12). */
+export const LOG_EXPENSE_MORE = [
+  'supplies',
+  'medication',
+  'boarding',
+  'training',
+  'other',
+] as const;
 
 type LogPrefs = Pick<
   Preferences,
@@ -28,6 +37,7 @@ export class LogService {
     private readonly expenses: ExpenseService,
     private readonly documents: DocumentService,
     private readonly files: FileGateway,
+    private readonly reducer: ImageReducer,
   ) {}
 
   /** A weight as the user's unit shows it ("12.5" in kg or lb). Stored in kg. */
@@ -94,9 +104,17 @@ export class LogService {
     });
   }
 
-  /** Keeps the photo on the device (uploaded by the next sync) and files it under the pet. */
+  /**
+   * Reduces the photo like a pet photo (QA-35: long edge 768 px, no EXIF), keeps it on the device
+   * (uploaded by the next sync) and files it under the pet. Throws `PhotoUnusable` for a file
+   * that cannot be decoded; nothing is written then.
+   */
   async photo(householdId: string, petId: string, file: File) {
-    const { fileId } = await this.files.attach(householdId, file);
+    const reduced = await this.reducer.reduce(file);
+    const { fileId } = await this.files.attach(
+      householdId,
+      new File([reduced], 'photo.jpg', { type: reduced.type || 'image/jpeg' }),
+    );
     await this.documents.add(householdId, {
       petId,
       title: file.name || 'photo',
