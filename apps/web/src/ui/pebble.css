@@ -821,10 +821,9 @@
   }
   .sw {
     width: 48px;
-    height: 30px;
-    border-radius: 999px;
+    height: 44px;
     border: 0;
-    background: var(--line-strong);
+    background: transparent;
     position: relative;
     flex: none;
     padding: 0;
@@ -832,12 +831,17 @@
   .sw::before {
     content: '';
     position: absolute;
-    inset: -7px -2px;
+    left: 0;
+    right: 0;
+    top: 7px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--line-strong);
   }
   .sw::after {
     content: '';
     position: absolute;
-    top: 3px;
+    top: 10px;
     left: 3px;
     width: 24px;
     height: 24px;
@@ -845,7 +849,7 @@
     background: var(--surface);
     transition: transform 0.15s;
   }
-  .sw[aria-checked='true'] {
+  .sw[aria-checked='true']::before {
     background: var(--accent);
   }
   .sw[aria-checked='true']::after {

@@ -20,13 +20,14 @@ import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 
 const MIN_PASSWORD = 8;
+const NO_PROVIDERS: string[] = [];
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Sign-in methods: the password (set / change in a sheet) and linked providers (CAP-02). */
 export function SignInCard({ demoNoteId }: { demoNoteId: string }) {
   const { account } = useServices();
   const demo = useDemo();
-  const available = useSessionStore((s) => s.config?.providers ?? []);
+  const available = useSessionStore((s) => s.config?.providers ?? NO_PROVIDERS);
   const client = useQueryClient();
   const showToast = useToastStore((s) => s.show);
   const accounts = useQuery({

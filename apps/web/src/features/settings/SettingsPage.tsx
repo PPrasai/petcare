@@ -48,7 +48,7 @@ export function SettingsPage() {
           <Card>
             <SectionHeader title={t('settings.more')} />
             {LINKS.map((row) => (
-              <Link key={row.to} to={row.to} aria-label={t(row.title)} className="mrow">
+              <Link key={row.to} to={row.to} className="mrow">
                 <span className="l">
                   <b>{t(row.title)}</b>
                   <span>{t(row.hint)}</span>
