@@ -774,7 +774,15 @@ export const SCREENS: Screen[] = [
     session: 'demo',
     kind: 'overlay',
     ready: profile,
-    open: profileOpener('Files', 'Add a document', 'Add document'),
+    open: async (page) => {
+      await profileTab('Files')(page);
+      await page.getByLabel('Choose a file').setInputFiles({
+        name: 'record.pdf',
+        mimeType: 'application/pdf',
+        buffer: Buffer.from('%PDF-1.4'),
+      });
+      await expect(dialogNamed('Add document')(page)).toBeVisible();
+    },
   },
   {
     id: 'S-40 empty',
