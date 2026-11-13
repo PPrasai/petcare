@@ -550,6 +550,9 @@
   .disc .in > .facts {
     margin-top: 0;
   }
+  .tabpane {
+    min-height: 12rem;
+  }
   .card > .disc,
   .card > .label,
   .card > [role='img'] {

@@ -6,7 +6,7 @@ import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatMeasurement } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
-import { Icon, Tabs, panelId, tabId } from '../../ui';
+import { EmptyState, Icon, Tabs, panelId, tabId } from '../../ui';
 import type { TabItem } from '../../ui';
 import { useHealthList } from '../health/hooks';
 import { PetAvatar } from '../shared/PetAvatar';
@@ -155,7 +155,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         onTouchEnd={onTouchEnd}
       >
         {tab === 'overview' ? <OverviewPane pet={record} /> : null}
-        <Suspense fallback={null}>
+        <Suspense fallback={<EmptyState busy>{t('ui.loading')}</EmptyState>}>
           {tab === 'health' ? <HealthPane pet={record} /> : null}
           {tab === 'files' ? <FilesPane pet={record} /> : null}
         </Suspense>

@@ -39,9 +39,14 @@ export async function userId(page: Page): Promise<string> {
   return (await res.json()).user.id as string;
 }
 
+/** Opens a disclosure by its title (for example "Vet visits" on the Health tab). */
+export async function openDisclosure(page: Page, title: string) {
+  await page.locator('summary').filter({ hasText: title }).click();
+}
+
 /** Opens the "Details" disclosure on a pet's Overview tab. */
 export async function openDetails(page: Page) {
-  await page.locator('summary').filter({ hasText: 'Details' }).click();
+  await openDisclosure(page, 'Details');
 }
 
 /**

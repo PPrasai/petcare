@@ -29,7 +29,7 @@ export function forEachCell(title: string, fn: (cell: Cell, browser: Browser) =>
     for (const theme of THEMES) {
       const cell: Cell = { width, theme, label: `${width.w}/${theme}` };
       test(`${title} @${cell.label}`, async ({ browser }) => {
-        test.setTimeout(300_000);
+        test.setTimeout(900_000);
         await fn(cell, browser);
       });
     }

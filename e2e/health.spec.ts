@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addPet, signUp, waitSynced } from './support/app';
+import { addPet, openDisclosure, signUp, waitSynced } from './support/app';
 
 type Change = { type: string; data: Record<string, unknown> };
 const pulled = async (page: import('@playwright/test').Page, type: string): Promise<Change[]> => {
@@ -15,6 +15,7 @@ test('vaccinations: suggestions fill name and interval, overdue shows at a glanc
   await addPet(page, 'Momo');
   await page.getByRole('tab', { name: 'Health' }).click();
 
+  await page.getByRole('button', { name: 'Add a vaccination' }).click();
   await expect(page.getByText('Suggestions — confirm intervals with your vet')).toBeVisible();
   await page.getByLabel('Given on').fill('2024-03-01');
   await page.getByRole('button', { name: 'Rabies' }).click();
@@ -29,12 +30,13 @@ test('vaccinations: suggestions fill name and interval, overdue shows at a glanc
 
   // A newer dose of the same vaccine answers the overdue one.
   const today = new Date().toISOString().slice(0, 10);
+  await page.getByRole('button', { name: 'Add a vaccination' }).click();
   await page.getByLabel('Vaccine', { exact: true }).fill('rabies');
   await page.getByLabel('Given on').fill(today);
   await page.getByLabel('Next due on').fill('2099-01-01');
   await page.getByRole('button', { name: 'Add vaccination' }).click();
   await expect(page.getByText('Overdue')).toHaveCount(0);
-  await expect(page.getByText('Up to date')).toBeVisible();
+  await expect(item.getByText(/^Due /)).toBeVisible();
 
   await waitSynced(page);
   const vaccinations = await pulled(page, 'vaccination');
@@ -47,6 +49,7 @@ test('medications: a scheduled dose can be given or skipped and syncs', async ({
   await addPet(page, 'Momo');
   await page.getByRole('tab', { name: 'Health' }).click();
 
+  await page.getByRole('button', { name: 'Add a medication' }).click();
   await page.getByLabel('Medication', { exact: true }).fill('Amoxicillin');
   await page.getByLabel('Dose', { exact: true }).fill('5');
   await page.getByLabel('Dose unit').selectOption('mg');
@@ -73,17 +76,20 @@ test('visits, conditions and symptoms are recorded and shown', async ({ page }) 
   await addPet(page, 'Momo');
 
   await page.getByRole('tab', { name: 'Health' }).click();
+  await openDisclosure(page, 'Vet visits');
+  await page.getByRole('button', { name: 'Add a visit' }).click();
   await page.getByLabel('Visit date').fill('2026-02-10');
   await page.getByLabel('Reason').fill('Annual check');
   await page.getByLabel('Diagnosis').fill('Healthy');
   await page.getByLabel('Cost').fill('45.50');
   await page.getByLabel('Follow-up on').fill('2099-02-10');
   await page.getByRole('button', { name: 'Add visit' }).click();
-  await expect(page.getByText('Annual check')).toBeVisible();
-  await expect(page.getByText('Diagnosis: Healthy')).toBeVisible();
-  await expect(page.getByText('$45.50')).toBeVisible();
+  const visits = page.getByRole('list', { name: 'Vet visits' });
+  await expect(visits.getByText('Annual check')).toBeVisible();
+  await expect(visits.getByText('Diagnosis: Healthy')).toBeVisible();
+  await expect(visits.getByText('$45.50')).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a condition' }).click();
   await page.getByLabel('Condition name').fill('Chicken');
   await page.getByLabel('Severity', { exact: true }).selectOption('moderate');
   await page.getByRole('button', { name: 'Add condition' }).click();
@@ -92,9 +98,12 @@ test('visits, conditions and symptoms are recorded and shown', async ({ page }) 
   await page.getByRole('button', { name: 'Mark Chicken resolved' }).click();
   await expect(condition.getByText(/Resolved/)).toBeVisible();
 
+  await page.getByRole('button', { name: 'Add a symptom' }).click();
   await page.getByLabel('What you noticed').fill('Scratching the left ear');
   await page.getByRole('button', { name: 'Add symptom' }).click();
-  await expect(page.getByText('Scratching the left ear')).toBeVisible();
+  await expect(
+    page.getByRole('list', { name: 'Symptoms journal' }).getByText('Scratching the left ear'),
+  ).toBeVisible();
 
   await waitSynced(page);
   expect(await pulled(page, 'vetVisit')).toHaveLength(1);
@@ -109,9 +118,12 @@ test('health records can be added offline and sync later', async ({ page, contex
   await waitSynced(page);
   await page.getByRole('tab', { name: 'Health' }).click();
   await context.setOffline(true);
+  await page.getByRole('button', { name: 'Add a condition' }).click();
   await page.getByLabel('Condition name').fill('Asthma');
   await page.getByRole('button', { name: 'Add condition' }).click();
-  await expect(page.getByText('Asthma').first()).toBeVisible();
+  await expect(
+    page.getByRole('list', { name: 'Conditions and allergies' }).getByText('Asthma'),
+  ).toBeVisible();
   await expect(page.getByTestId('pending-count')).toHaveAttribute('data-count', '1');
   await context.setOffline(false);
   await waitSynced(page);

@@ -35,6 +35,7 @@ test('add pet, health, care, files, emergency, more and the log sheet', async ({
 
   await expectAccessible(page, 'profile overview');
   await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a vaccination' }).click();
   await page.getByLabel('Vaccine', { exact: true }).fill('Rabies');
   await page.getByLabel('Given on').fill('2024-03-01');
   await page.getByRole('button', { name: 'Add vaccination' }).click();
@@ -46,7 +47,7 @@ test('add pet, health, care, files, emergency, more and the log sheet', async ({
   await expectAccessible(page, 'care routines and reminders');
 
   await page.getByRole('tab', { name: 'Files' }).click();
-  await expect(page.getByLabel('Title')).toBeVisible();
+  await expect(page.getByTestId('drop-zone')).toBeVisible();
   await expectAccessible(page, 'files');
 
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();

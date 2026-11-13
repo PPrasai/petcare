@@ -25,7 +25,7 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   await expect(page.getByText('2020-03-04 (estimated)')).toBeVisible();
   await expect(page.getByText('985112003456789')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Edit details' }).click();
   await page.getByLabel('Colour').fill('Brindle');
   await page.getByLabel('Insurance provider').fill('');
   await page.getByRole('button', { name: 'Save changes' }).click();

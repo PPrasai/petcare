@@ -85,6 +85,9 @@ test('the demo works end to end with no request to /api, and reset restores the 
     ['Files', 'Rabies certificate'],
   ] as const) {
     await page.getByRole('tab', { name: tab, exact: true }).click();
+    // Vet visits sit in a disclosure that starts closed.
+    if (text === 'Annual check-up')
+      await page.locator('summary').filter({ hasText: 'Vet visits' }).click();
     await expect(page.getByText(text).first()).toBeVisible();
   }
 

@@ -133,6 +133,32 @@ const withPet = async (page: Page) => {
     await page.goto('/emergency');
   }
 };
+
+/** The profile of the demo pet (Home on the phone, beside the list from 860 px), on one tab. */
+const profileTab = (tab: string) => async (page: Page) => {
+  await profile(page);
+  await page.getByRole('tab', { name: tab, exact: true }).click();
+};
+const profileDetails = async (page: Page) => {
+  await profile(page);
+  await page.locator('summary').filter({ hasText: 'Details' }).click();
+};
+/** A pet's profile in a fresh account, on one tab. */
+const newPetTab = (tab: string) => async (page: Page) => {
+  await withPet(page);
+  await page.goto('/');
+  await profileTab(tab)(page);
+};
+const profileOpener =
+  (tab: string, button: string, dialog: string, disclosure?: string) => async (page: Page) => {
+    await profileTab(tab)(page);
+    if (disclosure) await page.locator('summary').filter({ hasText: disclosure }).click();
+    await page.getByRole('button', { name: button }).click();
+    await expect(dialogNamed(dialog)(page)).toBeVisible();
+  };
+const mainReady = async (page: Page) => {
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+};
 const withCard = async (page: Page) => {
   await withPet(page);
   if (cards.has(page)) return;
@@ -610,6 +636,166 @@ export const SCREENS: Screen[] = [
       await page.getByLabel('Message for a finder').fill('Please call me');
       await page.getByRole('button', { name: 'Mark as lost', exact: true }).click();
       await expect(page.getByRole('status').filter({ hasText: 'Lost mode is on.' })).toBeVisible();
+    },
+  },
+  // P1b-4: pet profile panels
+  {
+    id: 'S-37',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileDetails(page);
+      await expect(page.getByRole('button', { name: 'Edit details' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-38',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileDetails(page);
+      await page.getByRole('button', { name: 'Edit details' }).click();
+      await expect(dialogNamed(/^Edit /)(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-39',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileDetails(page);
+      await page.getByRole('button', { name: 'Archive pet' }).click();
+      await expect(dialogNamed(/^Archive .+[?]$/)(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-40 health',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Health')(page);
+      await expect(page.getByRole('list', { name: 'Vaccinations' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-40 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a vaccination', 'Add vaccination'),
+  },
+  {
+    id: 'S-41 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a medication', 'Add medication'),
+  },
+  {
+    id: 'S-42 open',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Health')(page);
+      await page.locator('summary').filter({ hasText: 'Vet visits' }).click();
+      await expect(page.getByRole('button', { name: 'Add a visit' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-42 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a visit', 'Add visit', 'Vet visits'),
+  },
+  {
+    id: 'S-43 history',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Health')(page);
+      await page.locator('summary').filter({ hasText: 'All measurements' }).click();
+      await expect(page.getByRole('table', { name: 'All measurements' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-43 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a measurement', 'Add measurement'),
+  },
+  {
+    id: 'S-44 condition',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a condition', 'Add condition'),
+  },
+  {
+    id: 'S-44 symptom',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a symptom', 'Add symptom'),
+  },
+  {
+    id: 'S-45',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Files')(page);
+      await expect(page.getByTestId('drop-zone')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-46',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Files', 'Add a document', 'Add document'),
+  },
+  {
+    id: 'S-40 empty',
+    path: '/',
+    session: 'account',
+    two: true,
+    ready: mainReady,
+    open: async (page) => {
+      await newPetTab('Health')(page);
+      await expect(page.locator('.empty').getByText(/^No vaccines yet./)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-45 empty',
+    path: '/',
+    session: 'account',
+    two: true,
+    ready: mainReady,
+    open: async (page) => {
+      await newPetTab('Files')(page);
+      await expect(page.locator('.empty').getByText(/^No files yet./)).toBeVisible();
     },
   },
 ];
