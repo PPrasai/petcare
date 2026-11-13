@@ -28,7 +28,7 @@ test('routines and reminders show on the Care tab and can be done, skipped or sn
   page,
 }) => {
   await signUp(page, 'today');
-  await expect(page.getByText(/all caught up/)).toBeVisible();
+  await expect(page.getByText('Add a pet to get started.')).toBeVisible();
   await addPet(page, 'Momo');
 
   await page.getByRole('tab', { name: 'Care' }).click();

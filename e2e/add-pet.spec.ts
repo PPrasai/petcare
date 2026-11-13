@@ -11,6 +11,12 @@ const pulled = async (page: Page, type: string): Promise<Change[]> => {
   return (pull.changes as Change[]).filter((c) => c.type === type);
 };
 
+/** Waits for the server to hold `count` records of a type: the pending count can read 0 a moment early. */
+const pulledEventually = async (page: Page, type: string, count: number) => {
+  await expect.poll(async () => (await pulled(page, type)).length, { timeout: 15_000 }).toBe(count);
+  return pulled(page, type);
+};
+
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
@@ -133,7 +139,7 @@ test('the suggestions start unticked and only the ticked ones become reminders',
   await expect(page.getByRole('heading', { level: 1, name: 'Biralo' })).toBeVisible();
 
   await waitSynced(page);
-  const reminders = await pulled(page, 'reminder');
+  const reminders = await pulledEventually(page, 'reminder', 1);
   expect(reminders).toHaveLength(1);
   const [brush] = reminders;
   expect(brush?.data).toMatchObject({ title: 'Brush coat', active: true });
