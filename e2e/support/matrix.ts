@@ -54,6 +54,8 @@ async function open(
       // No storage: the default is System anyway.
     }
   });
+  // A click that cannot land fails after 15 s and names its screen, not after the whole test.
+  context.setDefaultTimeout(15_000);
   const page = await context.newPage();
   await page.emulateMedia({ colorScheme: cell.theme, reducedMotion: 'reduce' });
   return { context, page };
