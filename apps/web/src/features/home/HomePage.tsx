@@ -7,7 +7,7 @@ import type { StoredRecord } from '../../application/ports/record-store';
 import type { TodayView } from '../../application/today';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
-import { Disclosure, Icon } from '../../ui';
+import { Disclosure, EmptyState, Icon } from '../../ui';
 import { PetProfile } from '../pets/PetProfile';
 import type { StripPet } from '../pets/PetProfile';
 import type { ProfileTab } from '../pets/profile-tabs';
@@ -152,6 +152,8 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
     [active, today, householdId, view.data, showToast, dismissToast],
   );
   const archived = homePets.filter((p) => p.archived);
+  // A new account has no pets at all: the page invites the first one instead of showing a bare list.
+  const firstRun = list.isSuccess && homePets.length === 0;
   const summary = useMemo(() => summarize(ranked), [ranked]);
 
   const selectedId = petId ?? (wide ? ranked[0]?.pet.id : undefined);
@@ -195,31 +197,44 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
         <div className="greet">
           <span className="label">{dateLabel}</span>
           <Greeting>{greeting}</Greeting>
-          <p className="lede">
-            <Lede summary={summary} />
-          </p>
+          <p className="lede">{firstRun ? t('home.firstRun.lede') : <Lede summary={summary} />}</p>
         </div>
-        <ul className="plist" aria-label={t('home.listLabel')}>
-          {ranked.map((r) => (
-            <PetRow
-              key={r.pet.id}
-              ranked={r}
-              selected={r.pet.id === selectedId}
-              now={now}
-              tz={tz}
-              checked={holding && r.top !== null && hold.done.has(r.top.key)}
-              onCheck={(item, already) => void check(item, r.pet.name, already)}
-            />
-          ))}
-          {canAdd ? (
-            <li>
-              <Link to="/pets/new" className="addrow">
-                <Icon name="plus" /> {t('pets.add')}
-              </Link>
-            </li>
-          ) : null}
-        </ul>
-        {list.data && homePets.length === 0 ? <p className="empty">{t('pets.empty')}</p> : null}
+        {firstRun ? (
+          <EmptyState
+            icon="paw"
+            title={t('home.firstRun.title')}
+            action={
+              canAdd ? (
+                <Link to="/pets/new" search={{ step: 1 }} className="btn primary">
+                  <Icon name="plus" /> {t('pets.add')}
+                </Link>
+              ) : undefined
+            }
+          >
+            {t(canAdd ? 'home.firstRun.body' : 'pets.empty')}
+          </EmptyState>
+        ) : (
+          <ul className="plist" aria-label={t('home.listLabel')}>
+            {ranked.map((r) => (
+              <PetRow
+                key={r.pet.id}
+                ranked={r}
+                selected={r.pet.id === selectedId}
+                now={now}
+                tz={tz}
+                checked={holding && r.top !== null && hold.done.has(r.top.key)}
+                onCheck={(item, already) => void check(item, r.pet.name, already)}
+              />
+            ))}
+            {canAdd ? (
+              <li>
+                <Link to="/pets/new" search={{ step: 1 }} className="addrow">
+                  <Icon name="plus" /> {t('pets.add')}
+                </Link>
+              </li>
+            ) : null}
+          </ul>
+        )}
         {archived.length > 0 ? (
           <Disclosure
             title={t('home.archived')}

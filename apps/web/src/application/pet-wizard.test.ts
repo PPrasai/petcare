@@ -1,4 +1,5 @@
 import { careSuggestions } from '@petcare/domain';
+import type { CareSuggestion } from '@petcare/domain';
 import { describe, expect, it } from 'vitest';
 import {
   WIZARD_SLICE,
@@ -31,12 +32,18 @@ describe('care suggestions', () => {
 });
 
 describe('reminderFromSuggestion', () => {
-  const [walk, flea] = careSuggestions('dog', WIZARD_SLICE);
-  const [, brush] = careSuggestions('cat', WIZARD_SLICE);
+  const pick = (species: string, id: string): CareSuggestion => {
+    const found = careSuggestions(species, WIZARD_SLICE).find((s) => s.id === id);
+    if (!found) throw new Error(`no ${id} suggestion for ${species}`);
+    return found;
+  };
+  const walk = pick('dog', 'walk');
+  const flea = pick('dog', 'flea');
+  const brush = pick('cat', 'brush');
   const choice = (s: { time: string }, day = 7) => ({ on: true, time: s.time, day });
 
   it('starts a daily reminder today when its time has not passed, tomorrow when it has', () => {
-    const early = reminderFromSuggestion(walk!, 'Daily walk', choice(walk!), 'p', 'UTC', NOW);
+    const early = reminderFromSuggestion(walk, 'Daily walk', choice(walk), 'p', 'UTC', NOW);
     expect(early).toMatchObject({ petId: 'p', title: 'Daily walk', active: true });
     expect(early.schedule).toEqual({
       tz: 'UTC',
@@ -45,9 +52,9 @@ describe('reminderFromSuggestion', () => {
       startOn: '2026-11-09',
     });
     const late = reminderFromSuggestion(
-      walk!,
+      walk,
       'Daily walk',
-      choice(walk!),
+      choice(walk),
       'p',
       'UTC',
       new Date('2026-11-09T19:00:00Z'),
@@ -57,13 +64,13 @@ describe('reminderFromSuggestion', () => {
 
   it('writes a monthly day and a weekly day and never a category', () => {
     // 09:00 has passed at 10:00, so the first monthly occurrence is tomorrow.
-    const monthly = reminderFromSuggestion(flea!, 'Flea', choice(flea!), 'p', 'UTC', NOW);
+    const monthly = reminderFromSuggestion(flea, 'Flea', choice(flea), 'p', 'UTC', NOW);
     expect(monthly.schedule).toMatchObject({
       kind: 'monthly',
       dayOfMonth: 10,
       startOn: '2026-11-10',
     });
-    const weekly = reminderFromSuggestion(brush!, 'Brush', choice(brush!), 'p', 'UTC', NOW);
+    const weekly = reminderFromSuggestion(brush, 'Brush', choice(brush), 'p', 'UTC', NOW);
     // 2026-11-09 is a Monday; the next Sunday is the 15th.
     expect(weekly.schedule).toMatchObject({
       kind: 'weekly',

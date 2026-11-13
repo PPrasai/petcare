@@ -11,7 +11,6 @@ import { AuthPage } from '../features/auth/AuthPage';
 import { PublicEmergencyPage } from '../features/emergency/PublicEmergencyPage';
 import { JoinPage } from '../features/household/JoinPage';
 import { pendingInvite } from '../lib/pending-invite';
-import { NewPetPage } from '../features/pets/NewPetPage';
 import { HomePage } from '../features/home/HomePage';
 import { parseTab } from '../features/pets/profile-tabs';
 import { WIDE_QUERY } from '../features/shared/use-wide-screen';
@@ -44,8 +43,20 @@ const SettingsPage = lazyRouteComponent(
   'SettingsPage',
 );
 const SyncPage = lazyRouteComponent(() => import('../features/sync/SyncPage'), 'SyncPage');
+const AddPetWizard = lazyRouteComponent(
+  () => import('../features/pets/AddPetWizard'),
+  'AddPetWizard',
+);
 
-const screens = [EmergencyPage, ContactsPage, ExpensesPage, HouseholdPage, SettingsPage, SyncPage];
+const screens = [
+  EmergencyPage,
+  ContactsPage,
+  ExpensesPage,
+  HouseholdPage,
+  SettingsPage,
+  SyncPage,
+  AddPetWizard,
+];
 
 /**
  * Fetches every lazy screen once the page has loaded (not for a finder's public emergency page).
@@ -102,7 +113,15 @@ const pets = createRoute({
     throw redirect({ to: '/' });
   },
 });
-const newPet = leaf('/pets/new', NewPetPage);
+const newPet = createRoute({
+  getParentRoute: () => app,
+  path: '/pets/new',
+  validateSearch: (search: Record<string, unknown>) => {
+    const step = Number(search.step);
+    return { step: step === 2 || step === 3 ? step : 1 };
+  },
+  component: AddPetWizard,
+});
 const petDetail = createRoute({
   getParentRoute: () => app,
   path: '/pets/$petId',

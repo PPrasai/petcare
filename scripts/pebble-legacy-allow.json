@@ -1,5 +1,4 @@
 [
   "features/care/RemindersSection.tsx",
-  "features/care/RoutinesPanel.tsx",
-  "features/pets/NewPetPage.tsx"
+  "features/care/RoutinesPanel.tsx"
 ]
