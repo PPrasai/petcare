@@ -110,6 +110,26 @@ test('each kind writes the right record and offers a way back', async ({ page })
   await sheet(page).getByRole('button', { name: 'Save expense' }).click();
   await expect(sheet(page)).toHaveCount(0);
 
+  // "More" shows the other five categories, so none is lost (PO-002 Q-12).
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Expense', exact: true }).click();
+  const more = sheet(page).getByRole('button', { name: 'More', exact: true });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  const extra = sheet(page).getByRole('group', { name: 'More categories' });
+  await expect(extra.getByRole('button')).toHaveText([
+    'Supplies',
+    'Medication',
+    'Boarding',
+    'Training',
+    'Other',
+  ]);
+  await extra.getByRole('button', { name: 'Boarding' }).click();
+  await sheet(page).getByLabel('Amount').fill('30');
+  await sheet(page).getByRole('button', { name: 'Save expense' }).click();
+  await expect(sheet(page)).toHaveCount(0);
+
   // Vet visit.
   await openSheet(page);
   await sheet(page).getByRole('button', { name: 'Vet visit', exact: true }).click();
@@ -132,8 +152,7 @@ test('each kind writes the right record and offers a way back', async ({ page })
   expect(weights).toHaveLength(1);
   expect((await pulled(page, 'symptomEntry')).map((c) => c.data.description)).toEqual(['Limping']);
   const expenses = await pulled(page, 'expense');
-  expect(expenses).toHaveLength(1);
-  expect(expenses[0]?.data.category).toBe('vet');
+  expect(expenses.map((e) => e.data.category).sort()).toEqual(['boarding', 'vet']);
   expect((await pulled(page, 'vetVisit')).map((c) => c.data.reason)).toEqual(['Annual check-up']);
   const documents = await pulled(page, 'document');
   expect(documents).toHaveLength(1);

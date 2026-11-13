@@ -40,7 +40,7 @@ test('registering, adding a pet and a vaccination takes at most 12 interactions'
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Add a pet' }).click();
-  await page.getByLabel('Pet name').fill('Momo');
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
 

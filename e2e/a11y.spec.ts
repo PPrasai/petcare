@@ -26,10 +26,15 @@ test('sign-in page', async ({ page }) => {
 test('add pet, health, care, files, emergency, more and the log sheet', async ({ page }) => {
   await signUp(page, 'a11y');
   await page.getByRole('link', { name: 'Add a pet' }).click();
-  await expect(page.getByLabel('Pet name')).toBeVisible();
-  await expectAccessible(page, 'add pet');
-
-  await page.getByLabel('Pet name').fill('Momo');
+  await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
+  await expectAccessible(page, 'add pet, step 1');
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'A few details' })).toBeVisible();
+  await expectAccessible(page, 'add pet, step 2');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Reminders for Momo' })).toBeVisible();
+  await expectAccessible(page, 'add pet, step 3');
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
 

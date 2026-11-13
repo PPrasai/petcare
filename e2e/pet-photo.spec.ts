@@ -233,3 +233,57 @@ test('a viewer sees the pet but has no camera badge', async ({ page, browser }) 
   await expect(viewer.getByRole('button', { name: 'Add a photo' })).toHaveCount(0);
   await other.close();
 });
+
+// QA-35 also covers the Log sheet's Photo kind: it goes through the same reducer.
+test('a photo logged through the Log sheet is reduced and stripped of its location too', async ({
+  page,
+  context,
+}) => {
+  const dir = mkdtempSync(join(tmpdir(), 'petcare-logphoto-'));
+  try {
+    await signUp(page, 'logphoto');
+    await addPet(page, 'Momo');
+    await waitSynced(page);
+    const user = await userId(page);
+    const source = await bigJpegWithGps(page, dir);
+
+    await context.setOffline(true);
+    await page.getByTestId('log-open').click();
+    const sheet = page.getByRole('dialog', { name: 'Log something' });
+    await sheet.getByRole('button', { name: 'Photo', exact: true }).click();
+    await sheet.getByLabel('Choose a photo').setInputFiles(source);
+    await expect(page.locator('.toast').filter({ hasText: 'New photo for Momo' })).toBeVisible();
+
+    const stored = await pendingPhoto(page, user);
+    expect(stored?.count).toBe(1);
+    expect(stored?.mimeType).toBe('image/jpeg');
+    expect(stored?.size).toBeLessThanOrEqual(200 * 1024);
+    const longEdge = Math.max(stored?.width ?? 0, stored?.height ?? 0);
+    expect(longEdge).toBeLessThanOrEqual(768);
+    expect(longEdge).toBeGreaterThan(700);
+    expect(stored?.hasExif).toBe(false);
+    await context.setOffline(false);
+    await waitSynced(page);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a file the Log sheet cannot decode is refused and nothing is saved', async ({ page }) => {
+  await signUp(page, 'logphoto2');
+  await addPet(page, 'Momo');
+  await page.getByTestId('log-open').click();
+  const sheet = page.getByRole('dialog', { name: 'Log something' });
+  await sheet.getByRole('button', { name: 'Photo', exact: true }).click();
+  await sheet
+    .getByLabel('Choose a photo')
+    .setInputFiles({
+      name: 'broken.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('not an image'),
+    });
+  await expect(sheet.getByText(UNUSABLE)).toBeVisible();
+  await waitSynced(page);
+  const pull = await (await page.request.get('/api/sync/pull')).json();
+  expect(pull.changes.filter((c: { type: string }) => c.type === 'document')).toHaveLength(0);
+});
