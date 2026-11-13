@@ -42,13 +42,13 @@ export function SignOutButton() {
 
   return (
     <>
-      <Button variant="secondary" onClick={() => void start()}>
+      <Button variant="secondary" className="wide" onClick={() => void start()}>
         {t('auth.signOut')}
       </Button>
       <Dialog open={open} title={t('signOut.title')} onClose={() => setOpen(false)}>
-        <p className="mb-3">{t('signOut.body', { count: pending })}</p>
+        <p>{t('signOut.body', { count: pending })}</p>
         {failed ? <Banner tone="warn">{t('signOut.syncFailed')}</Banner> : null}
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="stackbtns">
           <Button disabled={busy} onClick={() => void syncThenSignOut()}>
             {t('signOut.sync')}
           </Button>

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { t } from '../../i18n/t';
-import { Card, Chip } from '../../ui';
+import { Chip, EmptyState, PageHeader } from '../../ui';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
@@ -22,11 +22,8 @@ export function EmergencyPage({ petId }: { petId?: string | undefined }) {
 
   return (
     <>
-      <div className="greet">
-        <h1>{t('emergency.title')}</h1>
-        <p className="lede">{t('emergency.lede')}</p>
-      </div>
-      {list.isSuccess && choices.length === 0 ? <p className="empty">{t('pets.empty')}</p> : null}
+      <PageHeader title={t('emergency.title')} lede={t('emergency.lede')} />
+      {list.isSuccess && choices.length === 0 ? <EmptyState>{t('pets.empty')}</EmptyState> : null}
       {choices.length > 1 ? (
         <div className="tags" role="group" aria-label={t('emergency.pickPet')}>
           {choices.map((p) => (
@@ -44,11 +41,7 @@ export function EmergencyPage({ petId }: { petId?: string | undefined }) {
           ))}
         </div>
       ) : null}
-      {pet ? (
-        <Card>
-          <EmergencyPanel key={pet.id} petId={pet.id} petName={String(pet.data.name)} />
-        </Card>
-      ) : null}
+      {pet ? <EmergencyPanel key={pet.id} pet={pet} /> : null}
     </>
   );
 }
