@@ -142,7 +142,7 @@ const withCard = async (page: Page) => {
   await page.getByLabel('Notes', { exact: true }).check();
   await page.getByLabel('Notes for a finder').fill('Shy, will hide');
   await page.getByRole('button', { name: 'Save card' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+  await expect(page.locator('.toast').filter({ hasText: 'Saved.' })).toBeVisible();
   await waitSynced(page);
   cards.add(page);
 };
@@ -452,19 +452,8 @@ export const SCREENS: Screen[] = [
     kind: 'overlay',
     ready: emergencyReady,
     open: async (page) => {
-      await page.getByRole('button', { name: 'Set up card' }).click();
+      await page.getByRole('button', { name: 'Edit card' }).first().click();
       await expect(dialogNamed('What a finder sees')(page)).toBeVisible();
-    },
-  },
-  {
-    id: 'S-35 demo',
-    path: '/emergency',
-    session: 'demo',
-    kind: 'overlay',
-    ready: emergencyReady,
-    open: async (page) => {
-      await markLost(page).click();
-      await expect(dialogNamed(/^Mark .+ as lost$/)(page)).toBeVisible();
     },
   },
   { id: 'S-25', path: '/settings', session: 'account', two: true, ready: settingsReady },

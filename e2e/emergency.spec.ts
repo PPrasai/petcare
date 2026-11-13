@@ -17,7 +17,7 @@ test('an owner shares an emergency card, marks the pet lost, and revokes the lin
   await page.getByLabel('Notes', { exact: true }).check();
   await page.getByLabel('Notes for a finder').fill('Shy, will hide');
   await page.getByRole('button', { name: 'Save card' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+  await expect(page.locator('.toast').filter({ hasText: 'Saved.' })).toBeVisible();
   await waitSynced(page);
 
   await page.getByRole('button', { name: 'Create link' }).click();

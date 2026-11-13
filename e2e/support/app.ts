@@ -66,7 +66,7 @@ export async function shareEmergencyCard(
     await page.getByLabel('Notes', { exact: true }).check();
     await page.getByLabel('Notes for a finder').fill('Shy, will hide');
     await page.getByRole('button', { name: 'Save card' }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+    await expect(page.locator('.toast').filter({ hasText: 'Saved.' })).toBeVisible();
     await waitSynced(page);
     await page.getByRole('button', { name: 'Create link' }).click();
     const link = (await page.getByTestId('emergency-link').textContent()) ?? '';

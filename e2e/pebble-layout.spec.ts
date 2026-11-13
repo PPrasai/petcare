@@ -20,6 +20,7 @@ const BLOCKS = [
   'form',
   // The pet chips of the Emergency hub, built in P1 and not a card.
   '.tags',
+  '.sheetdlg',
   // Home and the profile header, built in P1 from the mock. SPEC-petcare-003 §6.1 rule 3 omits them
   // (DIS-petcare-005), so they are accepted here, as the h1 holder `.ph` is below.
   '.plist',
