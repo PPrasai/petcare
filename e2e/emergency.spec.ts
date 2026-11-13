@@ -10,7 +10,8 @@ test('an owner shares an emergency card, marks the pet lost, and revokes the lin
   await addPet(page, 'Momo');
   await page.getByRole('link', { name: 'Emergency card' }).click();
 
-  // Name and species are shown by default; the owner adds a phone number and a note.
+  // Name and species are shown by default; the owner adds a phone number and a note in the sheet.
+  await page.getByRole('button', { name: 'Set up card' }).click();
   await page.getByLabel('My phone number', { exact: true }).check();
   await page.getByLabel('Phone number to show').fill('+1 555 0100');
   await page.getByLabel('Notes', { exact: true }).check();
@@ -42,16 +43,17 @@ test('an owner shares an emergency card, marks the pet lost, and revokes the lin
   await expect(guest.getByText('Microchip')).toHaveCount(0);
 
   // Lost mode shows up prominently on the public page.
+  await page.getByRole('button', { name: 'Mark Momo as lost' }).click();
   await page.getByLabel('Message for a finder').fill('Please call me');
-  await page.getByRole('button', { name: 'Mark as lost' }).click();
-  await expect(page.getByRole('button', { name: 'Mark as found' })).toBeVisible();
+  await page.getByRole('button', { name: 'Mark as lost', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Turn off lost mode' })).toBeVisible();
   await waitSynced(page);
   await guest.reload();
   await expect(guest.getByRole('alert').filter({ hasText: 'This pet is lost' })).toBeVisible();
   await expect(guest.getByText('Please call me')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Mark as found' }).click();
-  await expect(page.getByRole('button', { name: 'Mark as lost' })).toBeVisible();
+  await page.getByRole('button', { name: 'Turn off lost mode' }).click();
+  await expect(page.getByRole('button', { name: 'Mark Momo as lost' })).toBeVisible();
   await waitSynced(page);
   await guest.reload();
   await expect(guest.getByText('This pet is lost')).toHaveCount(0);

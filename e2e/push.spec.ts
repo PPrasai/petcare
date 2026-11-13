@@ -23,19 +23,22 @@ test('a device can be registered for push from Settings', async ({ page }) => {
   });
   await signUp(page, 'push');
   await page.getByRole('link', { name: 'Settings' }).click();
+  const push = page.getByRole('switch', { name: 'Push reminders' });
   await expect(page.getByText('Notifications are off for this device.')).toBeVisible();
+  await expect(push).toHaveAttribute('aria-checked', 'false');
 
   const registered = page.waitForResponse(
     (r) => r.url().endsWith('/api/push/subscriptions') && r.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Turn on notifications' }).click();
+  await push.click();
   expect((await registered).status()).toBe(201);
   await expect(page.getByText('Notifications are on for this device.')).toBeVisible();
+  await expect(push).toHaveAttribute('aria-checked', 'true');
 
   const removed = page.waitForResponse(
     (r) => r.url().endsWith('/api/push/subscriptions') && r.request().method() === 'DELETE',
   );
-  await page.getByRole('button', { name: 'Turn off notifications' }).click();
+  await push.click();
   expect((await removed).status()).toBe(204);
   await expect(page.getByText('Notifications are off for this device.')).toBeVisible();
 });
@@ -49,6 +52,6 @@ test('iPhone users are told to add the app to the Home Screen', async ({ browser
   await signUp(page, 'pushios');
   await page.getByRole('link', { name: 'Settings' }).click();
   await expect(page.getByText(/add PetCare to your Home Screen/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Turn on notifications' })).toHaveCount(0);
+  await expect(page.getByRole('switch', { name: 'Push reminders' })).toBeDisabled();
   await context.close();
 });
