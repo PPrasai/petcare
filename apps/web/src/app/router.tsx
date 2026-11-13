@@ -44,6 +44,23 @@ const SettingsPage = lazyRouteComponent(
 );
 const SyncPage = lazyRouteComponent(() => import('../features/sync/SyncPage'), 'SyncPage');
 
+const screens = [EmergencyPage, ContactsPage, ExpensesPage, HouseholdPage, SettingsPage, SyncPage];
+
+/**
+ * Fetches every lazy screen once the page has loaded (not for a finder's public emergency page).
+ * The chunks are in the service worker's precache already; this also covers the first minutes,
+ * before the worker controls the page, so going offline right after the app opened still opens
+ * every screen (offline first).
+ */
+const preloadScreens = () => {
+  if (window.location.pathname.startsWith('/e/')) return;
+  for (const screen of screens) void Promise.resolve(screen.preload?.()).catch(() => undefined);
+};
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'complete') window.setTimeout(preloadScreens, 0);
+  else window.addEventListener('load', () => window.setTimeout(preloadScreens, 0), { once: true });
+}
+
 const signedIn = () => useSessionStore.getState().status === 'signedIn';
 
 const root = createRootRoute({
