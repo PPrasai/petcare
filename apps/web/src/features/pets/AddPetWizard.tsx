@@ -67,13 +67,13 @@ function SuggestionRow({
     <div className="sugrow">
       <div className="tog">
         <div className="l">
-          <b>{title}</b>
+          <b id={`${id}-title`}>{title}</b>
           <button
             type="button"
             className="wizsched"
             aria-expanded={open}
             aria-controls={`${id}-edit`}
-            aria-label={t('wizard.sched.changeLabel', { title })}
+            aria-describedby={`${id}-title`}
             onClick={() => setOpen(!open)}
           >
             {scheduleText(suggestion, choice)} ·{' '}

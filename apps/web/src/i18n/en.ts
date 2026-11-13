@@ -764,7 +764,6 @@ export const en = {
   'wizard.sched.weekly': 'Weekly on {day} at {time}',
   'wizard.sched.change': 'Change',
   'wizard.sched.done': 'Done',
-  'wizard.sched.changeLabel': 'Change when to remind: {title}',
   'wizard.sched.time': 'Time',
   'wizard.sched.day': 'Day of the week',
   'home.firstRun.title': 'Welcome to PetCare',

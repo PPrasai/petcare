@@ -117,7 +117,11 @@ test('the suggestions start unticked and only the ticked ones become reminders',
   );
   await expect(page.getByText('Annual check-up')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Change when to remind: Brush coat' }).click();
+  await page
+    .locator('.sugrow')
+    .filter({ hasText: 'Brush coat' })
+    .getByRole('button', { name: /Change/ })
+    .click();
   await page.getByLabel('Time').fill('08:30');
   await page
     .getByRole('group', { name: 'Day of the week' })

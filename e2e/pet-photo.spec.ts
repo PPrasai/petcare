@@ -275,13 +275,11 @@ test('a file the Log sheet cannot decode is refused and nothing is saved', async
   await page.getByTestId('log-open').click();
   const sheet = page.getByRole('dialog', { name: 'Log something' });
   await sheet.getByRole('button', { name: 'Photo', exact: true }).click();
-  await sheet
-    .getByLabel('Choose a photo')
-    .setInputFiles({
-      name: 'broken.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from('not an image'),
-    });
+  await sheet.getByLabel('Choose a photo').setInputFiles({
+    name: 'broken.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('not an image'),
+  });
   await expect(sheet.getByText(UNUSABLE)).toBeVisible();
   await waitSynced(page);
   const pull = await (await page.request.get('/api/sync/pull')).json();

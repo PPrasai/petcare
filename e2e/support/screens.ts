@@ -414,7 +414,11 @@ export const SCREENS: Screen[] = [
     ready: heading('Meet your newest family member'),
     open: async (page) => {
       await wizardStep(3)(page);
-      await page.getByRole('button', { name: 'Change when to remind: Daily walk' }).click();
+      await page
+        .locator('.sugrow')
+        .filter({ hasText: 'Daily walk' })
+        .getByRole('button', { name: /Change/ })
+        .click();
       await expect(page.getByLabel('Time')).toBeVisible();
     },
   },
