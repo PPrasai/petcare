@@ -17,6 +17,7 @@ import { parseTab } from '../features/pets/profile-tabs';
 import { WIDE_QUERY } from '../features/shared/use-wide-screen';
 import { MorePage } from '../features/shell/MorePage';
 import { NotFoundPage } from '../features/shell/NotFoundPage';
+import { preloadProfilePanes } from '../features/pets/lazy-panes';
 import { AppShell } from '../features/shell/AppShell';
 import { useSessionStore } from '../state/session';
 
@@ -55,6 +56,7 @@ const screens = [EmergencyPage, ContactsPage, ExpensesPage, HouseholdPage, Setti
 const preloadScreens = () => {
   if (window.location.pathname.startsWith('/e/')) return;
   for (const screen of screens) void Promise.resolve(screen.preload?.()).catch(() => undefined);
+  preloadProfilePanes();
 };
 if (typeof window !== 'undefined') {
   if (document.readyState === 'complete') window.setTimeout(preloadScreens, 0);
