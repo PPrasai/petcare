@@ -19,12 +19,6 @@ export interface AttachedFile {
   fileId: string;
 }
 
-/** Upload limits shown to the user (CON-petcare-001 public config). */
-export interface FileLimits {
-  maxFileBytes: number;
-  householdQuotaBytes: number;
-}
-
 /**
  * Files for documents, receipts and photos (CAP-12). A file chosen offline is kept on the
  * device and uploaded by the next sync; records refer to it through `fileId` straight away.
