@@ -48,8 +48,15 @@ test('add pet, health, care, files, emergency, more and the log sheet', async ({
   await expectAccessible(page, 'vaccinations');
 
   await page.getByRole('tab', { name: 'Care' }).click();
-  await expect(page.getByLabel('Routine name')).toBeVisible();
-  await expectAccessible(page, 'care routines and reminders');
+  await expect(page.getByRole('heading', { level: 2, name: 'Reminders' })).toBeVisible();
+  await expectAccessible(page, 'care tab');
+  await page.getByRole('button', { name: /^Add a reminder for/ }).click();
+  await expect(page.getByRole('dialog', { name: 'New reminder' })).toBeVisible();
+  await expectAccessible(page, 'new reminder sheet');
+  await page
+    .getByRole('dialog', { name: 'New reminder' })
+    .getByRole('button', { name: 'Close' })
+    .click();
 
   await page.getByRole('tab', { name: 'Files' }).click();
   await expect(page.getByTestId('drop-zone')).toBeVisible();

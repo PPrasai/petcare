@@ -27,6 +27,101 @@ export async function addPet(page: Page, name: string) {
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
 }
 
+/** A UUID v7 (the server validates ids as such). */
+function uuid7(): string {
+  const hex = Date.now().toString(16).padStart(12, '0');
+  const random = crypto.getRandomValues(new Uint8Array(10));
+  const r = Array.from(random, (b) => b.toString(16).padStart(2, '0')).join('');
+  const variant = ((parseInt(r.slice(4, 6), 16) & 0x3f) | 0x80).toString(16).padStart(2, '0');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-7${r.slice(0, 3)}-${variant}${r.slice(6, 8)}-${r.slice(8, 20)}`;
+}
+
+export interface ReminderInput {
+  title: string;
+  repeat?: 'Once' | 'Daily' | 'Weekly' | 'Monthly';
+  time?: string;
+  time2?: string;
+  /** For Once and Monthly; defaults to the sheet's own date (today). */
+  date?: string;
+  /** For Once: that many days before the sheet's own date (today). */
+  daysAgo?: number;
+  /** For Weekly, as shown on the chips (Mon ... Sun). */
+  days?: string[];
+}
+
+/** On a pet's Care tab: opens "New reminder", fills it and saves. */
+export async function addReminder(page: Page, r: ReminderInput) {
+  await page.getByRole('button', { name: /^Add a reminder for/ }).click();
+  const sheet = page.getByRole('dialog', { name: 'New reminder' });
+  await sheet.getByLabel('Reminder name').fill(r.title);
+  if (r.repeat) {
+    await sheet
+      .getByRole('group', { name: 'Repeat' })
+      .getByRole('button', { name: r.repeat, exact: true })
+      .click();
+  }
+  for (const day of r.days ?? []) {
+    await sheet
+      .getByRole('group', { name: 'Days of the week' })
+      .getByRole('button', { name: day, exact: true })
+      .click();
+  }
+  if (r.date) await sheet.getByLabel(r.repeat === 'Monthly' ? 'Starting' : 'Date').fill(r.date);
+  if (r.daysAgo) {
+    const field = sheet.getByLabel('Date');
+    const today = await field.inputValue();
+    const past = new Date(Date.parse(`${today}T00:00:00Z`) - r.daysAgo * 86_400_000);
+    await field.fill(past.toISOString().slice(0, 10));
+  }
+  if (r.time) await sheet.getByLabel('Time', { exact: true }).fill(r.time);
+  if (r.time2) await sheet.getByLabel('Second time (optional)').fill(r.time2);
+  await sheet.getByRole('button', { name: 'Save reminder' }).click();
+  await expect(sheet).toBeHidden();
+}
+
+/**
+ * Puts a care routine on the server for the account's first pet, as an increment-1 client would
+ * have made it (the app no longer creates routines), and reloads so this device pulls it. It
+ * starts today, daily at 00:01, so it is overdue now.
+ */
+export async function pushRoutine(
+  page: Page,
+  routine: { title: string; kind: 'feeding' | 'walk' | 'grooming' },
+) {
+  await waitSynced(page);
+  const me = await (await page.request.get('/api/me')).json();
+  const pull = await (await page.request.get('/api/sync/pull')).json();
+  const pet = pull.changes.find((c: { type: string }) => c.type === 'pet');
+  const tz = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
+  const res = await page.request.post('/api/sync/push', {
+    headers: { origin: 'http://localhost:4173' },
+    data: {
+      clientId: uuid7(),
+      mutations: [
+        {
+          mutationId: uuid7(),
+          type: 'careRoutine',
+          id: uuid7(),
+          householdId: me.households[0].id,
+          op: 'create',
+          baseVersion: 0,
+          fields: {
+            petId: pet.id,
+            kind: routine.kind,
+            title: routine.title,
+            active: true,
+            schedule: { tz, kind: 'daily', startOn: today, times: ['00:01'] },
+          },
+          clientTime: new Date().toISOString(),
+        },
+      ],
+    },
+  });
+  expect(res.status()).toBe(200);
+  await page.reload();
+}
+
 /** Waits until nothing is waiting to sync. */
 export async function waitSynced(page: Page) {
   await expect(page.getByTestId('pending-count')).toHaveAttribute('data-count', '0', {

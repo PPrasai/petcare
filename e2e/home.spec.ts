@@ -1,52 +1,44 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, signUp, waitSynced } from './support/app';
+import { addPet, addReminder, signUp, waitSynced } from './support/app';
 
 type Change = { type: string; deletedAt: string | null; data: Record<string, unknown> };
 const liveCompletions = async (page: Page): Promise<number> => {
   const pull = await (await page.request.get('/api/sync/pull')).json();
-  return pull.changes.filter((c: Change) => c.type === 'careCompletion' && c.deletedAt === null)
-    .length;
+  return pull.changes.filter(
+    (c: Change) =>
+      (c.type === 'reminderCompletion' || c.type === 'careCompletion') && c.deletedAt === null,
+  ).length;
 };
 
 const rows = (page: Page) => page.getByTestId('pet-row');
 
-/** Adds routines that fell due a minute past midnight today, so each is overdue now. */
-async function addRoutines(page: Page, pet: string, titles: string[]) {
+/** Adds reminders that fell due a minute past midnight today, so each is overdue now. */
+async function addReminders(page: Page, pet: string, titles: string[]) {
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await rows(page).filter({ hasText: pet }).click();
   await page.getByRole('tab', { name: 'Care' }).click();
-  const routines = page.getByRole('region', { name: 'Care routines' });
   for (const title of titles) {
-    await routines.getByLabel('Routine name').fill(title);
-    await routines.getByLabel('Times (24-hour, comma separated)').fill('00:01');
-    await routines.getByRole('button', { name: 'Add routine' }).click();
-    await expect(routines.getByRole('listitem').filter({ hasText: title })).toBeVisible();
+    await addReminder(page, { title, repeat: 'Daily', time: '00:01' });
+    await expect(page.getByTestId('reminder-row').filter({ hasText: title })).toBeVisible();
   }
 }
 
 /**
- * Momo has two daily routines and one that was due only yesterday; Biralo has two daily routines.
+ * Momo has two daily reminders and one that was due only yesterday; Biralo has two daily reminders.
  * Momo leads by one overdue task, so a tick on Momo's top task ties them and the name would put
  * Biralo first, unless the order is held.
  */
 async function twoPets(page: Page) {
   await signUp(page, 'home');
   await addPet(page, 'Momo');
-  await addRoutines(page, 'Momo', ['Breakfast', 'Evening walk']);
-  const routines = page.getByRole('region', { name: 'Care routines' });
-  const start = await routines.getByLabel('Starts on').inputValue();
-  const yesterday = new Date(Date.parse(`${start}T00:00:00Z`) - 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-  await routines.getByLabel('Routine name').fill('Medicine drops');
-  await routines.getByLabel('Times (24-hour, comma separated)').fill('00:01');
-  await routines.getByLabel('Starts on').fill(yesterday);
-  await routines.getByLabel('Ends on (optional)').fill(yesterday);
-  await routines.getByRole('button', { name: 'Add routine' }).click();
-  await expect(routines.getByRole('listitem').filter({ hasText: 'Medicine drops' })).toBeVisible();
+  await addReminders(page, 'Momo', ['Breakfast', 'Evening walk']);
+  await addReminder(page, { title: 'Medicine drops', repeat: 'Once', daysAgo: 1, time: '00:01' });
+  await expect(
+    page.getByTestId('reminder-row').filter({ hasText: 'Medicine drops' }),
+  ).toBeVisible();
   await addPet(page, 'Biralo');
-  await addRoutines(page, 'Biralo', ['Supper', 'Brushing']);
+  await addReminders(page, 'Biralo', ['Supper', 'Brushing']);
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await expect(rows(page).first()).toContainText('Momo');
   await expect(rows(page).nth(1)).toContainText('Biralo');

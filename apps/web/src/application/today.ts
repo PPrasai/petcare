@@ -24,6 +24,8 @@ export interface TodayItem {
   skipped: boolean;
   doneBy: 'me' | 'other' | null;
   snoozedUntil: string | null;
+  /** For a care routine, its kind (feeding routines are never to-dos on Home). */
+  routineKind?: string;
 }
 
 export interface TodayView {
@@ -115,6 +117,7 @@ export function buildToday(all: StoredRecord[], opts: TodayOptions): TodayView {
       skipped: completion?.data.skipped === true,
       doneBy: completion ? (completion.createdBy === opts.userId ? 'me' : 'other') : null,
       snoozedUntil: snoozedUntil ? new Date(snoozedUntil).toISOString() : null,
+      ...(o.sourceType === 'careRoutine' ? { routineKind: String(source.data.kind ?? '') } : {}),
     };
     const status = occurrenceStatus(o, opts.now, new Set(completion ? [k] : []), snoozes);
     if (status === 'done') {

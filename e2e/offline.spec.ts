@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, openDetails, openDisclosure, signUp, waitSynced } from './support/app';
+import {
+  addPet,
+  addReminder,
+  openDetails,
+  openDisclosure,
+  signUp,
+  waitSynced,
+} from './support/app';
 
 // A real 1x1 PNG, so the server's content sniffing accepts it.
 const PNG = Buffer.from(
@@ -112,20 +119,10 @@ test('every record type works offline, survives a reload, and syncs when back on
     page.getByRole('list', { name: 'Symptoms journal' }).getByText('Coughing at night'),
   ).toBeVisible();
 
-  // Care routine, document with a file (kept on the device until it can upload).
+  // Reminder, document with a file (kept on the device until it can upload).
   await page.getByRole('tab', { name: 'Care' }).click();
-  await page.getByLabel('Routine name').fill('Breakfast');
-  await page
-    .getByRole('region', { name: 'Care routines' })
-    .getByLabel('Times (24-hour, comma separated)')
-    .fill('08:00');
-  await page.getByRole('button', { name: 'Add routine' }).click();
-  await expect(
-    page
-      .getByRole('region', { name: 'Care routines' })
-      .getByRole('listitem')
-      .filter({ hasText: 'Breakfast' }),
-  ).toBeVisible();
+  await addReminder(page, { title: 'Breakfast', repeat: 'Daily', time: '08:00' });
+  await expect(page.getByTestId('reminder-row').filter({ hasText: 'Breakfast' })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Files' }).click();
   await page
@@ -138,11 +135,10 @@ test('every record type works offline, survives a reload, and syncs when back on
     'waiting to upload',
   );
 
-  // Custom reminder (on Today), expense, contact (created, then deleted).
+  // Another reminder, then the expense and the contact.
   await page.getByRole('tab', { name: 'Care' }).click();
-  await page.getByLabel('Reminder', { exact: true }).fill('Order food');
-  await page.getByRole('button', { name: 'Add reminder' }).click();
-  await expect(page.getByText('Order food').first()).toBeVisible();
+  await addReminder(page, { title: 'Order food', repeat: 'Weekly', days: ['Mon'], time: '10:00' });
+  await expect(page.getByTestId('reminder-row').filter({ hasText: 'Order food' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Expenses', exact: true }).click();
   await page.getByRole('button', { name: 'Add an expense' }).click();
@@ -184,8 +180,9 @@ test('every record type works offline, survives a reload, and syncs when back on
   expect(live('vetVisit').map((c) => c.data.reason)).toContain('Annual check');
   expect(live('condition').map((c) => c.data.name)).toContain('Asthma');
   expect(live('symptomEntry').map((c) => c.data.description)).toContain('Coughing at night');
-  expect(live('careRoutine').map((c) => c.data.title)).toContain('Breakfast');
-  expect(live('reminder').map((c) => c.data.title)).toContain('Order food');
+  expect(live('reminder').map((c) => c.data.title)).toEqual(
+    expect.arrayContaining(['Breakfast', 'Order food']),
+  );
   expect(live('expense')).toHaveLength(1);
   expect(live('contact').map((c) => c.data.name)).toEqual(['Dr Rao']);
   expect(changes.filter((c) => c.type === 'contact' && c.deletedAt !== null)).toHaveLength(1);
