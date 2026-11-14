@@ -9,7 +9,38 @@ test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 const overflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
+/**
+ * WebKit has no CDP and no touch input in Playwright, so there the gesture is dispatched as the
+ * same touchstart and touchend events at the panel; the page's handler reads only their points.
+ */
+async function swipeByEvents(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
+  await page.evaluate(
+    ({ from, to }) => {
+      const panel = document.querySelector('[role="tabpanel"]');
+      if (!panel) throw new Error('no tab panel');
+      const fire = (type: string, point: { x: number; y: number }) => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        const touch = { clientX: point.x, clientY: point.y };
+        Object.defineProperty(event, 'touches', { value: type === 'touchend' ? [] : [touch] });
+        Object.defineProperty(event, 'changedTouches', { value: [touch] });
+        panel.dispatchEvent(event);
+      };
+      fire('touchstart', from);
+      fire('touchend', to);
+    },
+    { from, to },
+  );
+}
+
 async function swipe(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+  if (page.context().browser()?.browserType().name() !== 'chromium') {
+    await swipeByEvents(page, from, to);
+    return;
+  }
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Input.dispatchTouchEvent', {
     type: 'touchStart',
@@ -88,4 +119,36 @@ test('swiping the profile changes the tab, and the tabs work from the keyboard',
   await expect(tab('Files')).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Home');
   await expect(tab('Overview')).toHaveAttribute('aria-selected', 'true');
+});
+
+// PO-002 Q-04 (P8): the phone header is 72 px, conditions stay on one line, and the header
+// collapses to the name and the tabs once it has scrolled away.
+test('the phone profile header is 72 px and collapses to name and tabs on scroll', async ({
+  page,
+}) => {
+  await signUp(page, 'header');
+  await addPet(page, 'Momo');
+  const av = page.locator('.ph .av');
+  const box = await av.boundingBox();
+  expect(Math.round(box?.height ?? 0)).toBe(72);
+  expect(Math.round(box?.width ?? 0)).toBe(72);
+
+  const tabs = page.getByRole('tablist');
+  const caption = () => tabs.evaluate((el) => getComputedStyle(el, '::before').content);
+  expect(await caption()).toBe('none');
+
+  // Make the page long enough to scroll, then scroll the header out of view.
+  await page.evaluate(() => {
+    const pane = document.querySelector('.tabpane');
+    if (pane) (pane as HTMLElement).style.minHeight = '2400px';
+  });
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await expect(page.locator('.detail')).toHaveAttribute('data-collapsed', 'true');
+  expect(await caption()).toContain('Momo');
+  const top = await tabs.evaluate((el) => Math.round(el.getBoundingClientRect().top));
+  expect(top).toBeLessThanOrEqual(1);
+  await expect(page.getByRole('tab', { name: 'Health' })).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(page.locator('.detail')).toHaveAttribute('data-collapsed', 'false');
 });

@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
+import { addPet, addReminder, createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
 
 /**
  * The table of screen states that QA-39 (axe), QA-40 (layout) and QA-32 walk. One entry per
@@ -52,7 +52,7 @@ const logKind = (index: number) => async (page: Page) => {
   await expect(logSheet(page).getByRole('heading', { level: 2 })).not.toHaveText('Log something');
 };
 
-const dialogNamed = (name: string) => (page: Page) => page.getByRole('dialog', { name });
+const dialogNamed = (name: string | RegExp) => (page: Page) => page.getByRole('dialog', { name });
 
 /** A real 1x1 PNG, so the server's content sniffing accepts it as a receipt. */
 const PNG = Buffer.from(
@@ -72,6 +72,16 @@ const addExpense = async (page: Page, amount: string, currency: string, receipt 
   }
   await page.getByRole('button', { name: 'Add expense' }).click();
   await expect(dialogNamed('Add expense')(page)).toBeHidden();
+};
+
+/** Types a name on step 1 of the add-pet wizard and continues to the step. */
+const wizardStep = (step: 2 | 3) => async (page: Page) => {
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'A few details' })).toBeVisible();
+  if (step === 2) return;
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Reminders for Momo' })).toBeVisible();
 };
 
 const membersLoaded = async (page: Page) => {
@@ -122,6 +132,66 @@ const publicCard = (lost: boolean) => (browser: Browser) => {
   }
   return made;
 };
+
+// P1b-3: Settings, Sync activity and the Emergency hub. A pet and its card are made once per session.
+const pets = new WeakSet<Page>();
+const cards = new WeakSet<Page>();
+const withPet = async (page: Page) => {
+  if (!pets.has(page)) {
+    await addPet(page, 'Momo');
+    pets.add(page);
+    await page.goto('/emergency');
+  }
+};
+
+/** The profile of the demo pet (Home on the phone, beside the list from 860 px), on one tab. */
+const profileTab = (tab: string) => async (page: Page) => {
+  await profile(page);
+  await page.getByRole('tab', { name: tab, exact: true }).click();
+};
+const profileDetails = async (page: Page) => {
+  await profile(page);
+  await page.locator('summary').filter({ hasText: 'Details' }).click();
+};
+/** A pet's profile in a fresh account, on one tab. */
+const newPetTab = (tab: string) => async (page: Page) => {
+  await withPet(page);
+  await page.goto('/');
+  await profileTab(tab)(page);
+};
+const profileOpener =
+  (tab: string, button: string, dialog: string, disclosure?: string) => async (page: Page) => {
+    await profileTab(tab)(page);
+    if (disclosure) await page.locator('summary').filter({ hasText: disclosure }).click();
+    await page.getByRole('button', { name: button }).click();
+    await expect(dialogNamed(dialog)(page)).toBeVisible();
+  };
+const mainReady = async (page: Page) => {
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+};
+const withCard = async (page: Page) => {
+  await withPet(page);
+  if (cards.has(page)) return;
+  await page.getByRole('button', { name: 'Set up card' }).click();
+  await page.getByLabel('My phone number', { exact: true }).check();
+  await page.getByLabel('Phone number to show').fill('+1 555 0100');
+  await page.getByLabel('Notes', { exact: true }).check();
+  await page.getByLabel('Notes for a finder').fill('Shy, will hide');
+  await page.getByRole('button', { name: 'Save card' }).click();
+  await expect(page.locator('.toast').filter({ hasText: 'Saved.' })).toBeVisible();
+  await waitSynced(page);
+  cards.add(page);
+};
+const settingsReady = async (page: Page) => {
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Push reminders' })).toBeVisible();
+};
+const calendarSwitch = (page: Page) => page.getByRole('switch', { name: 'Calendar feed' });
+const emergencyReady = async (page: Page) => {
+  await expect(page.getByRole('heading', { level: 1, name: 'Emergency card' })).toBeVisible();
+  await expect(page.getByText('Microchip').first()).toBeVisible();
+};
+const markLost = (page: Page) => page.getByRole('button', { name: /^Mark .+ as lost$/ });
 
 export const SCREENS: Screen[] = [
   // P1b-1: account and public pages
@@ -209,11 +279,15 @@ export const SCREENS: Screen[] = [
     open: openLog,
   },
   ...[
-    ['weight', 0],
-    ['note', 1],
-    ['expense', 2],
-    ['vet visit', 3],
-    ['photo', 4],
+    ['meal', 0],
+    ['walk', 1],
+    ['medication', 2],
+    ['grooming', 3],
+    ['weight', 4],
+    ['note', 5],
+    ['expense', 6],
+    ['vet visit', 7],
+    ['photo', 8],
   ].map(([kind, index]): Screen => ({
     id: `S-09 ${kind}`,
     path: '/',
@@ -306,6 +380,50 @@ export const SCREENS: Screen[] = [
     two: true,
     ready: async (page) => {
       await expect(page.locator('.empty').getByText(/^No expenses yet\./)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-10 first run',
+    path: '/',
+    session: 'account',
+    ready: async (page) => {
+      await expect(page.locator('.empty').getByText(/^Add your first pet/)).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Add a pet' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-16 step 1',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+  },
+  {
+    id: 'S-16 step 2',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+    open: wizardStep(2),
+  },
+  {
+    id: 'S-16 step 3',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+    open: wizardStep(3),
+  },
+  {
+    id: 'S-16 step 3, reminder opened',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+    open: async (page) => {
+      await wizardStep(3)(page);
+      await page
+        .locator('.sugrow')
+        .filter({ hasText: 'Daily walk' })
+        .getByRole('button', { name: /Change/ })
+        .click();
+      await expect(page.getByLabel('Time')).toBeVisible();
     },
   },
   { id: 'S-20 owner', path: '/household', session: 'account', two: true, ready: membersLoaded },
@@ -405,6 +523,423 @@ export const SCREENS: Screen[] = [
     open: async (page) => {
       await page.getByRole('button', { name: 'View Receipt (optional)' }).click();
       await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
+    },
+  },
+  // P1b-3: Settings, Sync activity and the Emergency hub
+  { id: 'S-25 demo', path: '/settings', session: 'demo', two: true, ready: settingsReady },
+  { id: 'S-32 demo', path: '/sync', session: 'demo', two: true, ready: heading('Sync activity') },
+  { id: 'S-33 demo', path: '/emergency', session: 'demo', two: true, ready: emergencyReady },
+  {
+    id: 'S-34 demo',
+    path: '/emergency',
+    session: 'demo',
+    kind: 'overlay',
+    ready: emergencyReady,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Edit card' }).first().click();
+      await expect(dialogNamed('What a finder sees')(page)).toBeVisible();
+    },
+  },
+  { id: 'S-25', path: '/settings', session: 'account', two: true, ready: settingsReady },
+  {
+    id: 'S-26 timing open',
+    path: '/settings',
+    session: 'account',
+    two: true,
+    ready: settingsReady,
+    open: async (page) => {
+      await page.locator('summary').filter({ hasText: 'Reminder timing' }).click();
+      await expect(page.getByLabel('Minutes before: Vet visits')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-28 link sheet',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: settingsReady,
+    open: async (page) => {
+      await calendarSwitch(page).click();
+      await expect(dialogNamed('Calendar')(page)).toBeVisible();
+      await expect(page.getByLabel('Calendar address')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-28 turn-off dialog',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: async (page) => {
+      await settingsReady(page);
+      await expect(calendarSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    },
+    open: async (page) => {
+      await calendarSwitch(page).click();
+      await expect(dialogNamed('Turn off the calendar feed?')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-29 password sheet',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: settingsReady,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Change password' }).click();
+      await expect(dialogNamed('Change password')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-30 delete dialog',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: settingsReady,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Delete account', exact: true }).click();
+      await expect(dialogNamed('Delete your account?')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-32',
+    path: '/sync',
+    session: 'account',
+    two: true,
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { level: 1, name: 'Sync activity' })).toBeVisible();
+      await expect(page.getByText('Nothing to review.')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 no pet',
+    path: '/emergency',
+    session: 'account',
+    ready: async (page) => {
+      await expect(page.getByText(/^No pets yet\./)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 no card',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: heading('Emergency card'),
+    open: async (page) => {
+      await withPet(page);
+      await emergencyReady(page);
+      await expect(page.getByRole('button', { name: 'Set up card' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-34',
+    path: '/emergency',
+    session: 'account',
+    kind: 'overlay',
+    ready: heading('Emergency card'),
+    open: async (page) => {
+      await withPet(page);
+      await page.getByRole('button', { name: 'Set up card' }).click();
+      await expect(dialogNamed('What a finder sees')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 card saved',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: heading('Emergency card'),
+    open: async (page) => {
+      await withCard(page);
+      await page.goto('/emergency');
+      await expect(page.getByText('+1 555 0100')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 link created',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: async (page) => {
+      await expect(page.getByRole('button', { name: 'Create link' })).toBeVisible();
+    },
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Create link' }).click();
+      await expect(page.getByRole('img', { name: 'QR code of the emergency link' })).toBeVisible();
+      await expect(page.getByTestId('emergency-link')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-35',
+    path: '/emergency',
+    session: 'account',
+    kind: 'overlay',
+    ready: async (page) => {
+      await expect(markLost(page)).toBeVisible();
+    },
+    open: async (page) => {
+      await markLost(page).click();
+      await expect(dialogNamed(/^Mark .+ as lost$/)(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 lost',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: async (page) => {
+      await expect(markLost(page)).toBeVisible();
+    },
+    open: async (page) => {
+      await markLost(page).click();
+      await page.getByLabel('Message for a finder').fill('Please call me');
+      await page.getByRole('button', { name: 'Mark as lost', exact: true }).click();
+      await expect(page.getByRole('status').filter({ hasText: 'Lost mode is on.' })).toBeVisible();
+    },
+  },
+  // P1b-4: pet profile panels
+  {
+    id: 'S-37',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileDetails(page);
+      await expect(page.getByRole('button', { name: 'Edit details' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-38',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileDetails(page);
+      await page.getByRole('button', { name: 'Edit details' }).click();
+      await expect(dialogNamed(/^Edit /)(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-39',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileDetails(page);
+      await page.getByRole('button', { name: 'Archive pet' }).click();
+      await expect(dialogNamed(/^Archive .+[?]$/)(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-40 health',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Health')(page);
+      await expect(page.getByRole('list', { name: 'Vaccinations' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-40 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a vaccination', 'Add vaccination'),
+  },
+  {
+    id: 'S-41 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a medication', 'Add medication'),
+  },
+  {
+    id: 'S-42 open',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Health')(page);
+      await page.locator('summary').filter({ hasText: 'Vet visits' }).click();
+      await expect(page.getByRole('button', { name: 'Add a visit' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-42 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a visit', 'Add visit', 'Vet visits'),
+  },
+  {
+    id: 'S-43 history',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Health')(page);
+      await page.locator('summary').filter({ hasText: 'All measurements' }).click();
+      await expect(page.getByRole('table', { name: 'All measurements' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-43 add',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a measurement', 'Add measurement'),
+  },
+  {
+    id: 'S-44 condition',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a condition', 'Add condition'),
+  },
+  {
+    id: 'S-44 symptom',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Health', 'Add a symptom', 'Add symptom'),
+  },
+  {
+    id: 'S-45',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Files')(page);
+      await expect(page.getByTestId('drop-zone')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-46',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Files')(page);
+      await page.getByLabel('Choose a file').setInputFiles({
+        name: 'record.pdf',
+        mimeType: 'application/pdf',
+        buffer: Buffer.from('%PDF-1.4'),
+      });
+      await expect(dialogNamed('Add document')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-40 empty',
+    path: '/',
+    session: 'account',
+    two: true,
+    ready: mainReady,
+    open: async (page) => {
+      await newPetTab('Health')(page);
+      await expect(page.locator('.empty').getByText(/^No vaccines yet./)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-45 empty',
+    path: '/',
+    session: 'account',
+    two: true,
+    ready: mainReady,
+    open: async (page) => {
+      await newPetTab('Files')(page);
+      await expect(page.locator('.empty').getByText(/^No files yet./)).toBeVisible();
+    },
+  },
+  // P4: the Care tab (Today, Reminders, Feeding) and the reminder sheet
+  {
+    id: 'S-14 today',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Care')(page);
+      await expect(page.getByRole('heading', { level: 2, name: 'Today' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 list, feeding open',
+    path: '/',
+    session: 'demo',
+    two: true,
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Care')(page);
+      await addReminder(page, { title: 'Matrix walk', repeat: 'Daily', time: '18:00' });
+      await expect(
+        page.getByTestId('reminder-row').filter({ hasText: 'Matrix walk' }),
+      ).toBeVisible();
+      await page.locator('summary').filter({ hasText: 'Feeding' }).click();
+      // Some demo pets have a feeding routine and some do not.
+      await expect(
+        page.locator('details.disc[open]').filter({ hasText: 'Meals are never' }),
+      ).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 new',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: profileOpener('Care', 'Add a reminder for', 'New reminder'),
+  },
+  {
+    id: 'S-15 new, weekly',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileOpener('Care', 'Add a reminder for', 'New reminder')(page);
+      await dialogNamed('New reminder')(page)
+        .getByRole('group', { name: 'Repeat' })
+        .getByRole('button', { name: 'Weekly' })
+        .click();
+      await expect(page.getByRole('group', { name: 'Days of the week' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 edit',
+    path: '/',
+    session: 'demo',
+    kind: 'overlay',
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Care')(page);
+      await addReminder(page, { title: 'Matrix groom', repeat: 'Daily', time: '18:00' });
+      await page.getByRole('button', { name: 'Edit reminder: Matrix groom' }).click();
+      await expect(dialogNamed('Edit reminder')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-15 empty',
+    path: '/',
+    session: 'account',
+    two: true,
+    ready: mainReady,
+    open: async (page) => {
+      await newPetTab('Care')(page);
+      await expect(page.locator('.empty').getByText(/^No reminders yet./)).toBeVisible();
     },
   },
 ];

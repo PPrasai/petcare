@@ -332,7 +332,7 @@
       "data": {
         "petId": "0190e5a0-0000-7000-8000-000000000102",
         "kind": "weight",
-        "value": 4.0,
+        "value": 4,
         "measuredAt": {
           "$daysFromToday": -10,
           "time": "10:00"
@@ -594,6 +594,45 @@
       }
     },
     {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000407",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "title": "Annual check-up",
+        "category": "vetVisit",
+        "audienceUserId": null,
+        "schedule": {
+          "tz": "UTC",
+          "kind": "yearly",
+          "startOn": {
+            "$daysFromToday": 45
+          },
+          "times": ["09:00"]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000408",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "title": "Weigh Momo",
+        "category": "weighIn",
+        "audienceUserId": "demo-user",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "weekly",
+          "startOn": {
+            "$daysFromToday": 3
+          },
+          "times": ["10:00"],
+          "daysOfWeek": [7]
+        },
+        "active": true
+      }
+    },
+    {
       "type": "reminderCompletion",
       "id": "0190e5a0-0000-7000-8000-000000001501",
       "data": {
@@ -799,6 +838,210 @@
           "$daysFromToday": 0,
           "time": "09:05"
         }
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002001",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "meal",
+        "occurredAt": {
+          "$daysFromToday": 0,
+          "time": "07:30"
+        },
+        "foodName": "Salmon kibble",
+        "quantity": 300,
+        "quantityUnit": "g"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002002",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "walk",
+        "occurredAt": {
+          "$daysFromToday": -1,
+          "time": "17:30"
+        },
+        "durationMin": 30
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002003",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "medication",
+        "occurredAt": {
+          "$daysFromToday": -1,
+          "time": "08:10"
+        },
+        "medicationName": "Carprofen 25mg",
+        "medicationId": "0190e5a0-0000-7000-8000-000000000301",
+        "route": "oral",
+        "doseText": "1 tablet"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002004",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "meal",
+        "occurredAt": {
+          "$daysFromToday": -2,
+          "time": "18:00"
+        },
+        "foodName": "Salmon kibble",
+        "quantity": 300,
+        "quantityUnit": "g"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002005",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "walk",
+        "occurredAt": {
+          "$daysFromToday": -3,
+          "time": "07:15"
+        },
+        "durationMin": 45
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002006",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "kind": "grooming",
+        "occurredAt": {
+          "$daysFromToday": -5,
+          "time": "10:30"
+        },
+        "groomingTasks": ["bath", "brushing"],
+        "note": "Used the oatmeal shampoo"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002007",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "kind": "meal",
+        "occurredAt": {
+          "$daysFromToday": -1,
+          "time": "07:00"
+        },
+        "foodName": "Wet food, chicken",
+        "quantity": 55,
+        "quantityUnit": "g"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002008",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "kind": "medication",
+        "occurredAt": {
+          "$daysFromToday": -1,
+          "time": "20:05"
+        },
+        "medicationName": "Thyroid tablet",
+        "medicationId": "0190e5a0-0000-7000-8000-000000000302",
+        "route": "oral",
+        "doseText": "1 tablet"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002009",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "kind": "grooming",
+        "occurredAt": {
+          "$daysFromToday": -2,
+          "time": "17:30"
+        },
+        "groomingTasks": ["brushing"]
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002010",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000103",
+        "kind": "meal",
+        "occurredAt": {
+          "$daysFromToday": -1,
+          "time": "18:00"
+        },
+        "foodName": "Wet food, salmon",
+        "quantity": 1,
+        "quantityUnit": "pouch"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002011",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000103",
+        "kind": "grooming",
+        "occurredAt": {
+          "$daysFromToday": -6,
+          "time": "16:00"
+        },
+        "groomingTasks": ["nailTrim"],
+        "note": "Calm the whole time"
+      }
+    },
+    {
+      "type": "careLog",
+      "id": "0190e5a0-0000-7000-8000-000000002012",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000104",
+        "kind": "meal",
+        "occurredAt": {
+          "$daysFromToday": -1,
+          "time": "19:00"
+        },
+        "foodName": "Hay and greens",
+        "quantity": 1,
+        "quantityUnit": "cup"
+      }
+    },
+    {
+      "type": "mealPreset",
+      "id": "0190e5a0-0000-7000-8000-000000002101",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "foodName": "Salmon kibble",
+        "quantity": 300,
+        "quantityUnit": "g"
+      }
+    },
+    {
+      "type": "mealPreset",
+      "id": "0190e5a0-0000-7000-8000-000000002102",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000102",
+        "foodName": "Wet food, chicken",
+        "quantity": 55,
+        "quantityUnit": "g"
+      }
+    },
+    {
+      "type": "mealPreset",
+      "id": "0190e5a0-0000-7000-8000-000000002103",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000103",
+        "foodName": "Wet food, salmon",
+        "quantity": 1,
+        "quantityUnit": "pouch"
       }
     }
   ],

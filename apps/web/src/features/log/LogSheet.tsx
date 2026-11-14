@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
-import { LOG_EXPENSE_CATEGORIES } from '../../application/log-service';
+import { LOG_EXPENSE_CATEGORIES, LOG_EXPENSE_MORE } from '../../application/log-service';
 import type { LogKind } from '../../application/log-service';
 import { InvalidInput } from '../../application/pet-service';
+import { PhotoUnusable } from '../../application/ports/image-reducer';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatMeasurement, toDisplay, toStored, unitLabel } from '../../lib/format';
@@ -15,10 +16,15 @@ import { PetAvatar } from '../shared/PetAvatar';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
+import { GroomingForm, MealForm, MedicationForm, WalkForm } from './CareForms';
 import { useLogSheetStore } from './log-sheet';
 import type { LogSheetRequest } from './log-sheet';
 
 const KINDS: { kind: LogKind; icon: IconName }[] = [
+  { kind: 'meal', icon: 'meal' },
+  { kind: 'walk', icon: 'walk' },
+  { kind: 'medication', icon: 'pill' },
+  { kind: 'grooming', icon: 'groom' },
   { kind: 'weight', icon: 'scale' },
   { kind: 'note', icon: 'note' },
   { kind: 'expense', icon: 'wallet' },
@@ -35,7 +41,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 interface FormProps {
   petId: string;
   petName: string;
-  done: (message: string) => void;
+  done: (message: string, undo?: () => void) => void;
 }
 
 function WeightForm({ petId, petName, done }: FormProps) {
@@ -140,7 +146,10 @@ function ExpenseForm({ petId, petName, done }: FormProps) {
   const prefs = useSessionStore((s) => s.preferences);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<string>(LOG_EXPENSE_CATEGORIES[0]);
+  const [more, setMore] = useState(false);
   const [error, setError] = useState('');
+  const moreId = useId();
+  const showMore = more || (LOG_EXPENSE_MORE as readonly string[]).includes(category);
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
@@ -178,7 +187,25 @@ function ExpenseForm({ petId, petName, done }: FormProps) {
             {t(`expenses.category.${c}` as MessageKey)}
           </Chip>
         ))}
+        <button
+          type="button"
+          className="chip"
+          aria-expanded={showMore}
+          aria-controls={moreId}
+          onClick={() => setMore(!showMore)}
+        >
+          {t('log.expense.more')}
+        </button>
       </div>
+      {showMore ? (
+        <div id={moreId} className="tags" role="group" aria-label={t('log.expense.moreLabel')}>
+          {LOG_EXPENSE_MORE.map((c) => (
+            <Chip key={c} pressed={category === c} onClick={() => setCategory(c)}>
+              {t(`expenses.category.${c}` as MessageKey)}
+            </Chip>
+          ))}
+        </div>
+      ) : null}
       <Button type="submit">{t('log.expense.save')}</Button>
     </form>
   );
@@ -250,7 +277,13 @@ function PhotoForm({ petId, petName, done }: FormProps) {
       setError(t('files.tooLarge', { mb: String(Math.round(max / 1_048_576)) }));
       return;
     }
-    await log.photo(householdId, petId, file);
+    try {
+      await log.photo(householdId, petId, file);
+    } catch (e) {
+      if (!(e instanceof PhotoUnusable)) throw e;
+      setError(t('photo.unusable'));
+      return;
+    }
     done(t('log.photo.toast', { name: petName }));
   };
 
@@ -299,8 +332,8 @@ function LogSheetBody({ request }: { request: LogSheetRequest }) {
 
   const pet = choices.find((p) => p.id === petId) ?? choices[0];
   const petName = pet ? String(pet.data.name) : '';
-  const finish = (message: string) => {
-    showToast(message);
+  const finish = (message: string, undo?: () => void) => {
+    showToast(message, undo ? { undo } : undefined);
     close();
   };
 
@@ -346,6 +379,18 @@ function LogSheetBody({ request }: { request: LogSheetRequest }) {
             </button>
           ))}
         </div>
+      ) : null}
+      {pet && kind === 'meal' ? (
+        <MealForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
+      ) : null}
+      {pet && kind === 'walk' ? (
+        <WalkForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
+      ) : null}
+      {pet && kind === 'medication' ? (
+        <MedicationForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
+      ) : null}
+      {pet && kind === 'grooming' ? (
+        <GroomingForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
       ) : null}
       {pet && kind === 'weight' ? (
         <WeightForm key={pet.id} petId={pet.id} petName={petName} done={finish} />

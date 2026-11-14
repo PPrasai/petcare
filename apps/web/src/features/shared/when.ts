@@ -25,3 +25,13 @@ export function whenText(item: TodayItem, status: ItemStatus, now: Date, tz: str
   if (status === 'today') return t('task.todayAt', { time: timeText(item.occurrenceAt, tz) });
   return t('task.dueOn', { date: dateText(item.occurrenceAt, tz) });
 }
+
+/** "Just now", "5 min ago", "3 h ago", "2 days ago": how long ago an instant was. */
+export function relativeTime(iso: string, now: Date): string {
+  const minutes = Math.max(0, Math.floor((now.getTime() - Date.parse(iso)) / 60_000));
+  if (minutes < 1) return t('time.justNow');
+  if (minutes < 60) return t('time.minutes', { count: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t('time.hours', { count: hours });
+  return t('time.days', { count: Math.floor(hours / 24) });
+}

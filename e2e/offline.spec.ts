@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, openDetails, signUp, waitSynced } from './support/app';
+import {
+  addPet,
+  addReminder,
+  openDetails,
+  openDisclosure,
+  signUp,
+  waitSynced,
+} from './support/app';
 
 // A real 1x1 PNG, so the server's content sniffing accepts it.
 const PNG = Buffer.from(
@@ -40,10 +47,11 @@ test('every record type works offline, survives a reload, and syncs when back on
   // Records that exist on the server before going offline, so deleting them offline must sync
   // (deleting a record whose create was never sent is eliminated from the outbox by design).
   await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a measurement' }).click();
   await page.getByLabel(/^Value/).fill('12.5');
   await page.getByRole('button', { name: 'Add measurement' }).click();
   await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
-  await page.getByRole('link', { name: 'Contacts', exact: true }).click();
+  await page.getByRole('link', { name: 'Contacts' }).click();
   await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Temp clinic');
   await page.getByRole('button', { name: 'Add contact' }).click();
@@ -59,25 +67,29 @@ test('every record type works offline, survives a reload, and syncs when back on
   // CAP-04: edit the pet.
   await openPet(page);
   await openDetails(page);
-  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Edit details' }).click();
   await page.getByLabel('Colour').fill('Brindle');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Brindle')).toBeVisible();
 
   // Measurements (create, then delete one).
   await tab(page, 'Health');
+  await openDisclosure(page, 'All measurements');
   await page.getByRole('button', { name: /^Delete Weight from/ }).click();
+  await page.getByRole('button', { name: 'Add a measurement' }).click();
   await page.getByLabel(/^Value/).fill('13');
   await page.getByRole('button', { name: 'Add measurement' }).click();
 
   // Vaccination, medication, vet visit.
   await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a vaccination' }).click();
   await page.getByLabel('Vaccine', { exact: true }).fill('Rabies');
   await page.getByLabel('Given on').fill('2025-01-15');
   await page.getByRole('button', { name: 'Add vaccination' }).click();
   await expect(page.getByText('Given 2025-01-15')).toBeVisible();
 
   await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a medication' }).click();
   await page.getByLabel('Medication', { exact: true }).fill('Amoxicillin');
   await page.getByLabel('Dose', { exact: true }).fill('5');
   await page.getByLabel('Dose unit').selectOption('mg');
@@ -86,49 +98,47 @@ test('every record type works offline, survives a reload, and syncs when back on
   await expect(page.getByText('Amoxicillin').first()).toBeVisible();
 
   await page.getByRole('tab', { name: 'Health' }).click();
+  await openDisclosure(page, 'Vet visits');
+  await page.getByRole('button', { name: 'Add a visit' }).click();
   await page.getByLabel('Reason', { exact: true }).fill('Annual check');
   await page.getByRole('button', { name: 'Add visit' }).click();
-  await expect(page.getByText('Annual check')).toBeVisible();
+  await expect(
+    page.getByRole('list', { name: 'Vet visits' }).getByText('Annual check'),
+  ).toBeVisible();
 
   // Condition, symptom.
   await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a condition' }).click();
   await page.getByLabel('Condition name').fill('Asthma');
   await page.getByRole('button', { name: 'Add condition' }).click();
   await expect(page.getByText('Asthma').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Add a symptom' }).click();
   await page.getByLabel('What you noticed').fill('Coughing at night');
   await page.getByRole('button', { name: 'Add symptom' }).click();
-  await expect(page.getByText('Coughing at night')).toBeVisible();
-
-  // Care routine, document with a file (kept on the device until it can upload).
-  await page.getByRole('tab', { name: 'Care' }).click();
-  await page.getByLabel('Routine name').fill('Breakfast');
-  await page
-    .getByRole('region', { name: 'Care routines' })
-    .getByLabel('Times (24-hour, comma separated)')
-    .fill('08:00');
-  await page.getByRole('button', { name: 'Add routine' }).click();
   await expect(
-    page
-      .getByRole('region', { name: 'Care routines' })
-      .getByRole('listitem')
-      .filter({ hasText: 'Breakfast' }),
+    page.getByRole('list', { name: 'Symptoms journal' }).getByText('Coughing at night'),
   ).toBeVisible();
 
+  // Reminder, document with a file (kept on the device until it can upload).
+  await page.getByRole('tab', { name: 'Care' }).click();
+  await addReminder(page, { title: 'Breakfast', repeat: 'Daily', time: '08:00' });
+  await expect(page.getByTestId('reminder-row').filter({ hasText: 'Breakfast' })).toBeVisible();
+
   await page.getByRole('tab', { name: 'Files' }).click();
-  await page.getByLabel('Title').fill('Insurance card');
   await page
-    .getByLabel('File (photo or PDF)')
+    .getByLabel('Choose a file')
     .setInputFiles({ name: 'card.png', mimeType: 'image/png', buffer: PNG });
+  await page.getByLabel('Title').fill('Insurance card');
+  await page.getByLabel('Category').selectOption('insurance');
   await page.getByRole('button', { name: 'Add document' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Insurance card' })).toContainText(
     'waiting to upload',
   );
 
-  // Custom reminder (on Today), expense, contact (created, then deleted).
+  // Another reminder, then the expense and the contact.
   await page.getByRole('tab', { name: 'Care' }).click();
-  await page.getByLabel('Reminder', { exact: true }).fill('Order food');
-  await page.getByRole('button', { name: 'Add reminder' }).click();
-  await expect(page.getByText('Order food').first()).toBeVisible();
+  await addReminder(page, { title: 'Order food', repeat: 'Weekly', days: ['Mon'], time: '10:00' });
+  await expect(page.getByTestId('reminder-row').filter({ hasText: 'Order food' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Expenses', exact: true }).click();
   await page.getByRole('button', { name: 'Add an expense' }).click();
@@ -137,7 +147,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   await expect(page.getByRole('list', { name: 'Expenses' }).getByRole('listitem')).toHaveCount(1);
 
   await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
-  await page.getByRole('link', { name: 'Contacts', exact: true }).click();
+  await page.getByRole('link', { name: 'Contacts' }).click();
   await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Dr Rao');
   await page.getByRole('button', { name: 'Add contact' }).click();
@@ -150,7 +160,6 @@ test('every record type works offline, survives a reload, and syncs when back on
   await expect(page.getByTestId('contact-row').filter({ hasText: 'Dr Rao' })).toBeVisible();
   await tab(page, 'Health');
   await expect(page.getByText('Given 2025-01-15')).toBeVisible();
-  await tab(page, 'Health');
   await expect(page.getByText('Asthma').first()).toBeVisible();
   await tab(page, 'Files');
   await expect(page.getByRole('listitem').filter({ hasText: 'Insurance card' })).toBeVisible();
@@ -171,8 +180,9 @@ test('every record type works offline, survives a reload, and syncs when back on
   expect(live('vetVisit').map((c) => c.data.reason)).toContain('Annual check');
   expect(live('condition').map((c) => c.data.name)).toContain('Asthma');
   expect(live('symptomEntry').map((c) => c.data.description)).toContain('Coughing at night');
-  expect(live('careRoutine').map((c) => c.data.title)).toContain('Breakfast');
-  expect(live('reminder').map((c) => c.data.title)).toContain('Order food');
+  expect(live('reminder').map((c) => c.data.title)).toEqual(
+    expect.arrayContaining(['Breakfast', 'Order food']),
+  );
   expect(live('expense')).toHaveLength(1);
   expect(live('contact').map((c) => c.data.name)).toEqual(['Dr Rao']);
   expect(changes.filter((c) => c.type === 'contact' && c.deletedAt !== null)).toHaveLength(1);

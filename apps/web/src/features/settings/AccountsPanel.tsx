@@ -4,130 +4,185 @@ import type { FormEvent } from 'react';
 import { AccountError } from '../../application/ports/account-api';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
-import { Banner, Button, TextField } from '../../ui';
+import {
+  Banner,
+  Button,
+  Card,
+  Line,
+  Pill,
+  SectionHeader,
+  Sheet,
+  SheetHead,
+  TextField,
+} from '../../ui';
 import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
+import { useToastStore } from '../shared/toast';
 
 const MIN_PASSWORD = 8;
+const NO_PROVIDERS: string[] = [];
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** Sign-in methods: linked providers (link / unlink) and the password (set / change) (CAP-02). */
-export function AccountsPanel() {
+/** Sign-in methods: the password (set / change in a sheet) and linked providers (CAP-02). */
+export function SignInCard({ demoNoteId }: { demoNoteId: string }) {
   const { account } = useServices();
   const demo = useDemo();
-  const available = useSessionStore((s) => s.config?.providers ?? []);
+  const available = useSessionStore((s) => s.config?.providers ?? NO_PROVIDERS);
   const client = useQueryClient();
+  const showToast = useToastStore((s) => s.show);
   const accounts = useQuery({
     queryKey: ['linked-accounts'],
     queryFn: () => account.linkedAccounts(),
     enabled: !demo,
     retry: false,
   });
+  const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
-  const [note, setNote] = useState<{ tone: 'info' | 'warn'; text: string } | null>(null);
+  const [note, setNote] = useState('');
+  const [sheetNote, setSheetNote] = useState('');
   const hasPassword = accounts.data?.hasPassword ?? false;
   const linked = accounts.data?.providers ?? [];
+  const describedBy = demo ? demoNoteId : undefined;
 
-  const run = async (action: () => Promise<void>, done?: string) => {
-    setNote(null);
+  const failure = (error: unknown) => {
+    const kind = error instanceof AccountError ? error.kind : 'other';
+    return t(
+      kind === 'offline'
+        ? 'settings.offline'
+        : kind === 'rateLimited'
+          ? 'settings.accounts.rateLimited'
+          : 'settings.accounts.failed',
+    );
+  };
+
+  const run = async (action: () => Promise<void>) => {
+    setNote('');
     try {
       await action();
       await client.invalidateQueries({ queryKey: ['linked-accounts'] });
-      if (done) setNote({ tone: 'info', text: done });
     } catch (error) {
-      const kind = error instanceof AccountError ? error.kind : 'other';
-      const key =
-        kind === 'offline'
-          ? 'settings.offline'
-          : kind === 'rateLimited'
-            ? 'settings.accounts.rateLimited'
-            : 'settings.accounts.failed';
-      setNote({ tone: 'warn', text: t(key) });
+      setNote(failure(error));
     }
   };
 
-  const submitPassword = (event: FormEvent) => {
+  const openSheet = () => {
+    setCurrent('');
+    setNext('');
+    setSheetNote('');
+    setOpen(true);
+  };
+
+  const submitPassword = async (event: FormEvent) => {
     event.preventDefault();
+    setSheetNote('');
     if (next.length < MIN_PASSWORD) {
-      setNote({ tone: 'warn', text: t('settings.accounts.short', { min: MIN_PASSWORD }) });
+      setSheetNote(t('settings.accounts.short', { min: MIN_PASSWORD }));
       return;
     }
-    void run(async () => {
+    try {
       if (hasPassword) await account.changePassword(current, next);
       else await account.setPassword(next);
-      setCurrent('');
-      setNext('');
-    }, t('settings.accounts.passwordSaved'));
+      await client.invalidateQueries({ queryKey: ['linked-accounts'] });
+      setOpen(false);
+      showToast(t('settings.accounts.passwordSaved'));
+    } catch (error) {
+      setSheetNote(failure(error));
+    }
   };
 
+  const passwordLabel = t(
+    hasPassword ? 'settings.accounts.changePassword' : 'settings.accounts.setPassword',
+  );
+
   return (
-    <section aria-labelledby="accounts-title" className="flex flex-col gap-3">
-      <h2 id="accounts-title" className="text-xl font-semibold">
-        {t('settings.accounts.title')}
-      </h2>
-      {demo ? <Banner tone="info">{t('settings.demo')}</Banner> : null}
-      {note ? <Banner tone={note.tone}>{note.text}</Banner> : null}
-      <ul className="flex flex-col gap-2">
+    <Card>
+      <SectionHeader title={t('settings.signIn.title')} />
+      {note ? <Banner tone="warn">{note}</Banner> : null}
+      <ul>
+        <Line
+          title={t('settings.signIn.password')}
+          {...(hasPassword ? { aside: <Pill tone="ok">{t('settings.signIn.on')}</Pill> } : {})}
+          actions={
+            <button
+              type="button"
+              className="linkbtn"
+              disabled={demo}
+              aria-describedby={describedBy}
+              onClick={openSheet}
+            >
+              {passwordLabel}
+            </button>
+          }
+        />
         {available.map((provider) => {
           const isLinked = linked.includes(provider);
+          const name = capitalize(provider);
           // A sign-in method must remain: do not offer to unlink the last one.
           const canUnlink = hasPassword || linked.length > 1;
           return (
-            <li key={provider} className="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                {capitalize(provider)}
-                {isLinked ? ` — ${t('settings.accounts.linked')}` : ''}
-              </span>
-              {isLinked ? (
-                <Button
-                  variant="secondary"
-                  disabled={demo || !canUnlink}
-                  onClick={() => void run(() => account.unlinkProvider(provider))}
-                >
-                  {t('settings.accounts.unlink')}
-                </Button>
-              ) : (
-                <Button
-                  variant="secondary"
-                  disabled={demo}
-                  onClick={() =>
-                    void run(async () => {
-                      window.location.assign(await account.linkProvider(provider));
-                    })
-                  }
-                >
-                  {t('settings.accounts.link')}
-                </Button>
-              )}
-            </li>
+            <Line
+              key={provider}
+              title={name}
+              {...(isLinked
+                ? { aside: <Pill tone="ok">{t('settings.signIn.connected')}</Pill> }
+                : {})}
+              actions={
+                isLinked ? (
+                  <button
+                    type="button"
+                    className="linkbtn"
+                    disabled={demo || !canUnlink}
+                    aria-describedby={describedBy}
+                    aria-label={t('settings.signIn.unlinkLabel', { provider: name })}
+                    onClick={() => void run(() => account.unlinkProvider(provider))}
+                  >
+                    {t('settings.accounts.unlink')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="linkbtn"
+                    disabled={demo}
+                    aria-describedby={describedBy}
+                    aria-label={t('settings.signIn.connectLabel', { provider: name })}
+                    onClick={() =>
+                      void run(async () => {
+                        window.location.assign(await account.linkProvider(provider));
+                      })
+                    }
+                  >
+                    {t('settings.signIn.connect')}
+                  </button>
+                )
+              }
+            />
           );
         })}
       </ul>
-      <form onSubmit={submitPassword} className="flex flex-col gap-3">
-        <h3 className="font-semibold">
-          {t(hasPassword ? 'settings.accounts.changePassword' : 'settings.accounts.setPassword')}
-        </h3>
-        {hasPassword ? (
+      <Sheet open={open} label={passwordLabel} onClose={() => setOpen(false)}>
+        <SheetHead title={passwordLabel} onClose={() => setOpen(false)} />
+        <form aria-label={passwordLabel} onSubmit={(e) => void submitPassword(e)}>
+          {sheetNote ? <Banner tone="warn">{sheetNote}</Banner> : null}
+          {hasPassword ? (
+            <TextField
+              type="password"
+              autoComplete="current-password"
+              label={t('settings.accounts.current')}
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+            />
+          ) : null}
           <TextField
             type="password"
-            autoComplete="current-password"
-            label={t('settings.accounts.current')}
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="new-password"
+            label={t('settings.accounts.new')}
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
           />
-        ) : null}
-        <TextField
-          type="password"
-          autoComplete="new-password"
-          label={t('settings.accounts.new')}
-          value={next}
-          onChange={(e) => setNext(e.target.value)}
-        />
-        <Button type="submit" disabled={demo}>
-          {t('settings.accounts.savePassword')}
-        </Button>
-      </form>
-    </section>
+          <Button type="submit">{t('settings.accounts.savePassword')}</Button>
+        </form>
+      </Sheet>
+    </Card>
   );
 }

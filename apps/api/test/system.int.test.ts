@@ -58,14 +58,14 @@ describe('system routes', () => {
     });
   });
 
-  it('applies migrations at start (29 contract tables and 5 auth tables exist)', async () => {
+  it('applies migrations at start (31 contract tables and 5 auth tables exist)', async () => {
     const client = new pg.Client({ connectionString: database.url });
     await client.connect();
     const { rows } = await client.query<{ n: number }>(
       "SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema = 'public'",
     );
     await client.end();
-    expect(rows[0]?.n).toBe(34);
+    expect(rows[0]?.n).toBe(36);
   });
 });
 

@@ -46,6 +46,9 @@ export interface MetaRow {
   value: unknown;
 }
 
+/** Record types added by Dexie version 3. */
+const V3_TYPES: readonly string[] = ['careLog', 'mealPreset'];
+
 export const dbNameFor = (userId: string): string => `petcare-u-${userId}`;
 
 /** Per-user IndexedDB. One table per record type, built from the domain registry. */
@@ -69,12 +72,23 @@ export class LocalDb extends Dexie {
       problems: '++id',
       meta: 'key',
     };
-    for (const entity of entities) {
-      const indexed = entity.indexes.map((field) => `data.${field}`);
-      stores[entity.type] = ['id', 'householdId', 'deletedAt', ...indexed].join(', ');
-    }
-    this.version(1).stores(stores);
-    this.version(2).stores({ ...stores, pendingFiles: 'id, householdId' });
+    const withRecords = (types: readonly string[]): Record<string, string> => {
+      const all = { ...stores };
+      for (const entity of entities.filter((e) => types.includes(e.type))) {
+        const indexed = entity.indexes.map((field) => `data.${field}`);
+        all[entity.type] = ['id', 'householdId', 'deletedAt', ...indexed].join(', ');
+      }
+      return all;
+    };
+    // Versions 1 and 2 name the tables that existed then, so an existing database upgrades by
+    // gaining only what version 3 adds (CON-petcare-003: careLog and mealPreset).
+    const v1 = withRecords(entities.map((e) => e.type).filter((t) => !V3_TYPES.includes(t)));
+    this.version(1).stores(v1);
+    this.version(2).stores({ ...v1, pendingFiles: 'id, householdId' });
+    this.version(3).stores({
+      ...withRecords(entities.map((e) => e.type)),
+      pendingFiles: 'id, householdId',
+    });
   }
 
   records(type: RecordType): Table<LocalRecord, string> {

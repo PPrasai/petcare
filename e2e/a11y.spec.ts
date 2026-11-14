@@ -26,15 +26,21 @@ test('sign-in page', async ({ page }) => {
 test('add pet, health, care, files, emergency, more and the log sheet', async ({ page }) => {
   await signUp(page, 'a11y');
   await page.getByRole('link', { name: 'Add a pet' }).click();
-  await expect(page.getByLabel('Pet name')).toBeVisible();
-  await expectAccessible(page, 'add pet');
-
-  await page.getByLabel('Pet name').fill('Momo');
+  await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
+  await expectAccessible(page, 'add pet, step 1');
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'A few details' })).toBeVisible();
+  await expectAccessible(page, 'add pet, step 2');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Reminders for Momo' })).toBeVisible();
+  await expectAccessible(page, 'add pet, step 3');
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
 
   await expectAccessible(page, 'profile overview');
   await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a vaccination' }).click();
   await page.getByLabel('Vaccine', { exact: true }).fill('Rabies');
   await page.getByLabel('Given on').fill('2024-03-01');
   await page.getByRole('button', { name: 'Add vaccination' }).click();
@@ -42,11 +48,18 @@ test('add pet, health, care, files, emergency, more and the log sheet', async ({
   await expectAccessible(page, 'vaccinations');
 
   await page.getByRole('tab', { name: 'Care' }).click();
-  await expect(page.getByLabel('Routine name')).toBeVisible();
-  await expectAccessible(page, 'care routines and reminders');
+  await expect(page.getByRole('heading', { level: 2, name: 'Reminders' })).toBeVisible();
+  await expectAccessible(page, 'care tab');
+  await page.getByRole('button', { name: /^Add a reminder for/ }).click();
+  await expect(page.getByRole('dialog', { name: 'New reminder' })).toBeVisible();
+  await expectAccessible(page, 'new reminder sheet');
+  await page
+    .getByRole('dialog', { name: 'New reminder' })
+    .getByRole('button', { name: 'Close' })
+    .click();
 
   await page.getByRole('tab', { name: 'Files' }).click();
-  await expect(page.getByLabel('Title')).toBeVisible();
+  await expect(page.getByTestId('drop-zone')).toBeVisible();
   await expectAccessible(page, 'files');
 
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
