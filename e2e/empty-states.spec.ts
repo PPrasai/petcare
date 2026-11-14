@@ -150,6 +150,8 @@ test('the Care tab of a new pet shows the empty copy of Today, Reminders and Fee
   await noEmptyLists(page);
 
   await page.locator('summary').filter({ hasText: 'Feeding' }).click();
-  await expect(page.locator('.empty').getByText('No feeding routines.')).toBeVisible();
+  await expect(
+    page.locator('.empty').getByText('No presets yet. Log a meal and it is remembered here.'),
+  ).toBeVisible();
   await noEmptyLists(page);
 });
