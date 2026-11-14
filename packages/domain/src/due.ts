@@ -33,6 +33,8 @@ export function dueOccurrences(
   records: RecordEnvelope[],
   window: { from: Date | string; to: Date | string },
   userTz: string,
+  /** When given, a reminder whose audienceUserId names someone else is left out (CON-003 2.6). */
+  forUserId?: string,
 ): Occurrence[] {
   const live = records.filter(alive);
   const result: Occurrence[] = [];
@@ -86,6 +88,10 @@ export function dueOccurrences(
   for (const { type, sourceType } of scheduled) {
     for (const r of live.filter((x) => x.type === type)) {
       if (r.data.active === false) continue;
+      if (type === 'reminder' && forUserId !== undefined) {
+        const audience = r.data.audienceUserId;
+        if (typeof audience === 'string' && audience !== forUserId) continue;
+      }
       const schedule = r.data.schedule as Schedule;
       for (const at of occurrencesBetween(schedule, window.from, window.to)) {
         result.push({ sourceType, sourceId: r.id, petId: str(r.data.petId), occurrenceAt: at });
@@ -150,4 +156,34 @@ export function occurrenceStatus(
 /** Overdue items stay listed until done, for up to OVERDUE_LIST_DAYS. */
 export function overdueWindowStart(now: Date | string): Date {
   return new Date(new Date(now).getTime() - OVERDUE_LIST_DAYS * 86_400_000);
+}
+
+/**
+ * The missed daily/weekly rule (CON-003 2.6, PO-002 Q-03): an overdue occurrence of a daily or
+ * weekly schedule stops being listed once the next occurrence of the same source has started.
+ * Other kinds keep the overdue window. It changes only what is listed, never a record.
+ * Not used by the UI before slice P8.
+ */
+export function applyMissedRule(
+  occurrences: Occurrence[],
+  records: RecordEnvelope[],
+  now: Date | string,
+  statusOf: (o: Occurrence) => OccurrenceStatus,
+): Occurrence[] {
+  const nowMs = new Date(now).getTime();
+  const schedules = new Map<string, Schedule>();
+  for (const r of records.filter(alive)) {
+    if (r.type === 'medication' || r.type === 'careRoutine' || r.type === 'reminder') {
+      schedules.set(`${r.type}:${r.id}`, r.data.schedule as Schedule);
+    }
+  }
+  return occurrences.filter((o) => {
+    if (statusOf(o) !== 'overdue') return true;
+    const schedule = schedules.get(`${o.sourceType}:${o.sourceId}`);
+    if (!schedule || (schedule.kind !== 'daily' && schedule.kind !== 'weekly')) return true;
+    const after = Date.parse(o.occurrenceAt) + 1000;
+    // A weekly schedule's next occurrence is at most 7 days (plus a DST hour) away.
+    const [next] = occurrencesBetween(schedule, new Date(after), new Date(after + 8 * 86_400_000));
+    return next === undefined || Date.parse(next) > nowMs;
+  });
 }

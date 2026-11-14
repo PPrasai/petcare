@@ -28,7 +28,7 @@ const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 export const scheduleSchema = z
   .strictObject({
     tz: z.string().min(1).max(64),
-    kind: z.enum(['once', 'daily', 'weekly', 'monthly', 'everyNDays']),
+    kind: z.enum(['once', 'daily', 'weekly', 'monthly', 'everyNDays', 'yearly']),
     times: z
       .array(timeOfDay)
       .max(12)
@@ -42,6 +42,8 @@ export const scheduleSchema = z
     everyN: z.number().int().min(1).max(3650).optional(),
     startOn: calendarDate,
     endOn: nullableDate.optional(),
+    /** No occurrence earlier than this instant is generated (CON-003 2.6). */
+    notBefore: instant.optional(),
   })
   .superRefine((s, ctx) => {
     const need = (ok: boolean, path: string) => {
@@ -71,5 +73,13 @@ export const RECORD_TYPES = [
   'expense',
   'contact',
   'emergencyCard',
+  'careLog',
+  'mealPreset',
 ] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
+
+/** Stored in the unit the user chose (CON-003 1: kitchen units have no fixed mass). */
+export const QUANTITY_UNITS = ['g', 'kg', 'oz', 'lb', 'cup', 'can', 'pouch', 'tbsp'] as const;
+export const quantity = z.number().gt(0).max(100_000);
+export const quantityUnit = z.enum(QUANTITY_UNITS);
+export type QuantityUnit = (typeof QUANTITY_UNITS)[number];

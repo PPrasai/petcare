@@ -226,6 +226,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     list: (type, householdId) => current().records.list(type, householdId),
     get: (type, id) => current().records.get(type, id),
     create: (type, householdId, fields) => current().records.create(type, householdId, fields),
+    createMany: (householdId, items) => current().records.createMany(householdId, items),
     update: (type, id, fields) => current().records.update(type, id, fields),
     remove: (type, id) => current().records.remove(type, id),
   };

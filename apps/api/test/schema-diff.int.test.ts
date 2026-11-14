@@ -91,8 +91,8 @@ describe('migrations match schema.sql (I-11)', () => {
     expect(b.constraints).toEqual(a.constraints);
   });
 
-  it('creates 29 tables from schema.sql', async () => {
+  it('creates 31 tables from schema.sql', async () => {
     const a = await describeSchema(fromSql.url);
-    expect(new Set(a.columns.map((c) => c.table_name)).size).toBe(29);
+    expect(new Set(a.columns.map((c) => c.table_name)).size).toBe(31);
   });
 });

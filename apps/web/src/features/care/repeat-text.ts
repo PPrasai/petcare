@@ -25,6 +25,8 @@ export function repeatText(schedule: Schedule, prefs: DatePrefs): string {
       });
     case 'monthly':
       return t('reminder.when.monthly', { date: formatDate(schedule.startOn, prefs), time });
+    case 'yearly':
+      return t('reminder.when.yearly', { date: formatDate(schedule.startOn, prefs), time });
     case 'everyNDays':
       return t('reminder.when.everyN', { count: schedule.everyN ?? 1, time });
     default:

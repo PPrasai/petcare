@@ -22,6 +22,9 @@ import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
 import { repeatText } from './repeat-text';
 
+const hasDate = (repeat: Repeat): boolean =>
+  repeat === 'once' || repeat === 'monthly' || repeat === 'yearly';
+
 const DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 /** What the sheet edits: a new reminder, a stored reminder, or a stored (legacy) care routine. */
@@ -72,7 +75,7 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
     if (values.repeat === 'weekly' && values.days.length === 0) {
       next.days = t('reminder.daysRequired');
     }
-    if ((values.repeat === 'once' || values.repeat === 'monthly') && values.date === '') {
+    if (hasDate(values.repeat) && values.date === '') {
       next.date = t('form.invalid');
     }
     setErrors(next);
@@ -111,7 +114,8 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
     onClose();
   };
 
-  const repeats: Repeat[] = base?.kind === 'everyNDays' ? [...REPEATS, 'everyNDays'] : [...REPEATS];
+  const repeats: Repeat[] =
+    base?.kind === 'everyNDays' || base?.kind === 'yearly' ? [...REPEATS, base.kind] : [...REPEATS];
   const editable = target.mode === 'new' || canUpdate;
 
   return (
@@ -150,7 +154,7 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
           ) : null}
         </div>
       ) : null}
-      {values.repeat === 'once' || values.repeat === 'monthly' ? (
+      {hasDate(values.repeat) ? (
         <TextField
           label={t(values.repeat === 'once' ? 'reminder.date' : 'reminder.starting')}
           type="date"

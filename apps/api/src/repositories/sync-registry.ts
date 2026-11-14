@@ -3,12 +3,14 @@ import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { RecordType } from '@petcare/domain';
 import {
   careCompletions,
+  careLogs,
   careRoutines,
   conditions,
   contacts,
   documents,
   emergencyCards,
   expenses,
+  mealPresets,
   measurements,
   medicationDoses,
   medications,
@@ -43,6 +45,8 @@ export const recordTables: Record<string, PgTable> = {
   expense: expenses,
   contact: contacts,
   emergencyCard: emergencyCards,
+  careLog: careLogs,
+  mealPreset: mealPresets,
 };
 
 /**
