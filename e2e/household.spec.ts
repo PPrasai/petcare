@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { addPet, createInvite, signUp, uniqueEmail, waitSynced } from './support/app';
-import { guardV2Writes } from './support/no-v2-writes';
 
 const ORIGIN = 'http://localhost:4173';
 const octet = () => Math.floor(Math.random() * 250) + 1;
@@ -20,7 +19,6 @@ const pulled = async (page: Page, type: string): Promise<Change[]> => {
 
 /** Creates an account from the sign-up page, without expecting the main shell afterwards. */
 async function signUpPlain(page: Page, label: string) {
-  await guardV2Writes(page);
   await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': `198.52.${octet()}.${octet()}` });
   await page.goto('/sign-up');
   await page.getByLabel('Your name').fill(`${label} Person`);
