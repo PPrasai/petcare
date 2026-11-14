@@ -44,6 +44,7 @@ function memoryStore() {
       rows.push(row);
       return Promise.resolve(row);
     },
+    createMany: () => Promise.reject(new Error('unused')),
     update: () => Promise.reject(new Error('unused')),
     remove: () => Promise.reject(new Error('unused')),
   };

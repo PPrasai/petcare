@@ -65,6 +65,46 @@ export class LocalStore {
     return record;
   }
 
+  /** Several creates in one local transaction: all are written, or none (CON-003 2.5.2). */
+  async createMany(
+    householdId: string,
+    items: { type: RecordType; data: Record<string, unknown> }[],
+  ): Promise<LocalRecord[]> {
+    const { db, clock, actorId } = this.deps;
+    const now = clock.now().toISOString();
+    const records: LocalRecord[] = items.map(({ type, data }) => ({
+      id: this.deps.ids.next(),
+      type,
+      householdId,
+      version: 0,
+      createdAt: now,
+      createdBy: actorId,
+      updatedAt: now,
+      updatedBy: actorId,
+      deletedAt: null,
+      data,
+      _pending: true,
+    }));
+    const types = [...new Set(items.map((i) => i.type))];
+    await db.transaction('rw', [...types.map((t) => db.records(t)), db.outbox], async () => {
+      for (const record of records) {
+        await db.records(record.type).put(record);
+        await enqueue(db, {
+          mutationId: this.deps.ids.next(),
+          type: record.type,
+          id: record.id,
+          householdId,
+          op: 'create',
+          baseVersion: 0,
+          fields: record.data,
+          clientTime: now,
+        });
+      }
+    });
+    if (types.length > 0) this.deps.onWrite?.(types);
+    return records;
+  }
+
   async update(
     type: RecordType,
     id: string,

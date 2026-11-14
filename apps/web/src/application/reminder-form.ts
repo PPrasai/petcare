@@ -1,7 +1,10 @@
 import type { Schedule } from '@petcare/domain';
 
-/** The repeat choices of the reminder sheet; `everyNDays` is only offered for a legacy record. */
-export type Repeat = 'once' | 'daily' | 'weekly' | 'monthly' | 'everyNDays';
+/**
+ * The repeat choices of the reminder sheet. `everyNDays` and `yearly` are only shown for a stored
+ * record that has them; nothing here can create either before slice P6.
+ */
+export type Repeat = 'once' | 'daily' | 'weekly' | 'monthly' | 'everyNDays' | 'yearly';
 export const REPEATS = ['once', 'daily', 'weekly', 'monthly'] as const;
 
 /** When a reminder with no time of its own is due (the domain's default). */
@@ -54,7 +57,8 @@ export function reminderSchedule(
   today: string,
   base?: Schedule,
 ): Record<string, unknown> {
-  const dated = values.repeat === 'once' || values.repeat === 'monthly';
+  const dated =
+    values.repeat === 'once' || values.repeat === 'monthly' || values.repeat === 'yearly';
   const startOn = dated ? values.date : (base?.startOn ?? today);
   const first = values.time || DEFAULT_TIME;
   const wanted = [first, values.repeat === 'daily' ? values.time2 : ''].filter(Boolean);
@@ -67,6 +71,8 @@ export function reminderSchedule(
     startOn,
     times,
     ...(base?.endOn && values.repeat !== 'once' ? { endOn: base.endOn } : {}),
+    // Kept as stored, so editing a reminder written by a newer client does not drop it.
+    ...(base?.notBefore ? { notBefore: base.notBefore } : {}),
     ...(values.repeat === 'weekly' ? { daysOfWeek: [...values.days].sort() } : {}),
     ...(values.repeat === 'monthly' && day >= 1 ? { dayOfMonth: day } : {}),
     ...(values.repeat === 'everyNDays' && values.everyN ? { everyN: Number(values.everyN) } : {}),
