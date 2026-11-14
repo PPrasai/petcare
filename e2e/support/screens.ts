@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { addPet, createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
+import { addPet, addReminder, createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
 
 /**
  * The table of screen states that QA-39 (axe), QA-40 (layout) and QA-32 walk. One entry per
@@ -880,12 +880,15 @@ export const SCREENS: Screen[] = [
     ready: profile,
     open: async (page) => {
       await profileTab('Care')(page);
-      await addReminder(page, { title: 'Evening walk', repeat: 'Daily', time: '18:00' });
+      await addReminder(page, { title: 'Matrix walk', repeat: 'Daily', time: '18:00' });
       await expect(
-        page.getByTestId('reminder-row').filter({ hasText: 'Evening walk' }),
+        page.getByTestId('reminder-row').filter({ hasText: 'Matrix walk' }),
       ).toBeVisible();
       await page.locator('summary').filter({ hasText: 'Feeding' }).click();
-      await expect(page.getByText('No feeding routines.')).toBeVisible();
+      // Some demo pets have a feeding routine and some do not.
+      await expect(
+        page.locator('details.disc[open]').filter({ hasText: 'Meals are never' }),
+      ).toBeVisible();
     },
   },
   {
@@ -919,8 +922,8 @@ export const SCREENS: Screen[] = [
     ready: profile,
     open: async (page) => {
       await profileTab('Care')(page);
-      await addReminder(page, { title: 'Evening walk', repeat: 'Daily', time: '18:00' });
-      await page.getByRole('button', { name: 'Edit reminder: Evening walk' }).click();
+      await addReminder(page, { title: 'Matrix groom', repeat: 'Daily', time: '18:00' });
+      await page.getByRole('button', { name: 'Edit reminder: Matrix groom' }).click();
       await expect(dialogNamed('Edit reminder')(page)).toBeVisible();
     },
   },
