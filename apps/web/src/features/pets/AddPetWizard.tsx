@@ -45,9 +45,7 @@ function scheduleText(s: CareSuggestion, choice: SuggestionChoice): string {
       time: choice.time,
     });
   }
-  return t(s.kind === 'monthly' ? 'wizard.sched.monthly' : 'wizard.sched.daily', {
-    time: choice.time,
-  });
+  return t(`wizard.sched.${s.kind}` as MessageKey, { time: choice.time });
 }
 
 /** One suggested reminder: a switch, a summary of when, and a "Change" disclosure for time and day. */

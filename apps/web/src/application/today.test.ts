@@ -102,3 +102,25 @@ describe('buildToday', () => {
     expect(oldest >= '2026-05-11').toBe(true);
   });
 });
+
+describe('buildToday audience (PO-002 Q-08)', () => {
+  const reminder = (id: string, audienceUserId: string | null) =>
+    rec(
+      'reminder',
+      {
+        petId: 'pet1',
+        title: id,
+        active: true,
+        audienceUserId,
+        schedule: { tz: 'UTC', kind: 'daily', times: ['18:00'], startOn: '2026-06-10' },
+      },
+      { id },
+    );
+  const titles = (view: ReturnType<typeof buildToday>) => view.today.map((i) => i.title).sort();
+
+  it("leaves another member's Just-me reminder out, and keeps one's own and everyone's", () => {
+    const all = [pet, reminder('everyone', null), reminder('mine', 'me'), reminder('theirs', 'u2')];
+    expect(titles(buildToday(all, opts))).toEqual(['everyone', 'mine']);
+    expect(titles(buildToday(all, { ...opts, userId: 'u2' }))).toEqual(['everyone', 'theirs']);
+  });
+});

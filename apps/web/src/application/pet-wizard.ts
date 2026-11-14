@@ -1,11 +1,11 @@
 import { instantToLocalDate } from '@petcare/domain';
-import type { CareSuggestion } from '@petcare/domain';
+import type { CareSuggestion, CareSuggestionId } from '@petcare/domain';
 import { addDays } from './health-logic';
 import { emptyPetForm } from './pet-form';
 import type { PetFormValues } from './pet-form';
 
 /** The slice this build is at; suggestions newer than it are not offered (SPEC-petcare-002 P3). */
-export const WIZARD_SLICE = 3;
+export const WIZARD_SLICE = 6;
 
 /** The three species the wizard offers; every other species is added through "Something else". */
 export const WIZARD_SPECIES = ['dog', 'cat', 'other'] as const;
@@ -99,9 +99,26 @@ export function localTime(now: Date, tz: string): string {
   }).format(now);
 }
 
+/** What each suggestion is about (CON-003 `reminder.category`). */
+const CATEGORY: Record<CareSuggestionId, string> = {
+  walk: 'walk',
+  flea: 'medication',
+  brush: 'grooming',
+  weighIn: 'weighIn',
+  checkup: 'vetVisit',
+};
+
+/** The same calendar day one year on; 29 February becomes 28 February (CON-003 2.6). */
+export function nextYear(date: string): string {
+  const [y = 0, m = 1, d = 1] = date.split('-').map(Number);
+  const last = new Date(Date.UTC(y + 1, m, 0)).getUTCDate();
+  return `${String(y + 1).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+}
+
 /**
- * The `reminder` data for a ticked suggestion: an existing shape only (no category, no yearly).
- * `startOn` is the date of the first occurrence after now, so the reminder is not born overdue.
+ * The `reminder` data for a ticked suggestion, with its category and `notBefore` = now.
+ * `startOn` is the date of the first occurrence after now, so the reminder is not born overdue;
+ * the yearly check-up starts in 12 months (PO-petcare-002 Q-10).
  */
 export function reminderFromSuggestion(
   s: CareSuggestion,
@@ -127,10 +144,13 @@ export function reminderFromSuggestion(
   } else if (s.kind === 'monthly') {
     const dayOfMonth = Math.min(Number(firstDay.slice(8, 10)), 28);
     schedule = { tz, kind: 'monthly', times: [choice.time], dayOfMonth, startOn: firstDay };
+  } else if (s.kind === 'yearly') {
+    schedule = { tz, kind: 'yearly', times: [choice.time], startOn: nextYear(today) };
   } else {
     schedule = { tz, kind: 'daily', times: [choice.time], startOn: firstDay };
   }
-  return { petId, title, active: true, schedule };
+  schedule.notBefore = now.toISOString();
+  return { petId, title, active: true, category: CATEGORY[s.id], schedule };
 }
 
 /** The first choice for each suggestion: unticked, at its suggested time. */
