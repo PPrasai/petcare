@@ -1772,11 +1772,38 @@
     gap: 14px;
   }
   .ph .av {
+    --s: 72px;
     width: 72px;
     height: 72px;
   }
+  .ph .tags {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    mask-image: linear-gradient(to right, #000 88%, transparent);
+  }
+  .ph .tag {
+    flex: none;
+    white-space: nowrap;
+  }
   .ph h1 {
     font-size: 28px;
+  }
+  .detail > .tabs {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--bg);
+  }
+  .detail[data-collapsed='true'] > .tabs {
+    flex-wrap: wrap;
+  }
+  .detail[data-collapsed='true'] > .tabs[data-caption]::before {
+    content: attr(data-caption);
+    flex: 0 0 100%;
+    padding: 8px 0 0;
+    font-family: var(--fd);
+    font-weight: 700;
+    font-size: 18px;
   }
   .split:not(.open) .detail {
     display: none;

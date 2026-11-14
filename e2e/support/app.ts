@@ -101,7 +101,7 @@ export async function addReminder(page: Page, r: ReminderInput) {
  */
 export async function pushRoutine(
   page: Page,
-  routine: { title: string; kind: 'feeding' | 'walk' | 'grooming' },
+  routine: { title: string; kind: 'feeding' | 'walk' | 'grooming'; startDaysAgo?: number },
 ) {
   await waitSynced(page);
   const me = await (await page.request.get('/api/me')).json();
@@ -110,7 +110,8 @@ export async function pushRoutine(
   // The account's own time zone (UTC unless changed), not the machine's: the app lists a task on
   // the calendar day it has in that zone, so a routine in another zone can fall on yesterday.
   const tz: string = me.preferences?.timeZone ?? 'UTC';
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
+  const startMs = Date.now() - (routine.startDaysAgo ?? 0) * 86_400_000;
+  const today = new Date(startMs).toLocaleDateString('en-CA', { timeZone: tz });
   const res = await page.request.post('/api/sync/push', {
     headers: { origin: 'http://localhost:4173' },
     data: {
