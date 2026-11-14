@@ -211,7 +211,7 @@ describe('LogService medication', () => {
     });
     expect(records[1]?.data).toMatchObject({
       medicationId: CARPROFEN,
-      occurrenceAt: '2026-11-08T08:00:00Z',
+      occurrenceAt: '2026-11-09T08:00:00Z',
       skipped: false,
     });
     await service.undo(records);
