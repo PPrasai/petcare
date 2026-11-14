@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { TouchEvent } from 'react';
-import { Suspense, useRef } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatMeasurement } from '../../lib/format';
@@ -56,6 +56,19 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
     enabled: householdId !== '',
   });
   const conditions = useHealthList('condition', petId);
+  const header = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const loaded = pet.data !== undefined && pet.data !== null;
+  // PO-002 Q-04: once the header has scrolled away, the phone keeps only the name and the tabs.
+  useEffect(() => {
+    const node = header.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry) setCollapsed(!entry.isIntersecting && entry.boundingClientRect.bottom < 0);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loaded, petId]);
   const start = useRef<{ x: number; y: number } | null>(null);
   const photo = usePetPhoto(pet.data);
 
@@ -102,7 +115,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
 
   return (
-    <div className="detail">
+    <div className="detail" data-collapsed={collapsed}>
       <Link to="/" className="back">
         <Icon name="back" /> {t('pets.back')}
       </Link>
@@ -122,7 +135,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
           ))}
         </nav>
       ) : null}
-      <div className="ph">
+      <div className="ph" ref={header}>
         <PetAvatar pet={record} size={96} badge={photo.badge} />
         <div className="meta">
           <Heading>{name}</Heading>
@@ -145,7 +158,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
           <Icon name="shield" /> {t('profile.emergencyCard')}
         </Link>
       </div>
-      <Tabs tabs={tabs} value={tab} label={t('pets.tabs')} onChange={onTab} />
+      <Tabs tabs={tabs} value={tab} label={t('pets.tabs')} onChange={onTab} caption={name} />
       <div
         role="tabpanel"
         id={panelId(tab)}

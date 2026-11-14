@@ -39,16 +39,6 @@ export type GroomingTask = (typeof GROOMING_TASKS)[number];
 export const AGAIN_DAYS = [1, 7, 14, 30, 90] as const;
 /** How many presets the meal form shows: the most recently updated ones. */
 export const PRESETS_SHOWN = 4;
-export const QUANTITY_CHOICES: readonly QuantityUnit[] = [
-  'g',
-  'kg',
-  'oz',
-  'lb',
-  'cup',
-  'can',
-  'pouch',
-  'tbsp',
-];
 
 /** The expense categories offered as chips on the sheet; the Expenses page has all nine. */
 export const LOG_EXPENSE_CATEGORIES = ['food', 'vet', 'grooming', 'insurance'] as const;
