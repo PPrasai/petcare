@@ -1509,6 +1509,28 @@
     height: 26px;
     color: var(--accent);
   }
+  .presets {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .preset {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--r);
+    border: 1px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    text-align: left;
+    min-height: 52px;
+  }
+  .preset span {
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
   .pchip {
     padding: 5px 14px 5px 5px;
   }
