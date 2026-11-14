@@ -40,7 +40,8 @@ describe('buildToday', () => {
   it('sorts items into overdue, today, upcoming', () => {
     const view = buildToday([pet, daily('r1', 'Breakfast')], opts);
     expect(view.today.map((i) => i.occurrenceAt)).toEqual(['2026-06-10T08:00:00Z']);
-    expect(view.overdue.map((i) => i.occurrenceAt)).toContain('2026-06-09T08:00:00Z');
+    // Yesterday's 08:00 is dropped: today's has started (PO-002 Q-03).
+    expect(view.overdue).toHaveLength(0);
     expect(view.upcoming.map((i) => i.occurrenceAt)).toContain('2026-06-11T08:00:00Z');
     expect(view.today[0]).toMatchObject({ title: 'Breakfast', petName: 'Momo' });
   });
