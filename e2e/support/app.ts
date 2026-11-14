@@ -88,7 +88,7 @@ export async function addReminder(page: Page, r: ReminderInput) {
     await field.fill(past.toISOString().slice(0, 10));
   }
   if (r.time) await sheet.getByLabel('Time', { exact: true }).fill(r.time);
-  if (r.who) await sheet.getByLabel('Remind').selectOption({ label: r.who });
+  if (r.who) await sheet.getByLabel('Remind', { exact: true }).selectOption({ label: r.who });
   if (r.time2) await sheet.getByLabel('Second time (optional)').fill(r.time2);
   await sheet.getByRole('button', { name: 'Save reminder' }).click();
   await expect(sheet).toBeHidden();
@@ -107,7 +107,9 @@ export async function pushRoutine(
   const me = await (await page.request.get('/api/me')).json();
   const pull = await (await page.request.get('/api/sync/pull')).json();
   const pet = pull.changes.find((c: { type: string }) => c.type === 'pet');
-  const tz = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  // The account's own time zone (UTC unless changed), not the machine's: the app lists a task on
+  // the calendar day it has in that zone, so a routine in another zone can fall on yesterday.
+  const tz: string = me.preferences?.timeZone ?? 'UTC';
   const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
   const res = await page.request.post('/api/sync/push', {
     headers: { origin: 'http://localhost:4173' },

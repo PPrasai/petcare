@@ -13,13 +13,16 @@ const liveCompletions = async (page: Page): Promise<number> => {
 
 const rows = (page: Page) => page.getByTestId('pet-row');
 
-/** Adds reminders that fell due a minute past midnight today, so each is overdue now. */
+/**
+ * Adds one-off reminders that fell due a minute past midnight today, so each is overdue now.
+ * (A daily reminder made now starts at its next slot: notBefore, CON-003 2.6.)
+ */
 async function addReminders(page: Page, pet: string, titles: string[]) {
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await rows(page).filter({ hasText: pet }).click();
   await page.getByRole('tab', { name: 'Care' }).click();
   for (const title of titles) {
-    await addReminder(page, { title, repeat: 'Daily', time: '00:01' });
+    await addReminder(page, { title, repeat: 'Once', time: '00:01' });
     await expect(page.getByTestId('reminder-row').filter({ hasText: title })).toBeVisible();
   }
 }

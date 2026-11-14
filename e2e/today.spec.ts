@@ -30,7 +30,9 @@ test('reminders and a legacy routine show on the Care tab and can be done, skipp
 
   await page.getByRole('tab', { name: 'Care' }).click();
   for (const title of ['Breakfast', 'Buy dog food']) {
-    await addReminder(page, { title, repeat: 'Daily', time: '00:01' });
+    // A daily reminder made now starts at its next slot (notBefore, CON-003 2.6), so these are
+    // one-offs at 00:01 today: already overdue.
+    await addReminder(page, { title, repeat: 'Once', time: '00:01' });
     await expect(page.getByRole('listitem').filter({ hasText: title }).first()).toBeVisible();
   }
   // A routine made by an increment-1 client is still listed and can be skipped.
@@ -70,7 +72,7 @@ test('Up next shows the next task, and the Care tab works offline', async ({ pag
   await signUp(page, 'todayoff');
   await addPet(page, 'Momo');
   await page.getByRole('tab', { name: 'Care' }).click();
-  await addReminder(page, { title: 'Brush teeth', repeat: 'Daily', time: '00:01' });
+  await addReminder(page, { title: 'Brush teeth', repeat: 'Once', time: '00:01' });
   await addPet(page, 'Biralo');
   await waitSynced(page);
 

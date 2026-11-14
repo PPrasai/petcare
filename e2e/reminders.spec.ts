@@ -250,12 +250,14 @@ test('a reminder for just me is marked, and another member sees whose it is and 
 
   // The audience can be changed back to everyone and to me again.
   await page.getByRole('button', { name: 'Edit reminder: Private pill' }).click();
-  await expect(sheet(page, 'Edit reminder').getByLabel('Remind')).toHaveValue('me');
-  await sheet(page, 'Edit reminder').getByLabel('Remind').selectOption('everyone');
+  await expect(sheet(page, 'Edit reminder').getByLabel('Remind', { exact: true })).toHaveValue(
+    'me',
+  );
+  await sheet(page, 'Edit reminder').getByLabel('Remind', { exact: true }).selectOption('everyone');
   await sheet(page, 'Edit reminder').getByRole('button', { name: 'Save changes' }).click();
   await expect(rowOf(page, 'Private pill')).not.toContainText('Only');
   await page.getByRole('button', { name: 'Edit reminder: Private pill' }).click();
-  await sheet(page, 'Edit reminder').getByLabel('Remind').selectOption('me');
+  await sheet(page, 'Edit reminder').getByLabel('Remind', { exact: true }).selectOption('me');
   await sheet(page, 'Edit reminder').getByRole('button', { name: 'Save changes' }).click();
   await expect(rowOf(page, 'Private pill')).toContainText('Only you');
   await waitSynced(page);
