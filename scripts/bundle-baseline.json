@@ -1,5 +1,61 @@
 {
-  "note": "Measured on origin/main e79bd8c before the Pebble redesign (SPEC-002 5.2). Used by the P8 growth budgets.",
-  "precacheBytes": 1251775,
-  "entryChunkGzipBytes": 247732
+  "note": "Measured on origin/main e79bd8c before the Pebble redesign (SPEC-002 5.2), counting each precached URL once (AS-002 v0.4.0, DIS-petcare-006). Used by the P8 growth budgets and the per-slice ratchet.",
+  "precacheBytes": 1242390,
+  "entryChunkGzipBytes": 247732,
+  "readings": [
+    {
+      "slice": "P1b-1",
+      "commit": "3c9ef8c",
+      "precacheBytes": 1409428,
+      "entryChunkGzipBytes": 264962
+    },
+    {
+      "slice": "P1b-2",
+      "commit": "a2e96d9",
+      "precacheBytes": 1421351,
+      "entryChunkGzipBytes": 268725
+    },
+    {
+      "slice": "P1b-3",
+      "commit": "722b2f2",
+      "precacheBytes": 1440371,
+      "entryChunkGzipBytes": 171519
+    },
+    {
+      "slice": "P1b-4",
+      "commit": "baf5d37",
+      "precacheBytes": 1450690,
+      "entryChunkGzipBytes": 151954
+    },
+    {
+      "slice": "P3",
+      "commit": "e772928",
+      "precacheBytes": 1467977,
+      "entryChunkGzipBytes": 152162
+    },
+    {
+      "slice": "P4",
+      "commit": "050f9ed",
+      "precacheBytes": 1470521,
+      "entryChunkGzipBytes": 153049
+    },
+    {
+      "slice": "P5",
+      "commit": "8a06d3d",
+      "precacheBytes": 1475039,
+      "entryChunkGzipBytes": 153339
+    },
+    {
+      "slice": "P6",
+      "commit": "0eb47f4",
+      "precacheBytes": 1478853,
+      "entryChunkGzipBytes": 154021
+    },
+    {
+      "slice": "P7",
+      "commit": "a40d0bf",
+      "precacheBytes": 1501530,
+      "entryChunkGzipBytes": 157493
+    }
+  ]
 }
