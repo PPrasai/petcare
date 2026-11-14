@@ -1,15 +1,5 @@
 [
   "features/care/RemindersSection.tsx",
   "features/care/RoutinesPanel.tsx",
-  "features/documents/DocumentsPanel.tsx",
-  "features/health/ConditionsPanel.tsx",
-  "features/health/MedicationsPanel.tsx",
-  "features/health/RecordForm.tsx",
-  "features/health/ScheduleFields.tsx",
-  "features/health/VaccinationsPanel.tsx",
-  "features/health/VisitsPanel.tsx",
-  "features/pets/MeasurementsPanel.tsx",
-  "features/pets/NewPetPage.tsx",
-  "features/pets/PetForm.tsx",
-  "features/pets/PetOverview.tsx"
+  "features/pets/NewPetPage.tsx"
 ]

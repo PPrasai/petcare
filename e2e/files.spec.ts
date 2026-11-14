@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, signUp, waitSynced } from './support/app';
+import { addPet, openDisclosure, signUp, waitSynced } from './support/app';
 
 // A real 1x1 PNG, so the server's content sniffing accepts it.
 const PNG = Buffer.from(
@@ -24,8 +24,12 @@ test('documents upload, open offline, and a file chosen offline syncs later', as
   await addPet(page, 'Momo');
   await page.getByRole('tab', { name: 'Files' }).click();
 
+  // With no files yet, the drop zone is the way in. A chosen image is prefilled as a photo.
+  await page.getByLabel('Choose a file').setInputFiles(png('rabies.png'));
+  await expect(page.getByLabel('Title')).toHaveValue('rabies');
+  await expect(page.getByLabel('Category')).toHaveValue('photo');
   await page.getByLabel('Title').fill('Rabies certificate');
-  await page.getByLabel('File (photo or PDF)').setInputFiles(png('rabies.png'));
+  await page.getByLabel('Category').selectOption('certificate');
   await page.getByRole('button', { name: 'Add document' }).click();
   const first = page.getByRole('listitem').filter({ hasText: 'Rabies certificate' });
   await expect(first).toBeVisible();
@@ -39,6 +43,7 @@ test('documents upload, open offline, and a file chosen offline syncs later', as
 
   // Offline: add another document; it is kept on the device and can be opened.
   await context.setOffline(true);
+  await page.getByRole('button', { name: 'Add a document' }).click();
   await page.getByLabel('Title').fill('Insurance card');
   await page.getByLabel('File (photo or PDF)').setInputFiles(png('card.png'));
   await page.getByRole('button', { name: 'Add document' }).click();
@@ -66,12 +71,35 @@ test('an unsupported file is refused before upload', async ({ page }) => {
   await signUp(page, 'badfile');
   await addPet(page, 'Momo');
   await page.getByRole('tab', { name: 'Files' }).click();
-  await page.getByLabel('File (photo or PDF)').setInputFiles({
+  await page.getByLabel('Choose a file').setInputFiles({
     name: 'notes.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from('hello'),
   });
   await expect(page.getByText('Choose a JPEG, PNG, WebP or HEIC image, or a PDF.')).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+// S-45: a photo goes to the Photos grid as a tile that opens the viewer, and can be deleted there.
+test('a dropped photo shows in the Photos grid and opens', async ({ page }) => {
+  await signUp(page, 'photos');
+  await addPet(page, 'Momo');
+  await page.getByRole('tab', { name: 'Files' }).click();
+  await page.getByLabel('Choose a file').setInputFiles(png('Momo in the garden.png'));
+  await expect(page.getByLabel('Title')).toHaveValue('Momo in the garden');
+  await page.getByRole('button', { name: 'Add document' }).click();
+  await expect(page.locator('.toast')).toContainText('File added');
+
+  const tile = page.getByTestId('photo-tile');
+  await expect(tile).toHaveCount(1);
+  await expect(tile.locator('img')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Records' })).toHaveCount(0);
+  await tile.click();
+  await expect(
+    page.getByRole('dialog').getByRole('img', { name: 'Momo in the garden' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Delete Momo in the garden' }).click();
+  await expect(tile).toHaveCount(0);
 });
 
 // CAP-13: expenses, summary per period, pet and currency.
@@ -140,6 +168,8 @@ test('a contact can be added and linked to a vet visit', async ({ page }) => {
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await page.getByRole('link', { name: 'Momo' }).click();
   await page.getByRole('tab', { name: 'Health' }).click();
+  await openDisclosure(page, 'Vet visits');
+  await page.getByRole('button', { name: 'Add a visit' }).click();
   await page.getByLabel('Reason').fill('Annual check');
   await page.getByLabel('Vet or clinic').selectOption({ label: 'Dr. Rai' });
   await page.getByRole('button', { name: 'Add visit' }).click();

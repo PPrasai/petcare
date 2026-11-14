@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addPet, signUp, waitSynced } from './support/app';
+import { addPet, openDisclosure, signUp, waitSynced } from './support/app';
 
 // CAP-05: measurements, weight chart with a table alternative, units by preference.
 test('weight is shown in the preferred unit with a chart and a table', async ({
@@ -10,14 +10,18 @@ test('weight is shown in the preferred unit with a chart and a table', async ({
   await addPet(page, 'Momo');
   await page.getByRole('tab', { name: 'Health' }).click();
 
+  await page.getByRole('button', { name: 'Add a measurement' }).click();
   await page.getByLabel('Value (kg)').fill('10');
   await page.getByLabel('Measured on').fill('2026-01-10T09:00');
   await page.getByRole('button', { name: 'Add measurement' }).click();
-  await expect(page.getByLabel('Value (kg)')).toHaveValue('');
+  await expect(page.getByRole('dialog', { name: 'Add measurement' })).toBeHidden();
+  await page.getByRole('button', { name: 'Add a measurement' }).click();
   await page.getByLabel('Value (kg)').fill('10.5');
   await page.getByLabel('Measured on').fill('2026-02-10T09:00');
   await page.getByRole('button', { name: 'Add measurement' }).click();
 
+  await expect(page.getByRole('dialog', { name: 'Add measurement' })).toBeHidden();
+  await openDisclosure(page, 'All measurements');
   const table = page.getByRole('table', { name: 'All measurements' });
   await expect(table.getByRole('row')).toHaveCount(3); // header + 2
   await expect(table.getByText('10.5 kg')).toBeVisible();
@@ -26,16 +30,19 @@ test('weight is shown in the preferred unit with a chart and a table', async ({
   ).toBeVisible();
   await expect(page.locator('.recharts-line')).toBeVisible();
 
+  await page.getByRole('button', { name: 'Add a measurement' }).click();
   await page.getByLabel('Measurement', { exact: true }).selectOption('bodyCondition');
   await page.getByLabel('Value (/9)').fill('5');
   await page.getByRole('button', { name: 'Add measurement' }).click();
   await expect(table.getByText('5 /9')).toBeVisible();
 
   // Invalid input is refused with a message.
+  await page.getByRole('button', { name: 'Add a measurement' }).click();
   await page.getByLabel('Measurement', { exact: true }).selectOption('bodyCondition');
   await page.getByLabel('Value (/9)').fill('0');
   await page.getByRole('button', { name: 'Add measurement' }).click();
   await expect(page.getByText('Enter a number greater than zero.')).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
 
   // Units follow the preference (stored values stay in kg).
   await waitSynced(page);
@@ -63,13 +70,14 @@ test('weight is shown in the preferred unit with a chart and a table', async ({
   expect([put.status(), await put.text()]).toEqual([200, expect.anything()]);
   await page.reload();
   await page.getByRole('tab', { name: 'Health' }).click();
-  await expect(
-    page.getByRole('table', { name: 'All measurements' }).getByText('23.15 lb'),
-  ).toBeVisible();
-  await expect(page.getByText('10/02/2026')).toBeVisible();
+  await openDisclosure(page, 'All measurements');
+  const lbTable = page.getByRole('table', { name: 'All measurements' });
+  await expect(lbTable.getByText('23.15 lb')).toBeVisible();
+  await expect(lbTable.getByText('10/02/2026')).toBeVisible();
 
   // Works offline and syncs afterwards.
   await context.setOffline(true);
+  await page.getByRole('button', { name: 'Add a measurement' }).click();
   await page.getByLabel('Measurement', { exact: true }).selectOption('weight');
   await page.getByLabel('Value (lb)').fill('24');
   await page.getByRole('button', { name: 'Add measurement' }).click();

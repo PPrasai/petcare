@@ -64,10 +64,9 @@ export function PetForm({ initial, submitLabel, onSubmit, onCancel }: PetFormPro
   const flag = (name: 'isMixedBreed' | 'birthDateEstimated', label: MessageKey) => (
     <form.Field name={name}>
       {(field) => (
-        <label className="flex min-h-11 items-center gap-2">
+        <label className="check">
           <input
             type="checkbox"
-            className="size-5"
             checked={field.state.value}
             onChange={(e) => field.handleChange(e.target.checked)}
           />
@@ -79,7 +78,6 @@ export function PetForm({ initial, submitLabel, onSubmit, onCancel }: PetFormPro
 
   return (
     <form
-      className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
         void form.handleSubmit();
@@ -117,32 +115,40 @@ export function PetForm({ initial, submitLabel, onSubmit, onCancel }: PetFormPro
       </form.Subscribe>
       {text('breed', 'petForm.breed')}
       {flag('isMixedBreed', 'petForm.mixed')}
-      {choice(
-        'sex',
-        'petForm.sex',
-        SEXES.map((s) => ({ value: s, label: `petForm.sex.${s}` as MessageKey })),
-      )}
-      {choice('neutered', 'petForm.neutered', [
-        { value: 'yes', label: 'petForm.neutered.yes' },
-        { value: 'no', label: 'petForm.neutered.no' },
-      ])}
+      <div className="row2">
+        {choice(
+          'sex',
+          'petForm.sex',
+          SEXES.map((s) => ({ value: s, label: `petForm.sex.${s}` as MessageKey })),
+        )}
+        {choice('neutered', 'petForm.neutered', [
+          { value: 'yes', label: 'petForm.neutered.yes' },
+          { value: 'no', label: 'petForm.neutered.no' },
+        ])}
+      </div>
       {text('birthDate', 'petForm.birthDate', 'date')}
       {flag('birthDateEstimated', 'petForm.birthEstimated')}
-      {text('colour', 'petForm.colour')}
-      {text('markings', 'petForm.markings')}
-      {text('microchipId', 'petForm.microchip')}
       {text('adoptedOn', 'petForm.adoptedOn', 'date')}
+      <div className="row2">
+        {text('colour', 'petForm.colour')}
+        {text('markings', 'petForm.markings')}
+      </div>
+      <div className="row2">
+        {text('microchipId', 'petForm.microchip')}
+        {text('insuranceProvider', 'petForm.insuranceProvider')}
+      </div>
+      {text('insurancePolicy', 'petForm.insurancePolicy')}
+      {text('insuranceRenewsOn', 'petForm.insuranceRenews', 'date')}
+      <div className="row2">
+        {text('diet', 'petForm.diet')}
+        {text('bloodType', 'petForm.bloodType')}
+      </div>
       {choice(
         'sizeCategory',
         'petForm.size',
         SIZES.map((s) => ({ value: s, label: `petForm.size.${s}` as MessageKey })),
       )}
-      {text('bloodType', 'petForm.bloodType')}
-      {text('diet', 'petForm.diet')}
-      {text('insuranceProvider', 'petForm.insuranceProvider')}
-      {text('insurancePolicy', 'petForm.insurancePolicy')}
-      {text('insuranceRenewsOn', 'petForm.insuranceRenews', 'date')}
-      <div className="flex gap-2">
+      <div className="acts">
         <form.Subscribe selector={(s) => s.isSubmitting}>
           {(submitting) => (
             <Button type="submit" disabled={submitting}>
@@ -152,7 +158,7 @@ export function PetForm({ initial, submitLabel, onSubmit, onCancel }: PetFormPro
         </form.Subscribe>
         {onCancel ? (
           <Button variant="secondary" onClick={onCancel}>
-            {t('petForm.cancel')}
+            {t('ui.cancel')}
           </Button>
         ) : null}
       </div>

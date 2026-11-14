@@ -1,18 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { TouchEvent } from 'react';
-import { useRef } from 'react';
+import { Suspense, useRef } from 'react';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatMeasurement } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
-import { Icon, Tabs, panelId, tabId } from '../../ui';
+import { EmptyState, Icon, Tabs, panelId, tabId } from '../../ui';
 import type { TabItem } from '../../ui';
 import { useHealthList } from '../health/hooks';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
-import { CarePane, FilesPane, HealthPane, OverviewPane } from './ProfilePanes';
+import { FilesPane, HealthPane } from './lazy-panes';
+import { CarePane, OverviewPane } from './ProfilePanes';
 import { PROFILE_TABS } from './profile-tabs';
 import type { ProfileTab } from './profile-tabs';
 import { ageText } from './age';
@@ -154,9 +155,11 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         onTouchEnd={onTouchEnd}
       >
         {tab === 'overview' ? <OverviewPane pet={record} /> : null}
-        {tab === 'health' ? <HealthPane pet={record} /> : null}
+        <Suspense fallback={<EmptyState busy>{t('ui.loading')}</EmptyState>}>
+          {tab === 'health' ? <HealthPane pet={record} /> : null}
+          {tab === 'files' ? <FilesPane pet={record} /> : null}
+        </Suspense>
         {tab === 'care' ? <CarePane pet={record} /> : null}
-        {tab === 'files' ? <FilesPane pet={record} /> : null}
       </div>
     </div>
   );

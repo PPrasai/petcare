@@ -5,6 +5,7 @@ export { Card } from './Card';
 export { Chip } from './Chip';
 export { CopyButton } from './CopyButton';
 export { Dialog } from './Dialog';
+export { DropZone } from './DropZone';
 export { Disclosure } from './Disclosure';
 export { EmptyState } from './EmptyState';
 export { Icon } from './icons';
