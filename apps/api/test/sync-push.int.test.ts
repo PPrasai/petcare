@@ -56,6 +56,7 @@ describe('create', () => {
       'careCompletion',
       'reminderCompletion',
       'reminderSnooze',
+      'careLog',
     ])) {
       const result = await pushOne(
         owner,

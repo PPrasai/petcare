@@ -60,6 +60,8 @@ export function validData(
     expense: { spentOn: '2026-03-03', category: 'vet', amountMinor: 4500, currency: 'USD' },
     contact: { name: 'Dr. Vet', role: 'vet' },
     emergencyCard: { petId, visibleFields: ['name'], isLost: false },
+    careLog: { petId, kind: 'walk', occurredAt: at, durationMin: 30 },
+    mealPreset: { petId, foodName: 'Kibble', quantity: 1, quantityUnit: 'cup' },
   };
   return data[type];
 }
@@ -79,6 +81,7 @@ export const updateFor: Partial<Record<RecordType, Record<string, unknown>>> = {
   expense: { note: 'receipt kept' },
   contact: { note: 'open late' },
   emergencyCard: { notes: 'shy dog' },
+  mealPreset: { quantity: 2 },
 };
 
 export const ALL_TYPES: RecordType[] = [...RECORD_TYPES];

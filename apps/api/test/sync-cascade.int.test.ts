@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { entities } from '@petcare/domain';
 import { ALL_TYPES, validData } from './support/record-fixtures';
+import { dataKeys } from './support/schema-keys';
 import { mutation, pet, pull, pushOne, uid } from './support/sync-helpers';
 import { useSyncWorld } from './support/sync-world';
 
@@ -19,12 +20,7 @@ describe('pet delete cascade (I-08)', () => {
     const dependents: { type: string; id: string }[] = [];
     for (const type of ALL_TYPES) {
       const entity = entities.find((e) => e.type === type);
-      if (
-        !entity ||
-        type === 'pet' ||
-        !('petId' in (entity.schema as never as { shape: object }).shape)
-      )
-        continue;
+      if (!entity || type === 'pet' || !dataKeys(entity.schema).includes('petId')) continue;
       const data = { ...validData(type, refs, petId), petId };
       const result = await pushOne(owner, mutation(householdId, type, 'create', data));
       expect(result.status, `${type}: ${JSON.stringify(result.error)}`).toBe('applied');
