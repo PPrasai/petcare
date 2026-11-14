@@ -9,6 +9,7 @@ import {
   REPEATS,
   audienceOf,
   emptyReminderForm,
+  hasDate,
   reminderSchedule,
   reminderToForm,
 } from '../../application/reminder-form';
@@ -24,9 +25,6 @@ import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
 import { useMemberName } from './audience';
 import { repeatText } from './repeat-text';
-
-const hasDate = (repeat: Repeat): boolean =>
-  repeat === 'once' || repeat === 'monthly' || repeat === 'yearly';
 
 const DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 

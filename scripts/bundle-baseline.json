@@ -60,8 +60,8 @@
     {
       "slice": "P8",
       "commit": "747ca16",
-      "precacheBytes": 1503039,
-      "entryChunkGzipBytes": 157860
+      "precacheBytes": 1499625,
+      "entryChunkGzipBytes": 157820
     }
   ]
 }

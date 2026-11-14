@@ -42,6 +42,10 @@ export function dueOccurrences(
     Date.parse(at) >= new Date(window.from).getTime() &&
     Date.parse(at) <= new Date(window.to).getTime();
 
+  const push = (sourceType: SourceType, r: RecordEnvelope, at: string): void => {
+    result.push({ sourceType, sourceId: r.id, petId: str(r.data.petId), occurrenceAt: at });
+  };
+
   const vaccinations = live.filter((r) => r.type === 'vaccination');
   for (const v of vaccinations) {
     const nextDueOn = str(v.data.nextDueOn);
@@ -54,47 +58,24 @@ export function dueOccurrences(
         normalName(o.data.vaccineName) === normalName(v.data.vaccineName) &&
         (str(o.data.givenOn) ?? '') > givenOn,
     );
-    if (superseded) continue;
     const at = dueAtNineLocal(nextDueOn, userTz);
-    if (inWindow(at)) {
-      result.push({
-        sourceType: 'vaccination',
-        sourceId: v.id,
-        petId: str(v.data.petId),
-        occurrenceAt: at,
-      });
-    }
+    if (!superseded && inWindow(at)) push('vaccination', v, at);
   }
 
   for (const visit of live.filter((r) => r.type === 'vetVisit')) {
     const followUpOn = str(visit.data.followUpOn);
-    if (!followUpOn) continue;
-    const at = dueAtNineLocal(followUpOn, userTz);
-    if (inWindow(at)) {
-      result.push({
-        sourceType: 'vetVisit',
-        sourceId: visit.id,
-        petId: str(visit.data.petId),
-        occurrenceAt: at,
-      });
-    }
+    const at = followUpOn ? dueAtNineLocal(followUpOn, userTz) : '';
+    if (at && inWindow(at)) push('vetVisit', visit, at);
   }
 
-  const scheduled: { type: string; sourceType: SourceType }[] = [
-    { type: 'medication', sourceType: 'medication' },
-    { type: 'careRoutine', sourceType: 'careRoutine' },
-    { type: 'reminder', sourceType: 'reminder' },
-  ];
-  for (const { type, sourceType } of scheduled) {
-    for (const r of live.filter((x) => x.type === type)) {
-      if (r.data.active === false) continue;
+  for (const type of ['medication', 'careRoutine', 'reminder'] as const) {
+    for (const r of live.filter((x) => x.type === type && x.data.active !== false)) {
       if (type === 'reminder' && forUserId !== undefined) {
         const audience = r.data.audienceUserId;
         if (typeof audience === 'string' && audience !== forUserId) continue;
       }
-      const schedule = r.data.schedule as Schedule;
-      for (const at of occurrencesBetween(schedule, window.from, window.to)) {
-        result.push({ sourceType, sourceId: r.id, petId: str(r.data.petId), occurrenceAt: at });
+      for (const at of occurrencesBetween(r.data.schedule as Schedule, window.from, window.to)) {
+        push(type, r, at);
       }
     }
   }

@@ -7,6 +7,10 @@ import type { Schedule } from '@petcare/domain';
 export type Repeat = 'once' | 'daily' | 'weekly' | 'monthly' | 'everyNDays' | 'yearly';
 export const REPEATS = ['once', 'daily', 'weekly', 'monthly', 'yearly'] as const;
 
+/** The repeats that start on a date the person picks. */
+export const hasDate = (repeat: Repeat): boolean =>
+  repeat === 'once' || repeat === 'monthly' || repeat === 'yearly';
+
 /** What a reminder is about (CON-003 `reminder.category`), in the order of the chips. */
 export const REMINDER_TYPES = [
   { id: 'walk', time: '18:00' },
@@ -88,9 +92,7 @@ export function reminderSchedule(
   base?: Schedule,
   now: Date = new Date(),
 ): Record<string, unknown> {
-  const dated =
-    values.repeat === 'once' || values.repeat === 'monthly' || values.repeat === 'yearly';
-  const startOn = dated ? values.date : (base?.startOn ?? today);
+  const startOn = hasDate(values.repeat) ? values.date : (base?.startOn ?? today);
   const first = values.time || DEFAULT_TIME;
   const wanted = [first, values.repeat === 'daily' ? values.time2 : ''].filter(Boolean);
   const rest = base?.kind === values.repeat ? (base.times ?? []).slice(2) : [];

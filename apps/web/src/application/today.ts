@@ -127,7 +127,7 @@ export function buildToday(all: StoredRecord[], opts: TodayOptions): TodayView {
       snoozedUntil: snoozedUntil ? new Date(snoozedUntil).toISOString() : null,
       ...(o.sourceType === 'careRoutine' ? { routineKind: String(source.data.kind ?? '') } : {}),
     };
-    const status = occurrenceStatus(o, opts.now, new Set(completion ? [k] : []), snoozes);
+    const status = occurrenceStatus(o, opts.now, doneKeys, snoozes);
     if (status === 'done') {
       if (day === today) view.done.push(item);
     } else if (status === 'snoozed') view.snoozed.push(item);
