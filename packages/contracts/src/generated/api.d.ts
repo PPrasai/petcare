@@ -958,7 +958,7 @@ export interface components {
             notes?: string | null;
         };
         /** @enum {unknown} */
-        RecordType: "pet" | "measurement" | "vaccination" | "medication" | "medicationDose" | "vetVisit" | "condition" | "symptomEntry" | "careRoutine" | "careCompletion" | "reminder" | "reminderCompletion" | "reminderSnooze" | "document" | "expense" | "contact" | "emergencyCard";
+        RecordType: "pet" | "measurement" | "vaccination" | "medication" | "medicationDose" | "vetVisit" | "condition" | "symptomEntry" | "careRoutine" | "careCompletion" | "reminder" | "reminderCompletion" | "reminderSnooze" | "document" | "expense" | "contact" | "emergencyCard" | "careLog" | "mealPreset";
         Uuid: string;
         /** Format: date-time */
         Instant: string;
@@ -1049,8 +1049,11 @@ export interface components {
         Schedule: {
             /** @description IANA time zone, e.g. Asia/Kathmandu */
             tz: string;
-            /** @enum {unknown} */
-            kind: "once" | "daily" | "weekly" | "monthly" | "everyNDays";
+            /**
+             * @description yearly: every year on startOn's month and day; 29 Feb clamps to 28 Feb in non-leap years
+             * @enum {unknown}
+             */
+            kind: "once" | "daily" | "weekly" | "monthly" | "everyNDays" | "yearly";
             /** @description Local times; empty = all-day item due at 09:00 local */
             times?: string[];
             /** @description ISO weekday 1=Mon; required when kind=weekly */
@@ -1061,6 +1064,8 @@ export interface components {
             everyN?: number;
             startOn: components["schemas"]["Date"];
             endOn?: components["schemas"]["NullableDate"];
+            /** @description No occurrence earlier than this instant is generated. Clients set it to the creation or schedule-edit time */
+            notBefore?: components["schemas"]["Instant"];
         } & (unknown & unknown & unknown);
         MedicationData: {
             petId: components["schemas"]["Uuid"];
@@ -1174,6 +1179,13 @@ export interface components {
             schedule: components["schemas"]["Schedule"];
             active: boolean;
             note?: components["schemas"]["Note"];
+            /**
+             * @description What the reminder is about; drives icon and medication matching
+             * @enum {unknown}
+             */
+            category?: "walk" | "medication" | "grooming" | "vetVisit" | "weighIn" | "other" | null;
+            /** @description null = everyone in the household; otherwise the only user notified. Push: must equal the actor when set to a non-null value */
+            audienceUserId?: string | null;
         };
         ReminderRecord: components["schemas"]["Envelope"] & {
             /** @constant */
@@ -1264,7 +1276,48 @@ export interface components {
             type?: "emergencyCard";
             data?: components["schemas"]["EmergencyCardData"];
         };
-        Record: components["schemas"]["PetRecord"] | components["schemas"]["MeasurementRecord"] | components["schemas"]["VaccinationRecord"] | components["schemas"]["MedicationRecord"] | components["schemas"]["MedicationDoseRecord"] | components["schemas"]["VetVisitRecord"] | components["schemas"]["ConditionRecord"] | components["schemas"]["SymptomEntryRecord"] | components["schemas"]["CareRoutineRecord"] | components["schemas"]["CareCompletionRecord"] | components["schemas"]["ReminderRecord"] | components["schemas"]["ReminderCompletionRecord"] | components["schemas"]["ReminderSnoozeRecord"] | components["schemas"]["DocumentRecord"] | components["schemas"]["ExpenseRecord"] | components["schemas"]["ContactRecord"] | components["schemas"]["EmergencyCardRecord"];
+        Quantity: number;
+        /**
+         * @description Stored in the unit the user chose (explicit exception to the SI rule: kitchen units have no fixed mass)
+         * @enum {unknown}
+         */
+        QuantityUnit: "g" | "kg" | "oz" | "lb" | "cup" | "can" | "pouch" | "tbsp";
+        /** @description Append-only record of everyday care that happened (Pebble Log sheet). Fields not listed for a kind are forbidden for it. */
+        CareLogData: {
+            petId: components["schemas"]["Uuid"];
+            /** @enum {unknown} */
+            kind: "meal" | "walk" | "grooming" | "medication";
+            occurredAt: components["schemas"]["Instant"];
+            note?: components["schemas"]["Note"];
+            foodName?: components["schemas"]["ShortText"];
+            quantity?: components["schemas"]["Quantity"];
+            quantityUnit?: components["schemas"]["QuantityUnit"];
+            durationMin?: number;
+            groomingTasks?: ("bath" | "brushing" | "nailTrim" | "haircut" | "teeth" | "ears" | "other")[];
+            medicationName?: components["schemas"]["ShortText"];
+            medicationId?: components["schemas"]["Uuid"];
+            /** @enum {unknown} */
+            route?: "oral" | "topical";
+            doseText?: string;
+        } & (unknown & unknown & unknown & unknown);
+        CareLogRecord: components["schemas"]["Envelope"] & {
+            /** @constant */
+            type?: "careLog";
+            data?: components["schemas"]["CareLogData"];
+        };
+        /** @description A usual meal for one-tap logging. The UI shows at most 4 per pet (most recently updated); the server does not cap the count. */
+        MealPresetData: {
+            petId: components["schemas"]["Uuid"];
+            foodName: components["schemas"]["ShortText"];
+            quantity: components["schemas"]["Quantity"];
+            quantityUnit: components["schemas"]["QuantityUnit"];
+        };
+        MealPresetRecord: components["schemas"]["Envelope"] & {
+            /** @constant */
+            type?: "mealPreset";
+            data?: components["schemas"]["MealPresetData"];
+        };
+        Record: components["schemas"]["PetRecord"] | components["schemas"]["MeasurementRecord"] | components["schemas"]["VaccinationRecord"] | components["schemas"]["MedicationRecord"] | components["schemas"]["MedicationDoseRecord"] | components["schemas"]["VetVisitRecord"] | components["schemas"]["ConditionRecord"] | components["schemas"]["SymptomEntryRecord"] | components["schemas"]["CareRoutineRecord"] | components["schemas"]["CareCompletionRecord"] | components["schemas"]["ReminderRecord"] | components["schemas"]["ReminderCompletionRecord"] | components["schemas"]["ReminderSnoozeRecord"] | components["schemas"]["DocumentRecord"] | components["schemas"]["ExpenseRecord"] | components["schemas"]["ContactRecord"] | components["schemas"]["EmergencyCardRecord"] | components["schemas"]["CareLogRecord"] | components["schemas"]["MealPresetRecord"];
     };
     responses: {
         /** @description Validation failed (code invalid; errors[] lists JSON pointers) */
