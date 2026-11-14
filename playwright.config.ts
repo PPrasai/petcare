@@ -7,7 +7,15 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL: 'http://localhost:4173' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      // AS-A-08, SPEC-petcare-002 P8: swipe, hidden scrollbars, layout and contrast in WebKit.
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      testMatch: ['layout-phone.spec.ts', 'a11y-matrix.spec.ts', 'pebble-layout.spec.ts'],
+    },
+  ],
   webServer: [
     {
       command: 'npx tsx e2e/support/stack.ts',
