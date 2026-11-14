@@ -162,7 +162,7 @@ export function overdueWindowStart(now: Date | string): Date {
  * The missed daily/weekly rule (CON-003 2.6, PO-002 Q-03): an overdue occurrence of a daily or
  * weekly schedule stops being listed once the next occurrence of the same source has started.
  * Other kinds keep the overdue window. It changes only what is listed, never a record.
- * Not used by the UI before slice P8.
+ * Used by the in-app list from slice P8 (application/today.ts).
  */
 export function applyMissedRule(
   occurrences: Occurrence[],

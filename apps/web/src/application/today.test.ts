@@ -97,9 +97,36 @@ describe('buildToday', () => {
   });
 
   it('stops listing overdue items after 30 days', () => {
+    const monthly = rec(
+      'reminder',
+      {
+        petId: 'pet1',
+        title: 'Flea',
+        active: true,
+        schedule: {
+          tz: 'UTC',
+          kind: 'monthly',
+          times: ['08:00'],
+          startOn: '2026-01-01',
+          dayOfMonth: 1,
+        },
+      },
+      { id: 'm1' },
+    );
+    const view = buildToday([pet, monthly], opts);
+    expect(view.overdue.map((i) => i.occurrenceAt)).toEqual(['2026-06-01T08:00:00Z']);
+  });
+
+  it('lists one missed daily item, not a pile (PO-002 Q-03)', () => {
     const view = buildToday([pet, daily('r1', 'Breakfast', '2026-01-01')], opts);
-    const oldest = view.overdue[0]?.occurrenceAt ?? '';
-    expect(oldest >= '2026-05-11').toBe(true);
+    expect(view.overdue).toHaveLength(0);
+    expect(view.today.map((i) => i.occurrenceAt)).toEqual(['2026-06-10T08:00:00Z']);
+  });
+
+  it('keeps yesterday while today has not started', () => {
+    const early = { ...opts, now: new Date('2026-06-10T06:00:00Z') };
+    const view = buildToday([pet, daily('r1', 'Breakfast', '2026-01-01')], early);
+    expect(view.overdue.map((i) => i.occurrenceAt)).toEqual(['2026-06-09T08:00:00Z']);
   });
 });
 
