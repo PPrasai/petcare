@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
+import { guardV2Writes } from './no-v2-writes';
 
 let counter = 0;
 export const uniqueEmail = (label: string) => `${label}-${Date.now()}-${counter++}@example.test`;
@@ -7,6 +8,7 @@ export const uniqueEmail = (label: string) => `${label}-${Date.now()}-${counter+
 /** Creates an account through the sign-up page and waits for the signed-in shell. */
 export async function signUp(page: Page, label = 'e2e') {
   const email = uniqueEmail(label);
+  await guardV2Writes(page); // R-2, until slice P6
   // Sign-up is limited to 5 a minute per client IP; each test pretends to be its own client.
   const octet = () => Math.floor(Math.random() * 250) + 1;
   await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': `198.51.${octet()}.${octet()}` });
