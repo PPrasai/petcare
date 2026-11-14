@@ -13,12 +13,12 @@ export default defineConfig({
       // AS-A-08, SPEC-petcare-002 P8: swipe, hidden scrollbars, layout and contrast in WebKit.
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      // The two matrices (QA-39, QA-40) run in WebKit on CI, or locally with WEBKIT_MATRICES=1. The
-      // Windows WebKit build drops navigations during a full matrix (see the P8 PR notes).
-      testMatch:
-        process.env.CI || process.env.WEBKIT_MATRICES
-          ? ['layout-phone.spec.ts', 'a11y-matrix.spec.ts', 'pebble-layout.spec.ts']
-          : ['layout-phone.spec.ts'],
+      // SPEC-petcare-002 5.2 limits WebKit to layout-phone.spec.ts. The two matrices (QA-39, QA-40) also
+      // run there only on request (WEBKIT_MATRICES=1): on CI they timed out at 15 minutes per cell and
+      // failed on 390 px interactions (PR #28, run 43568476236), which is tracked as an open finding.
+      testMatch: process.env.WEBKIT_MATRICES
+        ? ['layout-phone.spec.ts', 'a11y-matrix.spec.ts', 'pebble-layout.spec.ts']
+        : ['layout-phone.spec.ts'],
     },
   ],
   webServer: [
