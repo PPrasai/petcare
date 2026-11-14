@@ -599,7 +599,7 @@
     display: grid;
     place-items: center;
     font-weight: 800;
-    background: color-mix(in srgb, var(--accent) 30%, var(--surface));
+    background: color-mix(in srgb, var(--c, var(--accent)) 30%, var(--surface));
     flex: none;
   }
   .fld {
@@ -636,6 +636,138 @@
     border-radius: 999px;
     padding: 3px;
     gap: 2px;
+  }
+  .seg button {
+    border: 0;
+    background: none;
+    padding: 6px 14px;
+    min-height: 36px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .seg button[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .modal h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  .modal .acts {
+    margin-top: 14px;
+  }
+  .imgview img {
+    display: block;
+    max-width: 100%;
+    max-height: 70dvh;
+    margin: 0 auto;
+    object-fit: contain;
+  }
+  .bar {
+    height: 12px;
+    border-radius: 999px;
+    display: flex;
+    overflow: hidden;
+    background: var(--line);
+    gap: 2px;
+    margin: 12px 0 8px;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+    min-width: 4px;
+    background: var(--c);
+  }
+  .dotc {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--c);
+    margin-right: 8px;
+  }
+  .stat {
+    font-family: var(--fd);
+    font-size: 44px;
+    line-height: 1.05;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    margin: 4px 0 0;
+  }
+  .stat.small {
+    font-size: 24px;
+  }
+  .amt {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .ltable {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ltable tr + tr {
+    border-top: 1px solid var(--line);
+  }
+  .ltable th,
+  .ltable td {
+    padding: 12px 0;
+  }
+  .ltable th {
+    text-align: left;
+    font-weight: 700;
+  }
+  .ltable td:last-child {
+    text-align: right;
+  }
+  .ltable .rh {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .danger-zone .line b {
+    color: var(--bad);
+  }
+  .invcard {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .invcard .stack {
+    flex: 1;
+    min-width: 180px;
+    gap: 10px;
+  }
+  .lcode {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .sheet form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  a.xbtn {
+    color: var(--accent);
+  }
+  .sech .linkbtn,
+  .line .linkbtn {
+    min-width: 44px;
+    justify-content: center;
+  }
+  .solo {
+    max-width: 720px;
+  }
+  .line .l .sub2 {
+    display: block;
+  }
+  .line > .l {
+    flex: 1 1 120px;
+  }
+  .line > .l b {
+    overflow-wrap: anywhere;
   }
 
   .empty .i {

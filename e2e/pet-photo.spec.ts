@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { addPet, signUp, uniqueEmail, userId, waitSynced } from './support/app';
+import { addPet, createInvite, signUp, uniqueEmail, userId, waitSynced } from './support/app';
 
 const UNUSABLE = "This photo can't be used. Try a JPEG or PNG.";
 const octet = () => Math.floor(Math.random() * 250) + 1;
@@ -209,8 +209,7 @@ test('a viewer sees the pet but has no camera badge', async ({ page, browser }) 
   await addPet(page, 'Momo');
   await waitSynced(page);
   await page.getByRole('link', { name: 'Household', exact: true }).click();
-  await page.getByLabel('Invite as').selectOption('viewer');
-  await page.getByRole('button', { name: 'Create invite' }).click();
+  await createInvite(page, 'Viewer');
   const code = (await page.getByTestId('invite-code').textContent()) ?? '';
 
   const other = await browser.newContext();

@@ -101,7 +101,9 @@ test('the demo works end to end with no request to /api, and reset restores the 
   await expect(page.getByRole('heading', { level: 1, name: 'Expenses' })).toBeVisible();
   await page.getByRole('link', { name: 'Household', exact: true }).click();
   await expect(page.getByText(/Inviting people .* turned off in the demo/)).toBeVisible();
-  await expect(page.getByText('Sam · Caretaker')).toBeVisible();
+  await expect(page.getByTestId('member-row').filter({ hasText: 'Sam' })).toContainText(
+    'Caretaker',
+  );
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByText(/Phone notifications need an account/)).toBeVisible();
   await page.getByRole('link', { name: 'Contacts' }).click();

@@ -26,15 +26,14 @@ export function FilePicker({ label, onPick, error, onRefused }: Props) {
   const id = useId();
   const max = useSessionStore((s) => s.config?.maxFileBytes ?? DEFAULT_MAX);
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium">
+    <div className="fld">
+      <label htmlFor={id} className="label">
         {label}
       </label>
       <input
         id={id}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,.heic"
-        className="min-h-11 rounded-lg border border-line bg-surface px-3 py-2"
         aria-invalid={error ? true : undefined}
         onChange={(e) => {
           const file = e.target.files?.[0] ?? null;
@@ -51,7 +50,11 @@ export function FilePicker({ label, onPick, error, onRefused }: Props) {
           }
         }}
       />
-      {error ? <p className="text-sm text-bad">{error}</p> : null}
+      {error ? (
+        <p className="err" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

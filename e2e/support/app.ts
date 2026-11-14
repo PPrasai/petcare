@@ -80,3 +80,10 @@ export async function shareEmergencyCard(
     await context.close();
   }
 }
+
+/** On /household as the owner: opens the Invite sheet, picks the role and creates the invite. */
+export async function createInvite(page: Page, role: 'Viewer' | 'Caretaker' = 'Caretaker') {
+  await page.getByRole('button', { name: 'Invite', exact: true }).click();
+  await page.getByRole('group', { name: 'Invite as' }).getByRole('button', { name: role }).click();
+  await page.getByRole('button', { name: 'Create invite' }).click();
+}

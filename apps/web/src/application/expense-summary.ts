@@ -67,3 +67,45 @@ export function grandTotals(rows: SummaryRow[]): { currency: string; totalMinor:
     .map(([currency, totalMinor]) => ({ currency, totalMinor }))
     .sort((a, b) => a.currency.localeCompare(b.currency));
 }
+
+const liveInPeriod = (expenses: StoredRecord[], anchor: string, period: Period) =>
+  expenses.filter((e) => e.deletedAt === null && inPeriod(String(e.data.spentOn), anchor, period));
+
+/**
+ * The currency the headline total is shown in: the preferred one when it has spending in the
+ * period, else the one with the most transactions (ties go alphabetically). Null when nothing was
+ * spent. Totals in other currencies are never added to it.
+ */
+export function displayCurrency(
+  expenses: StoredRecord[],
+  anchor: string,
+  period: Period,
+  preferred: string,
+): string | null {
+  const counts = new Map<string, number>();
+  for (const e of liveInPeriod(expenses, anchor, period)) {
+    const currency = String(e.data.currency);
+    counts.set(currency, (counts.get(currency) ?? 0) + 1);
+  }
+  if (counts.has(preferred)) return preferred;
+  const ranked = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  return ranked[0]?.[0] ?? null;
+}
+
+/** Spending per category in one currency, largest first. Categories with no spending are left out. */
+export function categoryTotals(
+  expenses: StoredRecord[],
+  anchor: string,
+  period: Period,
+  currency: string,
+): { category: string; totalMinor: number }[] {
+  const totals = new Map<string, number>();
+  for (const e of liveInPeriod(expenses, anchor, period)) {
+    if (e.data.currency !== currency) continue;
+    const category = String(e.data.category);
+    totals.set(category, (totals.get(category) ?? 0) + Number(e.data.amountMinor));
+  }
+  return [...totals]
+    .map(([category, totalMinor]) => ({ category, totalMinor }))
+    .sort((a, b) => b.totalMinor - a.totalMinor || a.category.localeCompare(b.category));
+}

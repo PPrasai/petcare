@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { shareEmergencyCard } from './app';
+import { createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
 
 /**
  * The table of screen states that QA-39 (axe), QA-40 (layout) and QA-32 walk. One entry per
@@ -19,7 +19,7 @@ export interface Screen {
   /** Waits until the state has loaded. */
   ready: (page: Page) => Promise<void>;
   /** Opens a sheet or dialog, or reaches a state, after the page loaded. */
-  open?: (page: Page) => Promise<void>;
+  open?: (page: Page, browser: Browser) => Promise<void>;
   /** The widths it exists at (More is a phone page). Both when left out. */
   widths?: (390 | 1280)[];
   /** `overlay` is a sheet or dialog: QA-40 checks overflow, fonts and hit areas only. */
@@ -50,6 +50,62 @@ const logKind = (index: number) => async (page: Page) => {
   await openLog(page);
   await logSheet(page).locator('.types button').nth(index).click();
   await expect(logSheet(page).getByRole('heading', { level: 2 })).not.toHaveText('Log something');
+};
+
+const dialogNamed = (name: string) => (page: Page) => page.getByRole('dialog', { name });
+
+/** A real 1x1 PNG, so the server's content sniffing accepts it as a receipt. */
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/** Adds an expense through the full sheet on /expenses. */
+const addExpense = async (page: Page, amount: string, currency: string, receipt = false) => {
+  await page.getByRole('button', { name: 'Add an expense' }).click();
+  await page.getByLabel('Amount').fill(amount);
+  await page.getByLabel('Currency').fill(currency);
+  if (receipt) {
+    await page
+      .getByLabel('Receipt (optional)')
+      .setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: PNG });
+  }
+  await page.getByRole('button', { name: 'Add expense' }).click();
+  await expect(dialogNamed('Add expense')(page)).toBeHidden();
+};
+
+const membersLoaded = async (page: Page) => {
+  await expect(page.getByRole('heading', { level: 1, name: 'Household' })).toBeVisible();
+  await expect(page.getByTestId('member-row').first()).toBeVisible();
+};
+
+// A second person joins the matrix account's household once per session, for the member sheet.
+const guests = new WeakSet<Page>();
+const withGuest = async (page: Page, browser: Browser) => {
+  if (!guests.has(page)) {
+    await createInvite(page);
+    const code = (await page.getByTestId('invite-code').textContent()) ?? '';
+    const context = await browser.newContext({ baseURL: 'http://localhost:4173' });
+    try {
+      const guest = await context.newPage();
+      await signUp(guest, 'guest');
+      await guest.goto('/join');
+      await guest.getByLabel('Invite code').fill(code.toLowerCase());
+      await guest.getByRole('button', { name: 'Check code' }).click();
+      await guest.getByRole('button', { name: 'Join household' }).click();
+      await expect(guest.getByRole('navigation', { name: 'Main' })).toBeVisible();
+    } finally {
+      await context.close();
+    }
+    guests.add(page);
+    await page.reload();
+    await membersLoaded(page);
+  }
+};
+const manageGuest = async (page: Page, browser: Browser) => {
+  await withGuest(page, browser);
+  await page.getByRole('button', { name: 'Manage guest Person' }).click();
+  await expect(dialogNamed('guest Person')(page)).toBeVisible();
 };
 
 /** A well-formed invite token, so /join shows its signed-out invite wording. */
@@ -175,5 +231,180 @@ export const SCREENS: Screen[] = [
     session: 'demo',
     widths: [390],
     ready: heading('More'),
+  },
+
+  // P1b-2: expenses, household, contacts and the file viewer
+  {
+    id: 'S-24 list',
+    path: '/contacts',
+    session: 'demo',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { level: 1, name: 'Contacts' })).toBeVisible();
+      await expect(page.getByTestId('contact-row').first()).toBeVisible();
+    },
+  },
+  {
+    id: 'S-24 add sheet',
+    path: '/contacts',
+    session: 'demo',
+    kind: 'overlay',
+    ready: heading('Contacts'),
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Add a contact' }).click();
+      await expect(dialogNamed('Add contact')(page)).toBeVisible();
+    },
+  },
+  { id: 'S-18 month', path: '/expenses', session: 'demo', two: true, ready: heading('Expenses') },
+  {
+    id: 'S-18 year, by pet open',
+    path: '/expenses',
+    session: 'demo',
+    two: true,
+    ready: heading('Expenses'),
+    open: async (page) => {
+      await page
+        .getByRole('group', { name: 'Period' })
+        .getByRole('button', { name: 'This year' })
+        .click();
+      await expect(page.getByTestId('expense-total').first()).toBeVisible();
+      await page.locator('summary').filter({ hasText: 'By pet' }).click();
+      await expect(page.getByRole('table', { name: 'Spending by pet' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-19',
+    path: '/expenses',
+    session: 'demo',
+    kind: 'overlay',
+    ready: heading('Expenses'),
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Add an expense' }).click();
+      await expect(dialogNamed('Add expense')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-20 demo',
+    path: '/household',
+    session: 'demo',
+    two: true,
+    ready: async (page) => {
+      await expect(page.getByTestId('member-row').first()).toBeVisible();
+    },
+  },
+  {
+    id: 'S-24 empty',
+    path: '/contacts',
+    session: 'account',
+    ready: async (page) => {
+      await expect(page.locator('.empty').getByText(/^No contacts yet\./)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-18 empty',
+    path: '/expenses',
+    session: 'account',
+    two: true,
+    ready: async (page) => {
+      await expect(page.locator('.empty').getByText(/^No expenses yet\./)).toBeVisible();
+    },
+  },
+  { id: 'S-20 owner', path: '/household', session: 'account', two: true, ready: membersLoaded },
+  {
+    id: 'S-21 invite sheet',
+    path: '/household',
+    session: 'account',
+    kind: 'overlay',
+    ready: membersLoaded,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Invite', exact: true }).click();
+      await expect(dialogNamed('Invite someone')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-21 new invite',
+    path: '/household',
+    session: 'account',
+    two: true,
+    ready: membersLoaded,
+    open: async (page) => {
+      await createInvite(page, 'Viewer');
+      await expect(page.getByRole('region', { name: 'New invite' })).toBeVisible();
+      await expect(page.getByRole('img', { name: 'QR code of the invite link' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'Open invites' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-22 member sheet',
+    path: '/household',
+    session: 'account',
+    kind: 'overlay',
+    ready: membersLoaded,
+    open: manageGuest,
+  },
+  {
+    id: 'S-22 transfer dialog',
+    path: '/household',
+    session: 'account',
+    kind: 'overlay',
+    ready: membersLoaded,
+    open: async (page, browser) => {
+      await manageGuest(page, browser);
+      await page.getByRole('button', { name: 'Make guest Person the owner' }).click();
+      await expect(dialogNamed('Transfer ownership')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-23 leave dialog',
+    path: '/household',
+    session: 'account',
+    kind: 'overlay',
+    ready: membersLoaded,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Leave household' }).click();
+      await expect(dialogNamed('Leave this household?')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-23 last owner',
+    path: '/household',
+    session: 'account',
+    kind: 'overlay',
+    ready: membersLoaded,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Leave household' }).click();
+      await page.getByRole('button', { name: 'Leave', exact: true }).click();
+      await expect(
+        dialogNamed('Leave this household?')(page).getByText(
+          'Make another member the owner before you leave.',
+        ),
+      ).toBeVisible();
+    },
+  },
+  {
+    id: 'S-18 spending',
+    path: '/expenses',
+    session: 'account',
+    two: true,
+    ready: heading('Expenses'),
+    open: async (page) => {
+      await addExpense(page, '12.50', 'USD', true);
+      await addExpense(page, '1500', 'NPR');
+      await expect(page.getByTestId('expense-total')).toHaveCount(2);
+      // Let the receipt upload finish, so the viewer finds the file.
+      await waitSynced(page);
+    },
+  },
+  {
+    id: 'S-47',
+    path: '/expenses',
+    session: 'account',
+    kind: 'overlay',
+    ready: async (page) => {
+      await expect(page.getByRole('button', { name: 'View Receipt (optional)' })).toBeVisible();
+    },
+    open: async (page) => {
+      await page.getByRole('button', { name: 'View Receipt (optional)' }).click();
+      await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
+    },
   },
 ];
