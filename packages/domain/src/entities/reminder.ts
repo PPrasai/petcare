@@ -8,6 +8,13 @@ export const reminderData = z.strictObject({
   schedule: scheduleSchema,
   active: z.boolean(),
   note: note.optional(),
+  /** What the reminder is about (CON-003). Nothing writes it before slice P6. */
+  category: z
+    .enum(['walk', 'medication', 'grooming', 'vetVisit', 'weighIn', 'other'])
+    .nullable()
+    .optional(),
+  /** null = everyone; otherwise the only user notified (CON-003 2.3, 2.6). */
+  audienceUserId: z.string().min(1).max(64).nullable().optional(),
 });
 
 export const reminder = defineEntity({

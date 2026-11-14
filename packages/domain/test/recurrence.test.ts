@@ -115,4 +115,51 @@ describe('occurrences', () => {
   it('a single due date is 09:00 local', () => {
     expect(dueAtNineLocal('2026-12-01', KTM)).toBe('2026-12-01T03:15:00Z');
   });
+
+  it.each([
+    [
+      'yearly from 29 Feb clamps to 28 Feb in 2027 and returns in 2028',
+      'Asia/Kathmandu',
+      '2026-02-28T00:00:00Z',
+      '2028-12-31T00:00:00Z',
+      ['2027-02-28T03:15:00Z', '2028-02-29T03:15:00Z'],
+      '2026-03-01',
+    ],
+    [
+      'yearly starts at startOn',
+      NY,
+      '2020-01-01T00:00:00Z',
+      '2029-01-01T00:00:00Z',
+      ['2026-09-10T13:00:00Z', '2027-09-10T13:00:00Z', '2028-09-10T13:00:00Z'],
+      '2026-09-10',
+    ],
+  ])('%s', (_label, tz, from, to, expected, startOn) => {
+    const start = _label.includes('29 Feb') ? '2024-02-29' : startOn;
+    const s = schedule({ tz, kind: 'yearly', startOn: start, times: tz === NY ? ['09:00'] : [] });
+    const got = occurrencesBetween(s, from, to);
+    expect(got).toEqual(expect.arrayContaining(expected));
+    if (!_label.includes('29 Feb')) expect(got).toEqual(expected);
+  });
+  it('yearly stops after endOn', () => {
+    const s = schedule({ tz: KTM, kind: 'yearly', startOn: '2026-05-01', endOn: '2027-12-31' });
+    expect(occurrencesBetween(s, '2026-01-01T00:00:00Z', '2030-01-01T00:00:00Z')).toHaveLength(2);
+  });
+  it.each(['once', 'daily', 'weekly', 'monthly', 'everyNDays', 'yearly'] as const)(
+    'notBefore suppresses earlier occurrences for %s',
+    (kind) => {
+      const s = schedule({
+        tz: KTM,
+        kind,
+        startOn: '2026-06-01',
+        times: ['08:00'],
+        daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
+        dayOfMonth: 1,
+        everyN: 1,
+        notBefore: '2026-06-01T05:00:00Z', // 10:45 Kathmandu, after the 08:00 occurrence
+      });
+      const got = occurrencesBetween(s, '2026-06-01T00:00:00Z', '2026-06-03T00:00:00Z');
+      expect(got.every((at) => at >= '2026-06-01T05:00:00Z')).toBe(true);
+      expect(got).not.toContain('2026-06-01T02:15:00Z');
+    },
+  );
 });

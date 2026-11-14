@@ -1,5 +1,6 @@
 import type { EntityDefinition } from './define-entity';
 import type { RecordType } from './schemas';
+import { careLog } from './entities/care-log';
 import { careCompletion } from './entities/care-completion';
 import { careRoutine } from './entities/care-routine';
 import { condition } from './entities/condition';
@@ -7,6 +8,7 @@ import { contact } from './entities/contact';
 import { document } from './entities/document';
 import { emergencyCard } from './entities/emergency-card';
 import { expense } from './entities/expense';
+import { mealPreset } from './entities/meal-preset';
 import { measurement } from './entities/measurement';
 import { medication } from './entities/medication';
 import { medicationDose } from './entities/medication-dose';
@@ -37,6 +39,8 @@ export const entities: EntityDefinition[] = [
   expense,
   contact,
   emergencyCard,
+  careLog,
+  mealPreset,
 ];
 
 export function getEntity(type: RecordType): EntityDefinition {
