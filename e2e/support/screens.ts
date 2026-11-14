@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
+import { addPet, createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
 
 /**
  * The table of screen states that QA-39 (axe), QA-40 (layout) and QA-32 walk. One entry per
@@ -52,7 +52,7 @@ const logKind = (index: number) => async (page: Page) => {
   await expect(logSheet(page).getByRole('heading', { level: 2 })).not.toHaveText('Log something');
 };
 
-const dialogNamed = (name: string) => (page: Page) => page.getByRole('dialog', { name });
+const dialogNamed = (name: string | RegExp) => (page: Page) => page.getByRole('dialog', { name });
 
 /** A real 1x1 PNG, so the server's content sniffing accepts it as a receipt. */
 const PNG = Buffer.from(
@@ -122,6 +122,40 @@ const publicCard = (lost: boolean) => (browser: Browser) => {
   }
   return made;
 };
+
+// P1b-3: Settings, Sync activity and the Emergency hub. A pet and its card are made once per session.
+const pets = new WeakSet<Page>();
+const cards = new WeakSet<Page>();
+const withPet = async (page: Page) => {
+  if (!pets.has(page)) {
+    await addPet(page, 'Momo');
+    pets.add(page);
+    await page.goto('/emergency');
+  }
+};
+const withCard = async (page: Page) => {
+  await withPet(page);
+  if (cards.has(page)) return;
+  await page.getByRole('button', { name: 'Set up card' }).click();
+  await page.getByLabel('My phone number', { exact: true }).check();
+  await page.getByLabel('Phone number to show').fill('+1 555 0100');
+  await page.getByLabel('Notes', { exact: true }).check();
+  await page.getByLabel('Notes for a finder').fill('Shy, will hide');
+  await page.getByRole('button', { name: 'Save card' }).click();
+  await expect(page.locator('.toast').filter({ hasText: 'Saved.' })).toBeVisible();
+  await waitSynced(page);
+  cards.add(page);
+};
+const settingsReady = async (page: Page) => {
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Push reminders' })).toBeVisible();
+};
+const calendarSwitch = (page: Page) => page.getByRole('switch', { name: 'Calendar feed' });
+const emergencyReady = async (page: Page) => {
+  await expect(page.getByRole('heading', { level: 1, name: 'Emergency card' })).toBeVisible();
+  await expect(page.getByText('Microchip').first()).toBeVisible();
+};
+const markLost = (page: Page) => page.getByRole('button', { name: /^Mark .+ as lost$/ });
 
 export const SCREENS: Screen[] = [
   // P1b-1: account and public pages
@@ -405,6 +439,177 @@ export const SCREENS: Screen[] = [
     open: async (page) => {
       await page.getByRole('button', { name: 'View Receipt (optional)' }).click();
       await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
+    },
+  },
+  // P1b-3: Settings, Sync activity and the Emergency hub
+  { id: 'S-25 demo', path: '/settings', session: 'demo', two: true, ready: settingsReady },
+  { id: 'S-32 demo', path: '/sync', session: 'demo', two: true, ready: heading('Sync activity') },
+  { id: 'S-33 demo', path: '/emergency', session: 'demo', two: true, ready: emergencyReady },
+  {
+    id: 'S-34 demo',
+    path: '/emergency',
+    session: 'demo',
+    kind: 'overlay',
+    ready: emergencyReady,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Edit card' }).first().click();
+      await expect(dialogNamed('What a finder sees')(page)).toBeVisible();
+    },
+  },
+  { id: 'S-25', path: '/settings', session: 'account', two: true, ready: settingsReady },
+  {
+    id: 'S-26 timing open',
+    path: '/settings',
+    session: 'account',
+    two: true,
+    ready: settingsReady,
+    open: async (page) => {
+      await page.locator('summary').filter({ hasText: 'Reminder timing' }).click();
+      await expect(page.getByLabel('Minutes before: Vet visits')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-28 link sheet',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: settingsReady,
+    open: async (page) => {
+      await calendarSwitch(page).click();
+      await expect(dialogNamed('Calendar')(page)).toBeVisible();
+      await expect(page.getByLabel('Calendar address')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-28 turn-off dialog',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: async (page) => {
+      await settingsReady(page);
+      await expect(calendarSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    },
+    open: async (page) => {
+      await calendarSwitch(page).click();
+      await expect(dialogNamed('Turn off the calendar feed?')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-29 password sheet',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: settingsReady,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Change password' }).click();
+      await expect(dialogNamed('Change password')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-30 delete dialog',
+    path: '/settings',
+    session: 'account',
+    kind: 'overlay',
+    ready: settingsReady,
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Delete account', exact: true }).click();
+      await expect(dialogNamed('Delete your account?')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-32',
+    path: '/sync',
+    session: 'account',
+    two: true,
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { level: 1, name: 'Sync activity' })).toBeVisible();
+      await expect(page.getByText('Nothing to review.')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 no pet',
+    path: '/emergency',
+    session: 'account',
+    ready: async (page) => {
+      await expect(page.getByText(/^No pets yet\./)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 no card',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: heading('Emergency card'),
+    open: async (page) => {
+      await withPet(page);
+      await emergencyReady(page);
+      await expect(page.getByRole('button', { name: 'Set up card' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-34',
+    path: '/emergency',
+    session: 'account',
+    kind: 'overlay',
+    ready: heading('Emergency card'),
+    open: async (page) => {
+      await withPet(page);
+      await page.getByRole('button', { name: 'Set up card' }).click();
+      await expect(dialogNamed('What a finder sees')(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 card saved',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: heading('Emergency card'),
+    open: async (page) => {
+      await withCard(page);
+      await page.goto('/emergency');
+      await expect(page.getByText('+1 555 0100')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 link created',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: async (page) => {
+      await expect(page.getByRole('button', { name: 'Create link' })).toBeVisible();
+    },
+    open: async (page) => {
+      await page.getByRole('button', { name: 'Create link' }).click();
+      await expect(page.getByRole('img', { name: 'QR code of the emergency link' })).toBeVisible();
+      await expect(page.getByTestId('emergency-link')).toBeVisible();
+    },
+  },
+  {
+    id: 'S-35',
+    path: '/emergency',
+    session: 'account',
+    kind: 'overlay',
+    ready: async (page) => {
+      await expect(markLost(page)).toBeVisible();
+    },
+    open: async (page) => {
+      await markLost(page).click();
+      await expect(dialogNamed(/^Mark .+ as lost$/)(page)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-33 lost',
+    path: '/emergency',
+    session: 'account',
+    two: true,
+    ready: async (page) => {
+      await expect(markLost(page)).toBeVisible();
+    },
+    open: async (page) => {
+      await markLost(page).click();
+      await page.getByLabel('Message for a finder').fill('Please call me');
+      await page.getByRole('button', { name: 'Mark as lost', exact: true }).click();
+      await expect(page.getByRole('status').filter({ hasText: 'Lost mode is on.' })).toBeVisible();
     },
   },
 ];

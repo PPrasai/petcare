@@ -58,6 +58,7 @@ export async function shareEmergencyCard(
     await signUp(page, 'public-card');
     await addPet(page, 'Momo');
     await page.getByRole('link', { name: 'Emergency card' }).click();
+    await page.getByRole('button', { name: 'Set up card' }).click();
     await page.getByLabel('My name', { exact: true }).check();
     await page.getByLabel('Name to show').fill('Sam Owner');
     await page.getByLabel('My phone number', { exact: true }).check();
@@ -65,14 +66,15 @@ export async function shareEmergencyCard(
     await page.getByLabel('Notes', { exact: true }).check();
     await page.getByLabel('Notes for a finder').fill('Shy, will hide');
     await page.getByRole('button', { name: 'Save card' }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+    await expect(page.locator('.toast').filter({ hasText: 'Saved.' })).toBeVisible();
     await waitSynced(page);
     await page.getByRole('button', { name: 'Create link' }).click();
     const link = (await page.getByTestId('emergency-link').textContent()) ?? '';
     if (options.lost) {
+      await page.getByRole('button', { name: 'Mark Momo as lost' }).click();
       await page.getByLabel('Message for a finder').fill('Please call me');
-      await page.getByRole('button', { name: 'Mark as lost' }).click();
-      await expect(page.getByRole('button', { name: 'Mark as found' })).toBeVisible();
+      await page.getByRole('button', { name: 'Mark as lost', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Turn off lost mode' })).toBeVisible();
       await waitSynced(page);
     }
     return new URL(link).pathname;

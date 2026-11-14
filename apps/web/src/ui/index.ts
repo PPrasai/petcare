@@ -20,6 +20,8 @@ export { SelectField } from './SelectField';
 export { Sheet } from './Sheet';
 export { SheetHead } from './SheetHead';
 export { Stepper } from './Stepper';
+export { Switch } from './Switch';
 export { Tabs, panelId, tabId } from './Tabs';
 export type { TabItem } from './Tabs';
 export { TextField } from './TextField';
+export { ToggleRow } from './ToggleRow';
