@@ -120,7 +120,7 @@ test('the demo works end to end with no request to /api, and reset restores the 
   const fresh = await snapshot(page);
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await page.getByRole('link', { name: 'Add a pet' }).click();
-  await page.getByLabel('Pet name').fill('Pixel');
+  await page.getByLabel('Name', { exact: true }).fill('Pixel');
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Pixel' })).toBeVisible();
   expect(await snapshot(page)).not.toEqual(fresh);

@@ -260,6 +260,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     release: (url) => URL.revokeObjectURL(url),
     discard: (fileId) => current().files.discard(fileId),
   };
+  const reducer = new CanvasImageReducer();
   const services: Services = {
     session,
     sync: {
@@ -268,7 +269,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       problems: () => (data ? data.sync.problems() : Promise.resolve([])),
     },
     pets: new PetService(records),
-    photos: new PetPhotoService(records, files, new CanvasImageReducer()),
+    photos: new PetPhotoService(records, files, reducer),
     measurements,
     health,
     today: new TodayService(records),
@@ -276,7 +277,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     files,
     documents,
     expenses,
-    log: new LogService(measurements, health, expenses, documents, files),
+    log: new LogService(measurements, health, expenses, documents, files, reducer),
     contacts: new ContactService(records),
     households: new HouseholdService(householdApi, refreshHouseholds),
     emergency: new EmergencyService(records, createEmergencyRemote()),

@@ -9,6 +9,7 @@ export * from './units';
 export * from './money';
 export * from './recurrence';
 export * from './due';
+export * from './care-suggestions';
 export * from './vaccine-suggestions';
 export * from './preferences';
 export { EMERGENCY_FIELDS } from './entities/emergency-card';

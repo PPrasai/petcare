@@ -76,3 +76,59 @@ test('a fresh account sees the empty copy of expenses, contacts and invites', as
   await expect(page.locator('.empty').getByText('No open invites.')).toBeVisible();
   await noEmptyLists(page);
 });
+
+// P3: a new account's Home invites the first pet, and a pet made through the wizard starts with the
+// empty copy of every section, each with its way to fill it.
+test('a new account sees the first-run invitation, and the wizard is the way in', async ({
+  page,
+}) => {
+  await signUp(page, 'empty-first-run');
+  const empty = page.locator('main .empty');
+  await expect(
+    empty.getByText(
+      'Add your first pet and this page will show what needs doing today, most urgent first.',
+    ),
+  ).toBeVisible();
+  await expect(empty.getByRole('heading', { level: 2, name: 'Welcome to PetCare' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+  await noEmptyLists(page);
+
+  await empty.getByRole('link', { name: 'Add a pet' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Meet your newest family member' }),
+  ).toBeVisible();
+  await noEmptyLists(page);
+
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Save pet' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
+  // With a pet the invitation is gone and the list holds the "Add a pet" row.
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await expect(page.locator('main .empty').getByText(/^Add your first pet/)).toHaveCount(0);
+  await expect(page.getByTestId('pet-row')).toHaveCount(1);
+});
+
+test('a pet made through the wizard shows the empty copy of Health and Files', async ({ page }) => {
+  await signUp(page, 'empty-new-pet');
+  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Save pet' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Health' }).click();
+  await expect(
+    page
+      .locator('.empty')
+      .getByText('No vaccines yet. Add the dates and we will remind you before each one is due.'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add a vaccination' })).toBeVisible();
+  await noEmptyLists(page);
+
+  await page.getByRole('tab', { name: 'Files' }).click();
+  await expect(
+    page
+      .locator('.empty')
+      .getByText('No files yet. Vet records, certificates and photos for Momo live here.'),
+  ).toBeVisible();
+  await noEmptyLists(page);
+});

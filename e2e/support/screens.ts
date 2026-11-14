@@ -74,6 +74,16 @@ const addExpense = async (page: Page, amount: string, currency: string, receipt 
   await expect(dialogNamed('Add expense')(page)).toBeHidden();
 };
 
+/** Types a name on step 1 of the add-pet wizard and continues to the step. */
+const wizardStep = (step: 2 | 3) => async (page: Page) => {
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'A few details' })).toBeVisible();
+  if (step === 2) return;
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Reminders for Momo' })).toBeVisible();
+};
+
 const membersLoaded = async (page: Page) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Household' })).toBeVisible();
   await expect(page.getByTestId('member-row').first()).toBeVisible();
@@ -366,6 +376,50 @@ export const SCREENS: Screen[] = [
     two: true,
     ready: async (page) => {
       await expect(page.locator('.empty').getByText(/^No expenses yet\./)).toBeVisible();
+    },
+  },
+  {
+    id: 'S-10 first run',
+    path: '/',
+    session: 'account',
+    ready: async (page) => {
+      await expect(page.locator('.empty').getByText(/^Add your first pet/)).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Add a pet' })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-16 step 1',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+  },
+  {
+    id: 'S-16 step 2',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+    open: wizardStep(2),
+  },
+  {
+    id: 'S-16 step 3',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+    open: wizardStep(3),
+  },
+  {
+    id: 'S-16 step 3, reminder opened',
+    path: '/pets/new',
+    session: 'account',
+    ready: heading('Meet your newest family member'),
+    open: async (page) => {
+      await wizardStep(3)(page);
+      await page
+        .locator('.sugrow')
+        .filter({ hasText: 'Daily walk' })
+        .getByRole('button', { name: /Change/ })
+        .click();
+      await expect(page.getByLabel('Time')).toBeVisible();
     },
   },
   { id: 'S-20 owner', path: '/household', session: 'account', two: true, ready: membersLoaded },
