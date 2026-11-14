@@ -1,4 +1,6 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
+/* Scanning every word in the sources emitted utilities nothing uses (flex, ring, container ...). Only these two are applied. */
+@source inline('sr-only print:hidden');
 @import './ui/fonts.css';
 @import './ui/tokens.css';
 @import './ui/pebble.css';

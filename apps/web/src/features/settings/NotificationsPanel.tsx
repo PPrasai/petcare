@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import type { PushState } from '../../application/ports/push-control';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
-import { Banner } from '../../ui';
+import { Switch, ToggleRow } from '../../ui';
 import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 
-/** Device notifications: enable or disable push on this device and send a test (CAP-07). */
-export function NotificationsPanel() {
+/**
+ * This device's push subscription as a switch (CAP-07). The account-level push preferences are in
+ * Preferences, under "Reminder timing".
+ */
+export function PushRow({ demoNoteId }: { demoNoteId: string }) {
   const { push } = useServices();
   const demo = useDemo();
   const key = useSessionStore((s) => s.config?.vapidPublicKey ?? null);
@@ -33,18 +36,17 @@ export function NotificationsPanel() {
     }
   };
 
-  const enable = () =>
+  const toggle = (next: boolean) =>
     run(async () => {
-      if (!key) return null;
-      const next = await push.enable(key);
-      setState(next);
-      return next === 'denied' ? t('notifications.denied') : t('notifications.enabled');
-    });
-  const disable = () =>
-    run(async () => {
+      if (next) {
+        if (!key) return null;
+        const result = await push.enable(key);
+        setState(result);
+        return result === 'denied' ? t('notifications.denied') : null;
+      }
       await push.disable();
       setState(await push.state());
-      return t('notifications.disabled');
+      return null;
     });
   const test = () =>
     run(async () => {
@@ -52,45 +54,50 @@ export function NotificationsPanel() {
       return t(`notifications.test.${result}`);
     });
 
-  return (
-    <section aria-labelledby="notifications-heading" className="flex flex-col gap-2">
-      <h2 id="notifications-heading" className="text-lg font-semibold">
-        {t('notifications.title')}
-      </h2>
-      {demo && <Banner>{t('demo.pushDisabled')}</Banner>}
-      {support === 'needsInstall' && <p>{t('notifications.needsInstall')}</p>}
-      {support === 'unsupported' && <p>{t('notifications.unsupported')}</p>}
-      {support === 'notConfigured' && <p>{t('notifications.notConfigured')}</p>}
-      {support === 'ready' && !demo && (
-        <>
-          <p>
-            {state === 'subscribed'
+  const usable = support === 'ready' && !demo;
+  const on = state === 'subscribed';
+  const status = demo
+    ? t('demo.pushDisabled')
+    : support === 'needsInstall'
+      ? t('notifications.needsInstall')
+      : support === 'unsupported'
+        ? t('notifications.unsupported')
+        : support === 'notConfigured'
+          ? t('notifications.notConfigured')
+          : state === 'denied'
+            ? t('notifications.blocked')
+            : on
               ? t('notifications.on')
-              : state === 'denied'
-                ? t('notifications.blocked')
-                : t('notifications.off')}
-          </p>
-          <div className="flex gap-2">
-            {state === 'subscribed' ? (
-              <>
-                <button type="button" disabled={busy} onClick={() => void disable()}>
-                  {t('notifications.disable')}
-                </button>
-                <button type="button" disabled={busy} onClick={() => void test()}>
-                  {t('notifications.test')}
-                </button>
-              </>
-            ) : (
-              state !== 'denied' && (
-                <button type="button" disabled={busy} onClick={() => void enable()}>
-                  {t('notifications.enable')}
-                </button>
-              )
-            )}
-          </div>
+              : state === null
+                ? ''
+                : t('notifications.off');
+
+  return (
+    <ToggleRow
+      id="push"
+      title={t('settings.push.title')}
+      hint={t('settings.push.hint')}
+      control={
+        <Switch
+          checked={on}
+          label={t('settings.push.title')}
+          describedBy={demo ? `${demoNoteId} push-h` : 'push-h'}
+          disabled={!usable || state === null || state === 'denied' || busy}
+          busy={busy}
+          onChange={(next) => void toggle(next)}
+        />
+      }
+      status={
+        <>
+          <p role="status">{status}</p>
+          {on && usable ? (
+            <button type="button" className="linkbtn" disabled={busy} onClick={() => void test()}>
+              {t('notifications.test')}
+            </button>
+          ) : null}
+          {note ? <p role="status">{note}</p> : null}
         </>
-      )}
-      {note && <p role="status">{note}</p>}
-    </section>
+      }
+    />
   );
 }

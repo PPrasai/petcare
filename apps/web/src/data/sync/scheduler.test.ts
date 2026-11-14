@@ -53,6 +53,25 @@ describe('sync scheduler', () => {
     scheduler.stop();
   });
 
+  it('does not lose a write requested while a sync is in flight', async () => {
+    let release: () => void = () => undefined;
+    const first = new Promise<SyncStatus>((resolve) => {
+      release = () => resolve(ok);
+    });
+    const { engine, sync } = fakeEngine([]);
+    sync.mockImplementationOnce(() => first);
+    const scheduler = createScheduler(engine, { debounceMs: 2_000, intervalMs: 600_000 });
+    scheduler.start();
+    await vi.advanceTimersByTimeAsync(0);
+    scheduler.request();
+    release();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sync).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(2_100);
+    expect(sync).toHaveBeenCalledTimes(2);
+    scheduler.stop();
+  });
+
   it('backs off 5 s, 10 s, 20 s while the server is unreachable, then resets', async () => {
     const { engine, sync } = fakeEngine([down, down, down, ok]);
     const scheduler = createScheduler(engine, {

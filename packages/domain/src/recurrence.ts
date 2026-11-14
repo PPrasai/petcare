@@ -2,7 +2,7 @@ import { DEFAULT_DUE_TIME } from './constants';
 import type { Schedule } from './schemas';
 
 /**
- * Occurrence rules (CON-petcare-002 2.6). Occurrences are computed in the schedule's tz.
+ * Occurrence rules (CON-petcare-003 2.6). Occurrences are computed in the schedule's tz.
  * - no times -> 09:00 local
  * - monthly dayOfMonth beyond the month length -> last day of that month
  * - DST gap (time does not exist) -> shifted forward by the gap length
@@ -100,6 +100,17 @@ function scheduleDays(s: Schedule, lo: number, hi: number): number[] {
       for (let n = first; n <= to; n += every) days.push(n);
       break;
     }
+    case 'yearly': {
+      const [sy, sm, sd] = s.startOn.split('-').map(Number) as [number, number, number];
+      const firstYear = new Date(from * DAY_MS).getUTCFullYear();
+      const lastYear = new Date(to * DAY_MS).getUTCFullYear();
+      for (let year = Math.max(firstYear, sy); year <= lastYear; year++) {
+        // 29 Feb becomes 28 Feb in a non-leap year (CON-003 2.6).
+        const n = Date.UTC(year, sm - 1, Math.min(sd, daysInMonth(year, sm))) / DAY_MS;
+        if (n >= from && n <= to) days.push(n);
+      }
+      break;
+    }
     case 'monthly': {
       const wanted = s.dayOfMonth ?? 1;
       const first = new Date(from * DAY_MS);
@@ -134,11 +145,12 @@ export function occurrencesBetween(
   const lo = dayNumber(instantToLocalDate(fromMs, tz)) - 1;
   const hi = dayNumber(instantToLocalDate(toMs, tz)) + 1;
   const times = schedule.times && schedule.times.length > 0 ? schedule.times : [DEFAULT_DUE_TIME];
+  const notBeforeMs = schedule.notBefore ? Date.parse(schedule.notBefore) : -Infinity;
   const result = new Set<string>();
   for (const day of scheduleDays(schedule, lo, hi)) {
     for (const time of times) {
       const at = localToInstant(dateFromDayNumber(day), time, tz);
-      if (at.getTime() >= fromMs && at.getTime() <= toMs) {
+      if (at.getTime() >= fromMs && at.getTime() <= toMs && at.getTime() >= notBeforeMs) {
         result.add(at.toISOString().replace('.000Z', 'Z'));
       }
     }

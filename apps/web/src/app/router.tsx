@@ -1,28 +1,78 @@
 import {
+  type AsyncRouteComponent,
   Outlet,
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
 } from '@tanstack/react-router';
 import { AuthPage } from '../features/auth/AuthPage';
-import { ContactsPage } from '../features/contacts/ContactsPage';
-import { EmergencyPage } from '../features/emergency/EmergencyPage';
-import { ExpensesPage } from '../features/expenses/ExpensesPage';
-import { HouseholdPage } from '../features/household/HouseholdPage';
 import { PublicEmergencyPage } from '../features/emergency/PublicEmergencyPage';
 import { JoinPage } from '../features/household/JoinPage';
 import { pendingInvite } from '../lib/pending-invite';
-import { NewPetPage } from '../features/pets/NewPetPage';
 import { HomePage } from '../features/home/HomePage';
 import { parseTab } from '../features/pets/profile-tabs';
 import { WIDE_QUERY } from '../features/shared/use-wide-screen';
 import { MorePage } from '../features/shell/MorePage';
 import { NotFoundPage } from '../features/shell/NotFoundPage';
-import { SettingsPage } from '../features/settings/SettingsPage';
+import { preloadProfilePanes } from '../features/pets/lazy-panes';
 import { AppShell } from '../features/shell/AppShell';
-import { SyncPage } from '../features/sync/SyncPage';
 import { useSessionStore } from '../state/session';
+
+// These screens are separate chunks, so the first paint does not wait for them. The service worker
+// still precaches every chunk, so each opens offline too (QA-36, DIS-petcare-006).
+const EmergencyPage = lazyRouteComponent(
+  () => import('../features/emergency/EmergencyPage'),
+  'EmergencyPage',
+);
+const ContactsPage = lazyRouteComponent(
+  () => import('../features/contacts/ContactsPage'),
+  'ContactsPage',
+);
+const ExpensesPage = lazyRouteComponent(
+  () => import('../features/expenses/ExpensesPage'),
+  'ExpensesPage',
+);
+const HouseholdPage = lazyRouteComponent(
+  () => import('../features/household/HouseholdPage'),
+  'HouseholdPage',
+);
+const SettingsPage = lazyRouteComponent(
+  () => import('../features/settings/SettingsPage'),
+  'SettingsPage',
+);
+const SyncPage = lazyRouteComponent(() => import('../features/sync/SyncPage'), 'SyncPage');
+const AddPetWizard = lazyRouteComponent(
+  () => import('../features/pets/AddPetWizard'),
+  'AddPetWizard',
+);
+
+const screens = [
+  EmergencyPage,
+  ContactsPage,
+  ExpensesPage,
+  HouseholdPage,
+  SettingsPage,
+  SyncPage,
+  AddPetWizard,
+];
+
+/**
+ * Fetches every lazy screen once the page has loaded (not for a finder's public emergency page).
+ * The chunks are in the service worker's precache already; this also covers the first minutes,
+ * before the worker controls the page, so going offline right after the app opened still opens
+ * every screen (offline first).
+ */
+const preloadScreens = () => {
+  if (window.location.pathname.startsWith('/e/')) return;
+  for (const screen of screens) void Promise.resolve(screen.preload?.()).catch(() => undefined);
+  preloadProfilePanes();
+};
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'complete') window.setTimeout(preloadScreens, 0);
+  else window.addEventListener('load', () => window.setTimeout(preloadScreens, 0), { once: true });
+}
 
 const signedIn = () => useSessionStore.getState().status === 'signedIn';
 
@@ -41,8 +91,10 @@ const app = createRoute({
   component: AppShell,
 });
 
-const leaf = <P extends string>(path: P, component: () => React.ReactNode) =>
-  createRoute({ getParentRoute: () => app, path, component });
+const leaf = <P extends string>(
+  path: P,
+  component: (() => React.ReactNode) | AsyncRouteComponent<unknown>,
+) => createRoute({ getParentRoute: () => app, path, component });
 
 const home = createRoute({
   getParentRoute: () => app,
@@ -61,7 +113,15 @@ const pets = createRoute({
     throw redirect({ to: '/' });
   },
 });
-const newPet = leaf('/pets/new', NewPetPage);
+const newPet = createRoute({
+  getParentRoute: () => app,
+  path: '/pets/new',
+  validateSearch: (search: Record<string, unknown>) => {
+    const step = Number(search.step);
+    return { step: step === 2 || step === 3 ? step : 1 };
+  },
+  component: AddPetWizard,
+});
 const petDetail = createRoute({
   getParentRoute: () => app,
   path: '/pets/$petId',

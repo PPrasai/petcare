@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { entities } from '@petcare/domain';
-import type { ZodObject } from 'zod';
+import { dataKeys } from './support/schema-keys';
 import {
   canonicalJson,
   columnsOf,
@@ -18,12 +18,12 @@ describe('sync registry matches the domain registry', () => {
 
   for (const entity of entities) {
     it(`${entity.type}: data keys and table columns are the same set`, () => {
-      const keys = Object.keys((entity.schema as ZodObject).shape).sort();
+      const keys = dataKeys(entity.schema).sort();
       expect(Object.keys(columnsOf(entity.type).data).sort()).toEqual(keys);
     });
 
     it(`${entity.type}: every reference field is a data key`, () => {
-      const keys = Object.keys((entity.schema as ZodObject).shape);
+      const keys = dataKeys(entity.schema);
       for (const field of [...Object.keys(entity.refs), ...entity.fileRefs]) {
         expect(keys).toContain(field);
       }
@@ -32,7 +32,7 @@ describe('sync registry matches the domain registry', () => {
 
   it('cascades a pet delete to every type with a petId column', () => {
     const expected = entities
-      .filter((e) => e.type !== 'pet' && 'petId' in (e.schema as ZodObject).shape)
+      .filter((e) => e.type !== 'pet' && dataKeys(e.schema).includes('petId'))
       .map((e) => e.type)
       .sort();
     expect([...typesWithPetId].sort()).toEqual(expected);

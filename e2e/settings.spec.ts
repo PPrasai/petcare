@@ -26,14 +26,21 @@ test('a user changes preferences, links a calendar, exports data and deletes the
   await page.getByRole('button', { name: 'Save preferences' }).click();
   await expect(page.getByText('Check the time zone, currency and lead times.')).toBeVisible();
 
-  // The calendar address is shown once.
-  await page.getByRole('button', { name: 'Create calendar link' }).click();
+  // The calendar address is shown once, in a sheet, after the switch is turned on.
+  const calendar = page.getByRole('switch', { name: 'Calendar feed' });
+  await expect(calendar).toHaveAttribute('aria-checked', 'false');
+  await calendar.click();
   await expect(page.getByLabel('Calendar address')).toHaveValue(/\/cal\/.+\.ics$/);
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(calendar).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('button', { name: 'Replace calendar link' })).toBeVisible();
+  // Turning it off asks first.
+  await calendar.click();
   await page.getByRole('button', { name: 'Turn off calendar link' }).click();
-  await expect(page.getByRole('button', { name: 'Create calendar link' })).toBeVisible();
+  await expect(calendar).toHaveAttribute('aria-checked', 'false');
 
-  // Change the password: the new one works, the old one does not.
+  // Change the password in its sheet: the new one works, the old one does not.
+  await page.getByRole('button', { name: 'Change password' }).click();
   await page.getByLabel('Current password').fill('correct-horse-battery');
   await page.getByLabel('New password').fill('another-long-password');
   await page.getByRole('button', { name: 'Save password' }).click();
@@ -41,10 +48,11 @@ test('a user changes preferences, links a calendar, exports data and deletes the
 
   // Export downloads a ZIP.
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export my data' }).click();
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
   expect((await download).suggestedFilename()).toBe('petcare-export.zip');
 
-  // Delete needs the typed phrase, then signs out and the account is gone.
+  // Delete asks in a dialog, needs the typed phrase, then signs out and the account is gone.
+  await page.getByRole('button', { name: 'Delete account', exact: true }).click();
   const remove = page.getByRole('button', { name: 'Delete my account' });
   await expect(remove).toBeDisabled();
   await page.getByLabel('Type DELETE MY ACCOUNT to confirm').fill('DELETE MY ACCOUNT');

@@ -102,7 +102,7 @@ export function AppShell({ children }: { children?: ReactNode }): ReactNode {
         {t('app.skipToContent')}
       </a>
       {demo ? <DemoBanner /> : null}
-      <div className="shell">
+      <div className={`shell${pathname === '/pets/new' ? ' noNav' : ''}`}>
         <div className="chrome">
           <div className="topbar">
             <span className="brand">

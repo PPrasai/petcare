@@ -1,23 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { rankPets } from '../../application/ranking';
+import { isMeal, rankPets } from '../../application/ranking';
 import type { StoredRecord } from '../../application/ports/record-store';
 import type { SnoozeFor } from '../../application/today-service';
 import type { TodayItem } from '../../application/today';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
-import { Card, Disclosure } from '../../ui';
-import { RemindersSection } from '../care/RemindersSection';
-import { RoutinesPanel } from '../care/RoutinesPanel';
-import { DocumentsPanel } from '../documents/DocumentsPanel';
-import { ConditionsPanel } from '../health/ConditionsPanel';
-import { MedicationsPanel } from '../health/MedicationsPanel';
-import { VaccinationsPanel } from '../health/VaccinationsPanel';
-import { VisitsPanel } from '../health/VisitsPanel';
+import { Card, Disclosure, EmptyState } from '../../ui';
+import { CareLists } from '../care/CareLists';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useNow } from '../shared/use-now';
-import { MeasurementsPanel } from './MeasurementsPanel';
 import { PetOverview } from './PetOverview';
 import { TaskRow } from './TaskRow';
 import type { TaskAction } from './TaskRow';
@@ -84,32 +77,6 @@ export function OverviewPane({ pet }: { pet: StoredRecord }) {
   );
 }
 
-export function HealthPane({ pet }: { pet: StoredRecord }) {
-  return (
-    <div className="two">
-      <div className="stack">
-        <Card>
-          <MeasurementsPanel petId={pet.id} />
-        </Card>
-        <Card>
-          <VaccinationsPanel petId={pet.id} species={String(pet.data.species)} />
-        </Card>
-      </div>
-      <div className="stack">
-        <Card>
-          <MedicationsPanel petId={pet.id} />
-        </Card>
-        <Card>
-          <VisitsPanel petId={pet.id} />
-        </Card>
-        <Card>
-          <ConditionsPanel petId={pet.id} />
-        </Card>
-      </div>
-    </div>
-  );
-}
-
 export function CarePane({ pet }: { pet: StoredRecord }) {
   const { view, now, tz, act } = usePetToday(pet.id);
   const rows = useMemo(() => {
@@ -117,11 +84,11 @@ export function CarePane({ pet }: { pet: StoredRecord }) {
     const ranked = rankPets([{ id: pet.id, name: '', archived: false }], view, now)[0]?.open ?? [];
     return [
       ...ranked.filter((i) => i.status !== 'soon').map((i) => ({ item: i, status: i.status })),
-      ...view.snoozed.map((item) => ({ item, status: undefined })),
-      ...view.done.map((item) => ({ item, status: undefined })),
+      ...view.snoozed.filter((i) => !isMeal(i)).map((item) => ({ item, status: undefined })),
+      ...view.done.filter((i) => !isMeal(i)).map((item) => ({ item, status: undefined })),
     ];
   }, [view, now, pet.id]);
-  const doneCount = view?.done.length ?? 0;
+  const doneCount = view?.done.filter((i) => !isMeal(i)).length ?? 0;
   return (
     <div className="two">
       <Card>
@@ -141,24 +108,9 @@ export function CarePane({ pet }: { pet: StoredRecord }) {
             onAction={(action) => act(item, action)}
           />
         ))}
-        {view && rows.length === 0 ? <p className="empty">{t('care.todayEmpty')}</p> : null}
+        {view && rows.length === 0 ? <EmptyState>{t('care.todayEmpty')}</EmptyState> : null}
       </Card>
-      <div className="stack">
-        <Card>
-          <RemindersSection petId={pet.id} pets={[{ id: pet.id, name: String(pet.data.name) }]} />
-        </Card>
-        <Card>
-          <RoutinesPanel petId={pet.id} />
-        </Card>
-      </div>
+      <CareLists pet={pet} />
     </div>
-  );
-}
-
-export function FilesPane({ pet }: { pet: StoredRecord }) {
-  return (
-    <Card>
-      <DocumentsPanel petId={pet.id} />
-    </Card>
   );
 }

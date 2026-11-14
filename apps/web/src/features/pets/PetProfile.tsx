@@ -1,18 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { TouchEvent } from 'react';
-import { useRef } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatMeasurement } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
-import { Icon, Tabs, panelId, tabId } from '../../ui';
+import { EmptyState, Icon, Tabs, panelId, tabId } from '../../ui';
 import type { TabItem } from '../../ui';
 import { useHealthList } from '../health/hooks';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
-import { CarePane, FilesPane, HealthPane, OverviewPane } from './ProfilePanes';
+import { FilesPane, HealthPane } from './lazy-panes';
+import { CarePane, OverviewPane } from './ProfilePanes';
 import { PROFILE_TABS } from './profile-tabs';
 import type { ProfileTab } from './profile-tabs';
 import { ageText } from './age';
@@ -55,6 +56,19 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
     enabled: householdId !== '',
   });
   const conditions = useHealthList('condition', petId);
+  const header = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const loaded = pet.data !== undefined && pet.data !== null;
+  // PO-002 Q-04: once the header has scrolled away, the phone keeps only the name and the tabs.
+  useEffect(() => {
+    const node = header.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry) setCollapsed(!entry.isIntersecting && entry.boundingClientRect.bottom < 0);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loaded, petId]);
   const start = useRef<{ x: number; y: number } | null>(null);
   const photo = usePetPhoto(pet.data);
 
@@ -101,7 +115,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
 
   return (
-    <div className="detail">
+    <div className="detail" data-collapsed={collapsed}>
       <Link to="/" className="back">
         <Icon name="back" /> {t('pets.back')}
       </Link>
@@ -121,7 +135,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
           ))}
         </nav>
       ) : null}
-      <div className="ph">
+      <div className="ph" ref={header}>
         <PetAvatar pet={record} size={96} badge={photo.badge} />
         <div className="meta">
           <Heading>{name}</Heading>
@@ -144,7 +158,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
           <Icon name="shield" /> {t('profile.emergencyCard')}
         </Link>
       </div>
-      <Tabs tabs={tabs} value={tab} label={t('pets.tabs')} onChange={onTab} />
+      <Tabs tabs={tabs} value={tab} label={t('pets.tabs')} onChange={onTab} caption={name} />
       <div
         role="tabpanel"
         id={panelId(tab)}
@@ -154,9 +168,11 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         onTouchEnd={onTouchEnd}
       >
         {tab === 'overview' ? <OverviewPane pet={record} /> : null}
-        {tab === 'health' ? <HealthPane pet={record} /> : null}
+        <Suspense fallback={<EmptyState busy>{t('ui.loading')}</EmptyState>}>
+          {tab === 'health' ? <HealthPane pet={record} /> : null}
+          {tab === 'files' ? <FilesPane pet={record} /> : null}
+        </Suspense>
         {tab === 'care' ? <CarePane pet={record} /> : null}
-        {tab === 'files' ? <FilesPane pet={record} /> : null}
       </div>
     </div>
   );

@@ -2,9 +2,10 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { signUp, waitSynced } from './support/app';
 
-// QA-21: with a seeded local database (20 pets) and the CPU throttled 4x, the first pet card
+// QA-21: with a seeded local database (20 pets, 10 of them with a photo) and the CPU throttled 4x, the first pet card
 // appears within 2 s, both online and offline (median of 5 runs). Production build, real API.
 const PETS = 20;
+const PHOTOS = 10;
 const RUNS = 5;
 const LIMIT_MS = 2000;
 const ORIGIN = 'http://localhost:4173';
@@ -21,9 +22,38 @@ function uuid7(): string {
 const median = (values: number[]) =>
   [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
 
+/** Uploads one reduced-size JPEG per photo, as the app's own reducer would make (768 px edge). */
+async function uploadPhotos(page: Page, householdId: string): Promise<string[]> {
+  const base64 = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 768;
+    canvas.height = 576;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('no 2d context');
+    const gradient = ctx.createLinearGradient(0, 0, 768, 576);
+    gradient.addColorStop(0, '#c98b5a');
+    gradient.addColorStop(1, '#3a58a8');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 768, 576);
+    return canvas.toDataURL('image/jpeg', 0.82).split(',')[1] ?? '';
+  });
+  const buffer = Buffer.from(base64, 'base64');
+  const ids: string[] = [];
+  for (let n = 0; n < PHOTOS; n++) {
+    const res = await page.request.post('/api/files', {
+      headers: { origin: ORIGIN },
+      multipart: { householdId, file: { name: `pet-${n}.jpg`, mimeType: 'image/jpeg', buffer } },
+    });
+    expect(res.status()).toBe(201);
+    ids.push((await res.json()).id as string);
+  }
+  return ids;
+}
+
 async function seedPets(page: Page): Promise<void> {
   const me = await (await page.request.get('/api/me')).json();
   const householdId = me.households[0].id as string;
+  const photos = await uploadPhotos(page, householdId);
   const mutations = Array.from({ length: PETS }, (_, n) => ({
     mutationId: uuid7(),
     type: 'pet',
@@ -31,7 +61,11 @@ async function seedPets(page: Page): Promise<void> {
     householdId,
     op: 'create',
     baseVersion: 0,
-    fields: { name: `Pet ${String(n + 1).padStart(2, '0')}`, species: n % 2 ? 'cat' : 'dog' },
+    fields: {
+      name: `Pet ${String(n + 1).padStart(2, '0')}`,
+      species: n % 2 ? 'cat' : 'dog',
+      ...(photos[n] ? { photoFileId: photos[n] } : {}),
+    },
     clientTime: new Date().toISOString(),
   }));
   const res = await page.request.post('/api/sync/push', {

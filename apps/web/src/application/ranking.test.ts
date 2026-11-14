@@ -96,6 +96,20 @@ describe('rankPets', () => {
     expect(ranked.every((r) => r.score === 0 && r.top === null)).toBe(true);
   });
 
+  it('leaves feeding routines out of the ranking, the top task and the done count', () => {
+    const meal = item('a', hours(-1), { sourceType: 'careRoutine', routineKind: 'feeding' });
+    const walk = item('b', hours(-1), { sourceType: 'careRoutine', routineKind: 'walk' });
+    const ranked = rankPets(
+      pets,
+      view({ overdue: [meal, walk], done: [{ ...meal, doneBy: 'me' }] }),
+      NOW,
+    );
+    expect(ranked.map((r) => r.pet.id)).toEqual(['b', 'a', 'c']);
+    const a = ranked.find((r) => r.pet.id === 'a');
+    expect(a?.open).toEqual([]);
+    expect(a?.label).toBe('onTrack');
+  });
+
   it('leaves archived pets out', () => {
     const list = [...pets, { id: 'z', name: 'Zed', archived: true }];
     const v = view({ overdue: [item('z', hours(-48))] });

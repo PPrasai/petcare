@@ -21,7 +21,7 @@ const openSheet = async (page: Page) => {
 };
 const toast = (page: Page, text: string) => page.locator('.toast').filter({ hasText: text });
 
-// QA-27: one Log control and one sheet, five kinds, and the sheet behaves as a modal dialog.
+// QA-27: one Log control and one sheet, nine kinds, and the sheet behaves as a modal dialog.
 for (const [label, viewport] of [
   ['phone', { width: 390, height: 844 }],
   ['desktop', { width: 1280, height: 800 }],
@@ -37,9 +37,19 @@ for (const [label, viewport] of [
     await expect(page.getByTestId('log-open').filter({ visible: true })).toHaveCount(1);
 
     await openSheet(page);
-    // The five kinds, and nothing else.
+    // The nine kinds in the mock's order, and nothing else.
     const kinds = sheet(page).locator('.types button');
-    await expect(kinds).toHaveText(['Weight', 'Note', 'Expense', 'Vet visit', 'Photo']);
+    await expect(kinds).toHaveText([
+      'Meal',
+      'Walk',
+      'Medication',
+      'Grooming',
+      'Weight',
+      'Note',
+      'Expense',
+      'Vet visit',
+      'Photo',
+    ]);
 
     // Focus stays inside the dialog however far the user tabs.
     for (let i = 0; i < 12; i++) {
@@ -99,7 +109,7 @@ test('each kind writes the right record and offers a way back', async ({ page })
   await sheet(page).getByRole('button', { name: 'Save note' }).click();
   await expect(sheet(page).getByText('Write a short note first')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Back' }).click();
-  await expect(sheet(page).locator('.types button')).toHaveCount(5);
+  await expect(sheet(page).locator('.types button')).toHaveCount(9);
   await page.keyboard.press('Escape');
 
   // Expense.
@@ -110,12 +120,68 @@ test('each kind writes the right record and offers a way back', async ({ page })
   await sheet(page).getByRole('button', { name: 'Save expense' }).click();
   await expect(sheet(page)).toHaveCount(0);
 
+  // "More" shows the other five categories, so none is lost (PO-002 Q-12).
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Expense', exact: true }).click();
+  const more = sheet(page).getByRole('button', { name: 'More', exact: true });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  const extra = sheet(page).getByRole('group', { name: 'More categories' });
+  await expect(extra.getByRole('button')).toHaveText([
+    'Supplies',
+    'Medication',
+    'Boarding',
+    'Training',
+    'Other',
+  ]);
+  await extra.getByRole('button', { name: 'Boarding' }).click();
+  await sheet(page).getByLabel('Amount').fill('30');
+  await sheet(page).getByRole('button', { name: 'Save expense' }).click();
+  await expect(sheet(page)).toHaveCount(0);
+
   // Vet visit.
   await openSheet(page);
   await sheet(page).getByRole('button', { name: 'Vet visit', exact: true }).click();
   await sheet(page).getByLabel('Reason').fill('Annual check-up');
   await sheet(page).getByRole('button', { name: 'Save visit' }).click();
   await expect(toast(page, 'Vet visit added for Momo')).toBeVisible();
+
+  // Meal: with a quantity and "Remember as a preset" (on by default) it also makes a preset.
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Meal', exact: true }).click();
+  await sheet(page).getByLabel('Food').fill('Salmon kibble');
+  await sheet(page).getByLabel('Quantity').fill('300');
+  await sheet(page).getByRole('button', { name: 'Save meal' }).click();
+  await expect(toast(page, 'Logged a meal for Momo')).toBeVisible();
+
+  // Walk: one tap on a length saves.
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Walk', exact: true }).click();
+  await sheet(page).getByRole('button', { name: '45 min' }).click();
+  await expect(toast(page, 'Logged a 45 minute walk for Momo')).toBeVisible();
+
+  // Grooming: nothing picked is refused; two tasks and a note save.
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Grooming', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Save grooming' }).click();
+  await expect(sheet(page).getByText('Pick at least one thing you did')).toBeVisible();
+  await sheet(page).getByRole('button', { name: 'Bath', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Ears', exact: true }).click();
+  await sheet(page).getByLabel('Note (optional)').fill('Used the oatmeal shampoo');
+  await sheet(page).getByRole('button', { name: 'Save grooming' }).click();
+  await expect(toast(page, 'Grooming logged for Momo.')).toBeVisible();
+
+  // Medication with no matching task: only the log is written.
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Medication', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Save medication' }).click();
+  await expect(sheet(page).getByText('Add the medication name')).toBeVisible();
+  await sheet(page).getByLabel('Medication', { exact: true }).fill('Fish oil');
+  await sheet(page).getByRole('button', { name: 'Topical' }).click();
+  await sheet(page).getByLabel('Dose (optional)').fill('1 tablet');
+  await sheet(page).getByRole('button', { name: 'Save medication' }).click();
+  await expect(toast(page, 'Logged Fish oil for Momo.')).toBeVisible();
 
   // Photo.
   await openSheet(page);
@@ -132,12 +198,120 @@ test('each kind writes the right record and offers a way back', async ({ page })
   expect(weights).toHaveLength(1);
   expect((await pulled(page, 'symptomEntry')).map((c) => c.data.description)).toEqual(['Limping']);
   const expenses = await pulled(page, 'expense');
-  expect(expenses).toHaveLength(1);
-  expect(expenses[0]?.data.category).toBe('vet');
+  expect(expenses.map((e) => e.data.category).sort()).toEqual(['boarding', 'vet']);
   expect((await pulled(page, 'vetVisit')).map((c) => c.data.reason)).toEqual(['Annual check-up']);
   const documents = await pulled(page, 'document');
   expect(documents).toHaveLength(1);
   expect(documents[0]?.data.category).toBe('photo');
+
+  const logs = await pulled(page, 'careLog');
+  expect(logs.map((l) => l.data.kind).sort()).toEqual(['grooming', 'meal', 'medication', 'walk']);
+  const byKind = (kind: string) => logs.find((l) => l.data.kind === kind)?.data;
+  expect(byKind('meal')).toMatchObject({
+    foodName: 'Salmon kibble',
+    quantity: 300,
+    quantityUnit: 'g',
+  });
+  expect(byKind('walk')).toMatchObject({ durationMin: 45 });
+  expect(byKind('grooming')).toMatchObject({
+    groomingTasks: ['bath', 'ears'],
+    note: 'Used the oatmeal shampoo',
+  });
+  expect(byKind('medication')).toMatchObject({
+    medicationName: 'Fish oil',
+    route: 'topical',
+    doseText: '1 tablet',
+  });
+  expect(byKind('medication')?.medicationId).toBeUndefined();
+  expect((await pulled(page, 'mealPreset')).map((p) => p.data.foodName)).toEqual(['Salmon kibble']);
+  expect(await pulled(page, 'medicationDose')).toHaveLength(0);
+
+  // Recent activity on Health shows them, newest first, with who.
+  await page.getByRole('tab', { name: 'Health' }).click();
+  const activity = page.getByTestId('activity-row');
+  await expect(activity.first()).toContainText('Medication: Fish oil (Topical), 1 tablet');
+  await expect(activity.first()).toContainText('You');
+  await expect(activity.filter({ hasText: 'Walk, 45 min' })).toBeVisible();
+  await expect(activity.filter({ hasText: 'Meal: Salmon kibble, 300 g' })).toBeVisible();
+  await expect(
+    activity.filter({ hasText: 'Grooming: Bath, Ears. Used the oatmeal shampoo' }),
+  ).toBeVisible();
+});
+
+// QA-29: a medication log checks off the open dose of the same medication, and Undo takes both back.
+test('a medication log checks off the matching dose, and Undo deletes both records', async ({
+  page,
+}) => {
+  await signUp(page, 'log-med');
+  await addPet(page, 'Momo');
+  await page.getByRole('tab', { name: 'Health' }).click();
+  await page.getByRole('button', { name: 'Add a medication' }).click();
+  await page.getByLabel('Medication', { exact: true }).fill('Carprofen');
+  await page.getByLabel('Times (24-hour, comma separated)').fill('09:00');
+  await page.getByRole('button', { name: 'Add medication' }).click();
+  const doses = page.getByRole('list', { name: 'Doses of Carprofen' });
+  await expect(doses.getByRole('listitem').first()).toBeVisible();
+
+  const logCarprofen = async () => {
+    await openSheet(page);
+    await sheet(page).getByRole('button', { name: 'Medication', exact: true }).click();
+    // The pet's current medication is offered as a chip.
+    await expect(
+      sheet(page).getByRole('group', { name: 'Current medications' }).getByRole('button'),
+    ).toHaveText(['Carprofen']);
+    await sheet(page).getByLabel('Medication', { exact: true }).fill('Carprofen 25mg');
+    await sheet(page).getByRole('button', { name: 'Save medication' }).click();
+  };
+
+  await logCarprofen();
+  await expect(toast(page, 'Logged Carprofen 25mg and checked off “Carprofen”.')).toBeVisible();
+  await expect(doses.getByText('Given', { exact: true })).toHaveCount(1);
+
+  // Undo deletes the log and the dose.
+  await toast(page, 'checked off').getByRole('button', { name: 'Undo' }).click();
+  await expect(doses.getByText('Given', { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('activity-row')).toHaveCount(0);
+
+  await logCarprofen();
+  await expect(doses.getByText('Given', { exact: true })).toHaveCount(1);
+  await waitSynced(page);
+  const logs = await pulled(page, 'careLog');
+  expect(logs).toHaveLength(1);
+  const doseRecords = await pulled(page, 'medicationDose');
+  expect(doseRecords).toHaveLength(1);
+  expect(logs[0]?.data.medicationId).toBe(doseRecords[0]?.data.medicationId);
+
+  // A name shorter than three characters never checks anything off.
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Medication', exact: true }).click();
+  await sheet(page).getByLabel('Medication', { exact: true }).fill('Ca');
+  await sheet(page).getByRole('button', { name: 'Save medication' }).click();
+  await expect(toast(page, 'Logged Ca for Momo.')).toBeVisible();
+  await waitSynced(page);
+  expect(await pulled(page, 'careLog')).toHaveLength(2);
+  expect(await pulled(page, 'medicationDose')).toHaveLength(1);
+});
+
+test('"remind me again" adds a once reminder of the right category', async ({ page }) => {
+  await signUp(page, 'log-again');
+  await addPet(page, 'Momo');
+  await openSheet(page);
+  await sheet(page).getByRole('button', { name: 'Grooming', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Bath', exact: true }).click();
+  await sheet(page).getByLabel('Remind me again (optional)').selectOption('In 1 week');
+  await sheet(page).getByRole('button', { name: 'Save grooming' }).click();
+  await expect(toast(page, 'Reminder set for')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Care' }).click();
+  await expect(page.getByTestId('reminder-row').filter({ hasText: 'Bath' })).toBeVisible();
+  await waitSynced(page);
+  const reminders = await pulled(page, 'reminder');
+  expect(reminders).toHaveLength(1);
+  expect(reminders[0]?.data).toMatchObject({
+    category: 'grooming',
+    title: 'Bath',
+    schedule: { kind: 'once', times: ['09:00'] },
+  });
 });
 
 test('the profile opens the sheet on the weight form for that pet', async ({ page }) => {

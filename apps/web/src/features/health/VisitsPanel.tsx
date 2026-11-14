@@ -4,12 +4,13 @@ import { InvalidInput } from '../../application/pet-service';
 import { t } from '../../i18n/t';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
-import { Banner, Button } from '../../ui';
+import { Button, Disclosure, EmptyState, Icon, Line } from '../../ui';
 import { useContactName, useContactOptions } from '../contacts/hooks';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { useToastStore } from '../shared/toast';
 import { errorsFor, useHealthList, useToday } from './hooks';
-import { RecordForm } from './RecordForm';
+import { RecordForm, RecordSheet } from './RecordForm';
 import type { FieldSpec } from './RecordForm';
 
 const FIELDS: FieldSpec[] = [
@@ -18,26 +19,24 @@ const FIELDS: FieldSpec[] = [
   { name: 'findings', label: t('visit.findings') },
   { name: 'diagnosis', label: t('visit.diagnosis') },
   { name: 'treatment', label: t('visit.treatment') },
-  { name: 'cost', label: t('visit.cost'), type: 'number' },
-  { name: 'followUpOn', label: t('visit.followUp'), type: 'date' },
+  { name: 'cost', label: t('visit.cost'), type: 'number', half: true },
+  { name: 'followUpOn', label: t('visit.followUp'), type: 'date', half: true },
 ];
 
-/** Vet visits of one pet. */
-export function VisitsPanel({ petId }: { petId: string }) {
+function AddVisit({ petId, onClose }: { petId: string; onClose: () => void }) {
   const { health } = useServices();
-  const contactOptions = useContactOptions();
-  const fields: FieldSpec[] = [
-    ...FIELDS,
-    { name: 'contactId', label: t('visit.contact'), type: 'select', options: contactOptions },
-  ];
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
-  const canCreate = useCan('create', 'vetVisit');
-  const canDelete = useCanDelete('vetVisit');
+  const contactOptions = useContactOptions();
+  const show = useToastStore((s) => s.show);
   const today = useToday();
-  const list = useHealthList('vetVisit', petId);
   const [values, setValues] = useState<Record<string, string>>({ visitedOn: today });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const fields: FieldSpec[] = [
+    ...FIELDS.slice(0, 2),
+    { name: 'contactId', label: t('visit.contact'), type: 'select', options: contactOptions },
+    ...FIELDS.slice(2),
+  ];
 
   const submit = async () => {
     const { cost, ...rest } = values;
@@ -54,82 +53,117 @@ export function VisitsPanel({ petId }: { petId: string }) {
           ? {}
           : { costMinor: toMinor(amount, prefs.currency), currency: prefs.currency }),
       });
-      setValues({ visitedOn: today });
-      setErrors({});
+      show(
+        t('form.added', { name: values.reason || formatDate(values.visitedOn ?? today, prefs) }),
+      );
+      onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) throw e;
       setErrors(errorsFor(e.path, t('form.invalid')));
     }
   };
 
-  const rows = list.data ?? [];
   return (
-    <section className="flex flex-col gap-4" aria-labelledby="visit-title">
-      <h2 id="visit-title" className="text-xl font-semibold">
-        {t('visit.title')}
-      </h2>
-      {canCreate ? (
-        <RecordForm
-          title={t('visit.add')}
-          fields={fields}
-          values={values}
-          errors={errors}
-          onChange={setValues}
-          onSubmit={() => void submit()}
-          submitLabel={t('visit.add')}
-        />
-      ) : null}
-      {rows.length === 0 ? <Banner>{t('visit.empty')}</Banner> : null}
-      <ul className="flex flex-col gap-2">
-        {rows.map((v) => {
-          const date = formatDate(String(v.data.visitedOn), prefs);
-          return (
-            <li
-              key={v.id}
-              className="flex items-start justify-between gap-2 rounded-lg border border-line bg-surface p-3"
-            >
-              <div className="flex flex-col gap-1">
-                <strong>
-                  {date}
-                  {v.data.reason ? ` · ${String(v.data.reason)}` : ''}
-                </strong>
-                {v.data.findings ? <p>{String(v.data.findings)}</p> : null}
-                {v.data.diagnosis ? (
-                  <p>{t('visit.diagnosisValue', { text: String(v.data.diagnosis) })}</p>
-                ) : null}
-                {v.data.treatment ? (
-                  <p>{t('visit.treatmentValue', { text: String(v.data.treatment) })}</p>
-                ) : null}
-                {typeof v.data.costMinor === 'number' ? (
-                  <p>{formatMoney(v.data.costMinor, String(v.data.currency ?? prefs.currency))}</p>
-                ) : null}
-                <ContactLine id={v.data.contactId} />
-                {v.data.followUpOn ? (
-                  <p>
-                    {t('visit.followUpValue', {
-                      date: formatDate(String(v.data.followUpOn), prefs),
-                    })}
-                  </p>
-                ) : null}
-              </div>
-              {canDelete(v.createdBy) ? (
-                <Button
-                  variant="secondary"
-                  aria-label={t('form.deleteLabel', { name: date })}
-                  onClick={() => void health.remove('vetVisit', v.id)}
-                >
-                  {t('form.delete')}
-                </Button>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <RecordForm
+      title={t('visit.add')}
+      fields={fields}
+      values={values}
+      errors={errors}
+      onChange={setValues}
+      onSubmit={() => void submit()}
+      submitLabel={t('visit.add')}
+    />
   );
 }
 
-function ContactLine({ id }: { id: unknown }) {
+function VisitList({ petId }: { petId: string }) {
+  const { health } = useServices();
+  const prefs = useSessionStore((s) => s.preferences);
+  const canCreate = useCan('create', 'vetVisit');
+  const canDelete = useCanDelete('vetVisit');
+  const list = useHealthList('vetVisit', petId);
+  const [adding, setAdding] = useState(false);
+  const rows = [...(list.data ?? [])].sort((a, b) =>
+    String(b.data.visitedOn).localeCompare(String(a.data.visitedOn)),
+  );
+
+  return (
+    <>
+      {canCreate ? (
+        <button type="button" className="linkbtn" onClick={() => setAdding(true)}>
+          <Icon name="plus" />
+          {t('visit.addLabel')}
+        </button>
+      ) : null}
+      {rows.length === 0 ? <EmptyState>{t('visit.empty')}</EmptyState> : null}
+      {rows.length > 0 ? (
+        <ul aria-label={t('visit.title')}>
+          {rows.map((v) => {
+            const date = formatDate(String(v.data.visitedOn), prefs);
+            const more = [
+              v.data.findings ? String(v.data.findings) : '',
+              v.data.diagnosis ? t('visit.diagnosisValue', { text: String(v.data.diagnosis) }) : '',
+              v.data.treatment ? t('visit.treatmentValue', { text: String(v.data.treatment) }) : '',
+              v.data.followUpOn
+                ? t('visit.followUpValue', { date: formatDate(String(v.data.followUpOn), prefs) })
+                : '',
+            ].filter(Boolean);
+            return (
+              <Line
+                key={v.id}
+                title={v.data.reason ? String(v.data.reason) : date}
+                sub={
+                  <>
+                    {date}
+                    <ContactSuffix id={v.data.contactId} />
+                    {more.length > 0 ? <span className="sub2">{more.join(' · ')}</span> : null}
+                  </>
+                }
+                aside={
+                  typeof v.data.costMinor === 'number' ? (
+                    <span className="amt">
+                      {formatMoney(v.data.costMinor, String(v.data.currency ?? prefs.currency))}
+                    </span>
+                  ) : null
+                }
+                actions={
+                  canDelete(v.createdBy) ? (
+                    <Button
+                      variant="secondary"
+                      aria-label={t('form.deleteLabel', { name: date })}
+                      onClick={() => void health.remove('vetVisit', v.id)}
+                    >
+                      {t('form.delete')}
+                    </Button>
+                  ) : null
+                }
+              />
+            );
+          })}
+        </ul>
+      ) : null}
+      <RecordSheet open={adding} title={t('visit.add')} onClose={() => setAdding(false)}>
+        <AddVisit petId={petId} onClose={() => setAdding(false)} />
+      </RecordSheet>
+    </>
+  );
+}
+
+/** Vet visits of one pet, in a disclosure with a count. */
+export function VisitsPanel({ petId }: { petId: string }) {
+  const list = useHealthList('vetVisit', petId);
+  const count = list.data?.length ?? 0;
+  return (
+    <Disclosure
+      title={t('visit.title')}
+      hint={count === 1 ? t('visit.count.one') : t('visit.count.many', { count })}
+    >
+      <VisitList petId={petId} />
+    </Disclosure>
+  );
+}
+
+function ContactSuffix({ id }: { id: unknown }) {
   const name = useContactName(id);
-  return name ? <p>{t('visit.contactValue', { name })}</p> : null;
+  return name ? ` · ${t('visit.contactValue', { name })}` : null;
 }

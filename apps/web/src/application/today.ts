@@ -1,4 +1,5 @@
 import {
+  applyMissedRule,
   completionOf,
   dueOccurrences,
   instantToLocalDate,
@@ -24,6 +25,8 @@ export interface TodayItem {
   skipped: boolean;
   doneBy: 'me' | 'other' | null;
   snoozedUntil: string | null;
+  /** For a care routine, its kind (feeding routines are never to-dos on Home). */
+  routineKind?: string;
 }
 
 export interface TodayView {
@@ -89,10 +92,17 @@ export function buildToday(all: StoredRecord[], opts: TodayOptions): TodayView {
   }
   const snoozes = snoozeMap(envelopes, opts.userId);
   const to = new Date(opts.now.getTime() + (opts.horizonDays ?? UPCOMING_DAYS) * 86_400_000);
-  const occurrences = dueOccurrences(
+  const windowed = dueOccurrences(
     envelopes,
     { from: overdueWindowStart(opts.now), to },
     opts.tz,
+    // CON-003 2.6: a Just-me reminder of someone else is not this person's to-do (PO-002 Q-08).
+    opts.userId,
+  );
+  const doneKeys = new Set(doneBy.keys());
+  // PO-002 Q-03 (CON-003 2.6): a missed daily or weekly occurrence drops off once the next starts.
+  const occurrences = applyMissedRule(windowed, envelopes, opts.now, (o) =>
+    occurrenceStatus(o, opts.now, doneKeys, snoozes),
   );
 
   const view: TodayView = { overdue: [], today: [], upcoming: [], snoozed: [], done: [] };
@@ -115,8 +125,9 @@ export function buildToday(all: StoredRecord[], opts: TodayOptions): TodayView {
       skipped: completion?.data.skipped === true,
       doneBy: completion ? (completion.createdBy === opts.userId ? 'me' : 'other') : null,
       snoozedUntil: snoozedUntil ? new Date(snoozedUntil).toISOString() : null,
+      ...(o.sourceType === 'careRoutine' ? { routineKind: String(source.data.kind ?? '') } : {}),
     };
-    const status = occurrenceStatus(o, opts.now, new Set(completion ? [k] : []), snoozes);
+    const status = occurrenceStatus(o, opts.now, doneKeys, snoozes);
     if (status === 'done') {
       if (day === today) view.done.push(item);
     } else if (status === 'snoozed') view.snoozed.push(item);

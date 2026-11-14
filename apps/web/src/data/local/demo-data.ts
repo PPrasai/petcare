@@ -24,20 +24,35 @@ export async function seedDemo(now: Date = new Date()): Promise<void> {
   const db = new LocalDb(DEMO_USER_ID);
   try {
     if (await db.meta.get(SEEDED)) return;
-    const records = resolveDemoRecords(now);
-    const types = [...new Set(records.map((r) => r.type))] as RecordType[];
-    await db.transaction(
-      'rw',
-      [...db.recordTables(), db.households, db.pendingFiles, db.meta],
-      async () => {
-        for (const type of types) {
-          await db.records(type).bulkPut(records.filter((r) => r.type === type));
-        }
-        await db.households.put({
-          id: DEMO_HOUSEHOLD.id,
-          name: DEMO_HOUSEHOLD.name,
-          role: 'owner',
-        });
+    try {
+      await fill(db, now, true);
+    } catch (error) {
+      // Some browsers (WebKit in an ephemeral session, for one) refuse to store a Blob in
+      // IndexedDB. The demo still opens, without its sample files.
+      if (!(error instanceof Error) || !/blob/i.test(`${error.name} ${error.message}`)) throw error;
+      await fill(db, now, false);
+    }
+  } finally {
+    db.close();
+  }
+}
+
+async function fill(db: LocalDb, now: Date, withFiles: boolean): Promise<void> {
+  const records = resolveDemoRecords(now);
+  const types = [...new Set(records.map((r) => r.type))] as RecordType[];
+  await db.transaction(
+    'rw',
+    [...db.recordTables(), db.households, db.pendingFiles, db.meta],
+    async () => {
+      for (const type of types) {
+        await db.records(type).bulkPut(records.filter((r) => r.type === type));
+      }
+      await db.households.put({
+        id: DEMO_HOUSEHOLD.id,
+        name: DEMO_HOUSEHOLD.name,
+        role: 'owner',
+      });
+      if (withFiles) {
         await db.pendingFiles.bulkPut(
           DEMO_SEED.files.map((f) => ({
             id: f.id,
@@ -47,12 +62,10 @@ export async function seedDemo(now: Date = new Date()): Promise<void> {
             blob: toBlob(f.base64, f.mimeType),
           })),
         );
-        await db.meta.put({ key: SEEDED, value: now.toISOString() });
-      },
-    );
-  } finally {
-    db.close();
-  }
+      }
+      await db.meta.put({ key: SEEDED, value: now.toISOString() });
+    },
+  );
 }
 
 /** Deletes the demo database and its cached files. */

@@ -7,25 +7,32 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
 }) => {
   await signUp(page, 'pets');
   await page.getByRole('link', { name: 'Add a pet' }).click();
-  await page.getByLabel('Pet name').fill('Momo');
-  await page.getByLabel('Species').selectOption('dog');
-  await page.getByLabel('Breed', { exact: true }).fill('Terrier');
-  await page.getByLabel('Mixed breed').check();
-  await page.getByLabel('Sex').selectOption('female');
-  await page.getByLabel('Neutered or spayed').selectOption('yes');
-  await page.getByLabel('Date of birth', { exact: true }).fill('2020-03-04');
-  await page.getByLabel('Date of birth is an estimate').check();
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByLabel('Breed (optional)').fill('Terrier');
+  await page.getByRole('group', { name: 'Sex' }).getByRole('button', { name: 'Female' }).click();
+  await page.getByRole('button', { name: 'Spayed or neutered' }).click();
+  await page.getByLabel('Birthday', { exact: true }).fill('2020-03-04');
   await page.getByLabel('Microchip number').fill('985112003456789');
-  await page.getByLabel('Insurance provider').fill('PetSure');
   await page.getByRole('button', { name: 'Save pet' }).click();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
   await openDetails(page);
-  await expect(page.getByText('Terrier · Mixed breed')).toBeVisible();
-  await expect(page.getByText('2020-03-04 (estimated)')).toBeVisible();
+  await expect(page.getByText('Terrier', { exact: true })).toBeVisible();
+  await expect(page.getByText('2020-03-04')).toBeVisible();
   await expect(page.getByText('985112003456789')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Edit' }).click();
+  // The edit sheet still reaches every field the wizard leaves out.
+  await page.getByRole('button', { name: 'Edit details' }).click();
+  await page.getByLabel('Mixed breed').check();
+  await page.getByLabel('Date of birth is an estimate').check();
+  await page.getByLabel('Insurance provider').fill('PetSure');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Terrier · Mixed breed')).toBeVisible();
+  await expect(page.getByText('2020-03-04 (estimated)')).toBeVisible();
+  await expect(page.getByText('PetSure')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Edit details' }).click();
   await page.getByLabel('Colour').fill('Brindle');
   await page.getByLabel('Insurance provider').fill('');
   await page.getByRole('button', { name: 'Save changes' }).click();

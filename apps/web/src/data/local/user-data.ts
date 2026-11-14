@@ -85,6 +85,9 @@ export function openUserData(
     async create(type, householdId, data) {
       return present(await store.create(type, householdId, data));
     },
+    async createMany(householdId, items) {
+      return (await store.createMany(householdId, items)).map(present);
+    },
     async update(type, id, fields) {
       return present(await store.update(type, id, fields));
     },

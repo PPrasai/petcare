@@ -1,0 +1,16 @@
+{
+  "dog": [
+    { "id": "walk", "kind": "daily", "time": "18:00", "minSlice": 3 },
+    { "id": "flea", "kind": "monthly", "time": "09:00", "minSlice": 3 },
+    { "id": "checkup", "kind": "yearly", "time": "09:00", "minSlice": 6 }
+  ],
+  "cat": [
+    { "id": "flea", "kind": "monthly", "time": "09:00", "minSlice": 3 },
+    { "id": "brush", "kind": "weekly", "time": "17:00", "daysOfWeek": [7], "minSlice": 3 },
+    { "id": "checkup", "kind": "yearly", "time": "09:00", "minSlice": 6 }
+  ],
+  "other": [
+    { "id": "weighIn", "kind": "monthly", "time": "10:00", "minSlice": 3 },
+    { "id": "checkup", "kind": "yearly", "time": "09:00", "minSlice": 6 }
+  ]
+}

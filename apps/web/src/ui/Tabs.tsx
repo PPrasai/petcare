@@ -18,11 +18,14 @@ export function Tabs<Id extends string>({
   value,
   label,
   onChange,
+  caption,
 }: {
   tabs: TabItem<Id>[];
   value: Id;
   label: string;
   onChange: (id: Id) => void;
+  /** Shown above the tabs by the stylesheet when a page collapses its header (PO-002 Q-04). */
+  caption?: string;
 }) {
   const refs = useRef(new Map<Id, HTMLButtonElement>());
 
@@ -48,7 +51,7 @@ export function Tabs<Id extends string>({
   };
 
   return (
-    <div className="tabs" role="tablist" aria-label={label}>
+    <div className="tabs" role="tablist" aria-label={label} data-caption={caption}>
       {tabs.map((tab) => (
         <button
           key={tab.id}

@@ -4,11 +4,12 @@ import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
-import { Banner, Button } from '../../ui';
+import { Button, Card, EmptyState, Line, SectionHeader } from '../../ui';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { useToastStore } from '../shared/toast';
 import { errorsFor, useHealthList, useToday } from './hooks';
-import { RecordForm } from './RecordForm';
+import { RecordForm, RecordSheet } from './RecordForm';
 import type { FieldSpec } from './RecordForm';
 
 const severity = (): { value: string; label: string }[] => [
@@ -47,160 +48,211 @@ const nowLocal = () => {
   return d.toISOString().slice(0, 16);
 };
 
-/** Conditions and allergies, and the symptoms journal, of one pet. */
-export function ConditionsPanel({ petId }: { petId: string }) {
+function AddCondition({ petId, onClose }: { petId: string; onClose: () => void }) {
   const { health } = useServices();
   const householdId = useHouseholdId();
-  const prefs = useSessionStore((s) => s.preferences);
-  const canCreate = useCan('create', 'condition');
-  const canResolve = useCan('update', 'condition');
-  const canDeleteCondition = useCanDelete('condition');
-  const canLogSymptom = useCan('create', 'symptomEntry');
-  const canDeleteSymptom = useCanDelete('symptomEntry');
-  const today = useToday();
-  const conditions = useHealthList('condition', petId);
-  const symptoms = useHealthList('symptomEntry', petId);
-  const [cValues, setCValues] = useState<Record<string, string>>({ kind: 'allergy' });
-  const [sValues, setSValues] = useState<Record<string, string>>({ observedAt: nowLocal() });
-  const [cErrors, setCErrors] = useState<Record<string, string>>({});
-  const [sErrors, setSErrors] = useState<Record<string, string>>({});
-
-  const addCondition = async () => {
+  const show = useToastStore((s) => s.show);
+  const [values, setValues] = useState<Record<string, string>>({ kind: 'allergy' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const submit = async () => {
     try {
-      await health.add('condition', householdId, { petId, ...cValues });
-      setCValues({ kind: cValues.kind ?? 'allergy' });
-      setCErrors({});
+      await health.add('condition', householdId, { petId, ...values });
+      show(t('form.added', { name: values.name ?? '' }));
+      onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) throw e;
-      setCErrors(errorsFor(e.path, t('form.invalid')));
+      setErrors(errorsFor(e.path, t('form.invalid')));
     }
   };
+  return (
+    <RecordForm
+      title={t('condition.add')}
+      fields={CONDITION_FIELDS}
+      values={values}
+      errors={errors}
+      onChange={setValues}
+      onSubmit={() => void submit()}
+      submitLabel={t('condition.add')}
+    />
+  );
+}
 
-  const addSymptom = async () => {
+function AddSymptom({ petId, onClose }: { petId: string; onClose: () => void }) {
+  const { health } = useServices();
+  const householdId = useHouseholdId();
+  const show = useToastStore((s) => s.show);
+  const [values, setValues] = useState<Record<string, string>>({ observedAt: nowLocal() });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const submit = async () => {
     try {
       await health.add('symptomEntry', householdId, {
         petId,
-        ...sValues,
-        observedAt: sValues.observedAt ? new Date(sValues.observedAt).toISOString() : '',
+        ...values,
+        observedAt: values.observedAt ? new Date(values.observedAt).toISOString() : '',
       });
-      setSValues({ observedAt: nowLocal() });
-      setSErrors({});
+      show(t('form.added', { name: values.description ?? '' }));
+      onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) throw e;
-      setSErrors(errorsFor(e.path, t('form.invalid')));
+      setErrors(errorsFor(e.path, t('form.invalid')));
     }
   };
+  return (
+    <RecordForm
+      title={t('symptom.add')}
+      fields={SYMPTOM_FIELDS}
+      values={values}
+      errors={errors}
+      onChange={setValues}
+      onSubmit={() => void submit()}
+      submitLabel={t('symptom.add')}
+    />
+  );
+}
+
+/** Conditions and allergies of one pet: active first, then resolved ones. */
+export function ConditionsPanel({ petId }: { petId: string }) {
+  const { health } = useServices();
+  const prefs = useSessionStore((s) => s.preferences);
+  const canCreate = useCan('create', 'condition');
+  const canResolve = useCan('update', 'condition');
+  const canDelete = useCanDelete('condition');
+  const today = useToday();
+  const conditions = useHealthList('condition', petId);
+  const [adding, setAdding] = useState(false);
+  const all = conditions.data ?? [];
+  const isResolved = (c: (typeof all)[number]) => typeof c.data.resolvedOn === 'string';
+  const rows = [...all.filter((c) => !isResolved(c)), ...all.filter(isResolved)];
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-4" aria-labelledby="condition-title">
-        <h2 id="condition-title" className="text-xl font-semibold">
-          {t('condition.title')}
-        </h2>
-        {canCreate ? (
-          <RecordForm
-            title={t('condition.add')}
-            fields={CONDITION_FIELDS}
-            values={cValues}
-            errors={cErrors}
-            onChange={setCValues}
-            onSubmit={() => void addCondition()}
-            submitLabel={t('condition.add')}
-          />
-        ) : null}
-        {(conditions.data ?? []).length === 0 ? <Banner>{t('condition.empty')}</Banner> : null}
-        <ul className="flex flex-col gap-2">
-          {(conditions.data ?? []).map((c) => {
+    <Card>
+      <SectionHeader
+        title={t('condition.title')}
+        {...(canCreate
+          ? {
+              action: {
+                label: t('ui.add'),
+                ariaLabel: t('condition.addLabel'),
+                onClick: () => setAdding(true),
+              },
+            }
+          : {})}
+      />
+      {rows.length === 0 ? <EmptyState>{t('condition.empty')}</EmptyState> : null}
+      {rows.length > 0 ? (
+        <ul aria-label={t('condition.title')}>
+          {rows.map((c) => {
             const name = String(c.data.name);
             const resolved = typeof c.data.resolvedOn === 'string' ? c.data.resolvedOn : null;
+            const sub = [
+              t(`condition.kind.${String(c.data.kind)}` as MessageKey) +
+                (c.data.severity
+                  ? ` · ${t(`severity.${String(c.data.severity)}` as MessageKey)}`
+                  : ''),
+              resolved ? t('condition.resolvedOn', { date: formatDate(resolved, prefs) }) : '',
+            ]
+              .filter(Boolean)
+              .join(' · ');
             return (
-              <li
+              <Line
                 key={c.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3"
-              >
-                <div>
-                  <strong>{name}</strong>{' '}
-                  <span className="text-sm">
-                    {t(`condition.kind.${String(c.data.kind)}` as MessageKey)}
-                    {c.data.severity
-                      ? ` · ${t(`severity.${String(c.data.severity)}` as MessageKey)}`
-                      : ''}
-                    {resolved
-                      ? ` · ${t('condition.resolvedOn', { date: formatDate(resolved, prefs) })}`
-                      : ''}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  {!resolved && canResolve ? (
+                title={name}
+                sub={sub}
+                actions={
+                  <>
+                    {!resolved && canResolve ? (
+                      <button
+                        type="button"
+                        className="linkbtn"
+                        aria-label={t('condition.resolveLabel', { name })}
+                        onClick={() => void health.update('condition', c.id, { resolvedOn: today })}
+                      >
+                        {t('condition.resolve')}
+                      </button>
+                    ) : null}
+                    {canDelete(c.createdBy) ? (
+                      <Button
+                        variant="secondary"
+                        aria-label={t('form.deleteLabel', { name })}
+                        onClick={() => void health.remove('condition', c.id)}
+                      >
+                        {t('form.delete')}
+                      </Button>
+                    ) : null}
+                  </>
+                }
+              />
+            );
+          })}
+        </ul>
+      ) : null}
+      <RecordSheet open={adding} title={t('condition.add')} onClose={() => setAdding(false)}>
+        <AddCondition petId={petId} onClose={() => setAdding(false)} />
+      </RecordSheet>
+    </Card>
+  );
+}
+
+/** The symptoms journal of one pet, newest first. */
+export function SymptomsPanel({ petId }: { petId: string }) {
+  const { health } = useServices();
+  const prefs = useSessionStore((s) => s.preferences);
+  const canLog = useCan('create', 'symptomEntry');
+  const canDelete = useCanDelete('symptomEntry');
+  const symptoms = useHealthList('symptomEntry', petId);
+  const [adding, setAdding] = useState(false);
+  const rows = [...(symptoms.data ?? [])].sort((a, b) =>
+    String(b.data.observedAt).localeCompare(String(a.data.observedAt)),
+  );
+
+  return (
+    <Card>
+      <SectionHeader
+        title={t('symptom.title')}
+        {...(canLog
+          ? {
+              action: {
+                label: t('ui.add'),
+                ariaLabel: t('symptom.addLabel'),
+                onClick: () => setAdding(true),
+              },
+            }
+          : {})}
+      />
+      {rows.length === 0 ? <EmptyState>{t('symptom.empty')}</EmptyState> : null}
+      {rows.length > 0 ? (
+        <ul aria-label={t('symptom.title')}>
+          {rows.map((s) => {
+            const date = formatDate(String(s.data.observedAt), prefs);
+            return (
+              <Line
+                key={s.id}
+                title={String(s.data.description)}
+                sub={
+                  date +
+                  (s.data.severity
+                    ? ` · ${t(`severity.${String(s.data.severity)}` as MessageKey)}`
+                    : '')
+                }
+                actions={
+                  canDelete(s.createdBy) ? (
                     <Button
                       variant="secondary"
-                      aria-label={t('condition.resolveLabel', { name })}
-                      onClick={() => void health.update('condition', c.id, { resolvedOn: today })}
-                    >
-                      {t('condition.resolve')}
-                    </Button>
-                  ) : null}
-                  {canDeleteCondition(c.createdBy) ? (
-                    <Button
-                      variant="secondary"
-                      aria-label={t('form.deleteLabel', { name })}
-                      onClick={() => void health.remove('condition', c.id)}
+                      aria-label={t('form.deleteLabel', { name: date })}
+                      onClick={() => void health.remove('symptomEntry', s.id)}
                     >
                       {t('form.delete')}
                     </Button>
-                  ) : null}
-                </div>
-              </li>
+                  ) : null
+                }
+              />
             );
           })}
         </ul>
-      </section>
-
-      <section className="flex flex-col gap-4" aria-labelledby="symptom-title">
-        <h2 id="symptom-title" className="text-xl font-semibold">
-          {t('symptom.title')}
-        </h2>
-        {canLogSymptom ? (
-          <RecordForm
-            title={t('symptom.add')}
-            fields={SYMPTOM_FIELDS}
-            values={sValues}
-            errors={sErrors}
-            onChange={setSValues}
-            onSubmit={() => void addSymptom()}
-            submitLabel={t('symptom.add')}
-          />
-        ) : null}
-        {(symptoms.data ?? []).length === 0 ? <Banner>{t('symptom.empty')}</Banner> : null}
-        <ul className="flex flex-col gap-2">
-          {(symptoms.data ?? []).map((s) => {
-            const date = formatDate(String(s.data.observedAt), prefs);
-            return (
-              <li
-                key={s.id}
-                className="flex items-start justify-between gap-2 rounded-lg border border-line bg-surface p-3"
-              >
-                <div>
-                  <strong>{date}</strong>
-                  {s.data.severity
-                    ? ` · ${t(`severity.${String(s.data.severity)}` as MessageKey)}`
-                    : ''}
-                  <p>{String(s.data.description)}</p>
-                </div>
-                {canDeleteSymptom(s.createdBy) ? (
-                  <Button
-                    variant="secondary"
-                    aria-label={t('form.deleteLabel', { name: date })}
-                    onClick={() => void health.remove('symptomEntry', s.id)}
-                  >
-                    {t('form.delete')}
-                  </Button>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    </div>
+      ) : null}
+      <RecordSheet open={adding} title={t('symptom.add')} onClose={() => setAdding(false)}>
+        <AddSymptom petId={petId} onClose={() => setAdding(false)} />
+      </RecordSheet>
+    </Card>
   );
 }

@@ -1,15 +1,12 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, signUp, waitSynced } from './support/app';
+import { addPet, addReminder, pushRoutine, signUp, waitSynced } from './support/app';
 
 type Change = { type: string; data: Record<string, unknown> };
 const pulled = async (page: import('@playwright/test').Page, type: string): Promise<Change[]> => {
   const pull = await (await page.request.get('/api/sync/pull')).json();
   return pull.changes.filter((c: Change) => c.type === type);
 };
-
-const dayBefore = (iso: string) =>
-  new Date(Date.parse(`${iso}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
 
 // CAP-10: care routines and the daily checklist. CAP-07 (in-app): done, skip, snooze, custom
 // reminders. The tasks live on the Care tab and in each pet's "Up next"; the "More actions" menu
@@ -24,30 +21,27 @@ const act = async (page: Page, title: string, action: string) => {
   await page.getByRole('button', { name: action, exact: true }).click();
 };
 
-test('routines and reminders show on the Care tab and can be done, skipped or snoozed', async ({
+test('reminders and a legacy routine show on the Care tab and can be done, skipped or snoozed', async ({
   page,
 }) => {
   await signUp(page, 'today');
-  await expect(page.getByText(/all caught up/)).toBeVisible();
+  await expect(page.getByText('Add a pet to get started.')).toBeVisible();
   await addPet(page, 'Momo');
 
   await page.getByRole('tab', { name: 'Care' }).click();
-  const routines = page.getByRole('region', { name: 'Care routines' });
-  for (const title of ['Breakfast', 'Evening walk']) {
-    await routines.getByLabel('Routine name').fill(title);
-    await routines.getByLabel('Times (24-hour, comma separated)').fill('00:01');
-    await routines.getByRole('button', { name: 'Add routine' }).click();
-    await expect(routines.getByRole('listitem').filter({ hasText: title })).toBeVisible();
+  for (const title of ['Breakfast', 'Buy dog food']) {
+    // A daily reminder made now starts at its next slot (notBefore, CON-003 2.6), so these are
+    // one-offs at 00:01 today: already overdue.
+    await addReminder(page, { title, repeat: 'Once', time: '00:01' });
+    await expect(page.getByRole('listitem').filter({ hasText: title }).first()).toBeVisible();
   }
+  // A routine made by an increment-1 client is still listed and can be skipped.
+  await pushRoutine(page, { title: 'Evening walk', kind: 'walk' });
+  await page.getByRole('tab', { name: 'Care' }).click();
+  await expect(page.getByTestId('reminder-row').filter({ hasText: 'Evening walk' })).toBeVisible();
 
-  // A routine that started yesterday has an overdue occurrence from yesterday.
-  const start = await routines.getByLabel('Starts on').inputValue();
-  await routines.getByLabel('Routine name').fill('Medicine drops');
-  await routines.getByLabel('Times (24-hour, comma separated)').fill('00:01');
-  await routines.getByLabel('Starts on').fill(dayBefore(start));
-  await routines.getByLabel('Ends on (optional)').fill(dayBefore(start));
-  await routines.getByRole('button', { name: 'Add routine' }).click();
-  await expect(routines.getByRole('listitem').filter({ hasText: 'Medicine drops' })).toBeVisible();
+  // A reminder that was due only yesterday is overdue from yesterday.
+  await addReminder(page, { title: 'Medicine drops', repeat: 'Once', daysAgo: 1, time: '00:01' });
 
   await expect(task(page, 'Medicine drops')).toContainText('Overdue');
   await expect(task(page, 'Breakfast')).toContainText('Overdue');
@@ -61,31 +55,24 @@ test('routines and reminders show on the Care tab and can be done, skipped or sn
   await act(page, 'Medicine drops', 'Snooze until tomorrow');
   await expect(task(page, 'Medicine drops')).toContainText('Snoozed until');
 
-  // A custom reminder without a pet.
-  const reminders = page.getByRole('region', { name: 'Custom reminders' });
-  await reminders.getByLabel('Reminder', { exact: true }).fill('Buy dog food');
-  await reminders.getByLabel('Times (24-hour, comma separated)').fill('00:01');
-  await reminders.getByRole('button', { name: 'Add reminder' }).click();
   await act(page, 'Buy dog food', 'Done');
   await expect(task(page, 'Buy dog food')).toContainText('Done by you');
 
   await waitSynced(page);
-  expect(await pulled(page, 'careRoutine')).toHaveLength(3);
+  expect(await pulled(page, 'careRoutine')).toHaveLength(1);
+  expect(await pulled(page, 'reminder')).toHaveLength(3);
   const completions = await pulled(page, 'careCompletion');
-  expect(completions.map((c) => c.data.skipped).sort()).toEqual([false, true]);
-  expect(await pulled(page, 'reminderCompletion')).toHaveLength(1);
+  expect(completions.map((c) => c.data.skipped)).toEqual([true]);
+  expect(await pulled(page, 'reminderCompletion')).toHaveLength(2);
   const [snooze] = await pulled(page, 'reminderSnooze');
-  expect(snooze?.data.sourceType).toBe('careRoutine');
+  expect(snooze?.data.sourceType).toBe('reminder');
 });
 
 test('Up next shows the next task, and the Care tab works offline', async ({ page, context }) => {
   await signUp(page, 'todayoff');
   await addPet(page, 'Momo');
   await page.getByRole('tab', { name: 'Care' }).click();
-  const routines = page.getByRole('region', { name: 'Care routines' });
-  await routines.getByLabel('Routine name').fill('Brush teeth');
-  await routines.getByLabel('Times (24-hour, comma separated)').fill('00:01');
-  await routines.getByRole('button', { name: 'Add routine' }).click();
+  await addReminder(page, { title: 'Brush teeth', repeat: 'Once', time: '00:01' });
   await addPet(page, 'Biralo');
   await waitSynced(page);
 
@@ -104,5 +91,5 @@ test('Up next shows the next task, and the Care tab works offline', async ({ pag
   await expect(page.locator('.task').filter({ hasText: 'Brush teeth' })).toHaveCount(0);
   await context.setOffline(false);
   await waitSynced(page);
-  expect(await pulled(page, 'careCompletion')).toHaveLength(1);
+  expect(await pulled(page, 'reminderCompletion')).toHaveLength(1);
 });

@@ -27,7 +27,7 @@ test('sign-out wipes the local database and file cache', async ({ page }) => {
 
   await signUp(page, 'wipeb');
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-  await expect(page.getByText('No pets yet')).toBeVisible();
+  await expect(page.getByText(/^Add your first pet/)).toBeVisible();
   await expect(page.getByText('SecretPet')).toHaveCount(0);
   expect(await databases(page)).not.toContain(`petcare-u-${a}`);
 });

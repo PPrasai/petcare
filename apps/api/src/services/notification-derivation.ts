@@ -85,7 +85,7 @@ export async function deriveSource(
         from: now,
         to: new Date(now.getTime() + DERIVE_WINDOW_DAYS * DAY_MS + leadMs),
       };
-      for (const occurrence of dueOccurrences([source], window, prefs.timeZone)) {
+      for (const occurrence of dueOccurrences([source], window, prefs.timeZone, member.userId)) {
         const occurrenceAt = new Date(occurrence.occurrenceAt);
         if (await repos.notifications.isCompleted(sourceType, sourceId, occurrenceAt)) continue;
         let fireAt = new Date(occurrenceAt.getTime() - leadMs);

@@ -23,8 +23,8 @@ export function ScheduleFields({ values, onChange, error }: Props) {
         : [...values.daysOfWeek, day],
     });
   return (
-    <fieldset className="flex flex-col gap-3 rounded-lg border border-line p-3">
-      <legend className="px-1 text-sm font-medium">{t('schedule.title')}</legend>
+    <fieldset className="sched">
+      <legend className="label">{t('schedule.title')}</legend>
       <SelectField
         label={t('schedule.kind')}
         value={values.kind}
@@ -35,18 +35,20 @@ export function ScheduleFields({ values, onChange, error }: Props) {
         onChange={(e) => set({ kind: e.target.value as ScheduleFormValues['kind'] })}
       />
       {values.kind === 'weekly' ? (
-        <fieldset className="flex flex-wrap gap-2">
-          <legend className="text-sm font-medium">{t('schedule.days')}</legend>
-          {DAYS.map((d) => (
-            <label key={d} className="flex min-h-11 items-center gap-1">
-              <input
-                type="checkbox"
-                checked={values.daysOfWeek.includes(d)}
-                onChange={() => toggleDay(d)}
-              />
-              {t(`schedule.day.${d}` as MessageKey)}
-            </label>
-          ))}
+        <fieldset className="fld">
+          <legend className="label">{t('schedule.days')}</legend>
+          <div className="tags">
+            {DAYS.map((d) => (
+              <label key={d} className="check">
+                <input
+                  type="checkbox"
+                  checked={values.daysOfWeek.includes(d)}
+                  onChange={() => toggleDay(d)}
+                />
+                {t(`schedule.day.${d}` as MessageKey)}
+              </label>
+            ))}
+          </div>
         </fieldset>
       ) : null}
       {values.kind === 'monthly' ? (
@@ -71,20 +73,22 @@ export function ScheduleFields({ values, onChange, error }: Props) {
         value={values.times}
         onChange={(e) => set({ times: e.target.value })}
       />
-      <TextField
-        label={t('schedule.startOn')}
-        type="date"
-        value={values.startOn}
-        onChange={(e) => set({ startOn: e.target.value })}
-      />
-      <TextField
-        label={t('schedule.endOn')}
-        type="date"
-        value={values.endOn}
-        onChange={(e) => set({ endOn: e.target.value })}
-      />
+      <div className="row2">
+        <TextField
+          label={t('schedule.startOn')}
+          type="date"
+          value={values.startOn}
+          onChange={(e) => set({ startOn: e.target.value })}
+        />
+        <TextField
+          label={t('schedule.endOn')}
+          type="date"
+          value={values.endOn}
+          onChange={(e) => set({ endOn: e.target.value })}
+        />
+      </div>
       {error ? (
-        <p role="alert" className="text-sm text-bad">
+        <p role="alert" className="err">
           {error}
         </p>
       ) : null}

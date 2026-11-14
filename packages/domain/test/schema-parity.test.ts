@@ -62,16 +62,17 @@ describe('mutations of every valid sample get the same verdict from both', () =>
 });
 
 describe('registry', () => {
-  it('defines all 17 record types exactly once', () => {
+  it('defines all 19 record types exactly once', () => {
     expect(entities.map((e) => e.type).sort()).toEqual([...RECORD_TYPES].sort());
   });
-  it('marks the four event types append-only and the rest mergeable (CON-002 2.2)', () => {
+  it('marks the five event types append-only and the rest mergeable (CON-002 2.2)', () => {
     const appendOnly = entities
       .filter((e) => e.kind === 'appendOnly')
       .map((e) => e.type)
       .sort();
     expect(appendOnly).toEqual([
       'careCompletion',
+      'careLog',
       'medicationDose',
       'reminderCompletion',
       'reminderSnooze',

@@ -35,6 +35,8 @@ export function createScheduler(engine: SyncEngine, options: SchedulerOptions = 
   let timer: ReturnType<typeof setTimeout> | undefined;
   let failures = 0;
   let running = false;
+  /** A write was requested while a sync was in flight; it must not wait for the next interval. */
+  let requested = false;
 
   const clear = () => {
     if (timer !== undefined) clearTimeout(timer);
@@ -47,13 +49,14 @@ export function createScheduler(engine: SyncEngine, options: SchedulerOptions = 
   };
   async function run(): Promise<void> {
     clear();
+    requested = false;
     const status = await engine.sync();
     if (status.error !== null || !status.online) {
       failures += 1;
       schedule(Math.min(backoffStart * 2 ** (failures - 1), backoffMax));
     } else {
       failures = 0;
-      schedule(intervalMs);
+      schedule(requested ? debounceMs : intervalMs);
     }
   }
 
@@ -67,7 +70,9 @@ export function createScheduler(engine: SyncEngine, options: SchedulerOptions = 
       clear();
     },
     request() {
-      if (running) schedule(debounceMs);
+      if (!running) return;
+      requested = true;
+      schedule(debounceMs);
     },
     nudge() {
       if (!running) return;

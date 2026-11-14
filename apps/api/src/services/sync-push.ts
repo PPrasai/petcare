@@ -58,6 +58,22 @@ export function createPushProcessor(deps: SyncServiceDeps) {
     if (m.type === 'reminderSnooze' && m.op === 'create' && m.fields.userId !== actor) {
       return reject(m, 'forbidden', 'a snooze belongs to the user who made it', '/userId');
     }
+    // CON-003 2.3: a "Just me" reminder can only name its author. Clearing it is always allowed.
+    // The actor has a role here, so a matching id is also a current member (invalidReference
+    // for a non-member id cannot be reached: it would already be forbidden).
+    if (
+      m.type === 'reminder' &&
+      op !== 'delete' &&
+      typeof m.fields.audienceUserId === 'string' &&
+      m.fields.audienceUserId !== actor
+    ) {
+      return reject(
+        m,
+        'forbidden',
+        'a Just me reminder can only be for its author',
+        '/audienceUserId',
+      );
+    }
     if (JSON.stringify(m.fields).length > MAX_FIELDS_BYTES) {
       return reject(m, 'tooLarge', 'fields are too large');
     }

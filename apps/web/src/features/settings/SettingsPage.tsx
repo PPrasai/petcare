@@ -1,46 +1,67 @@
 import { Link } from '@tanstack/react-router';
 import { t } from '../../i18n/t';
+import type { MessageKey } from '../../i18n/en';
 import { useSessionStore } from '../../state/session';
+import { Banner, Card, Icon, PageHeader, SectionHeader } from '../../ui';
 import { useDemo } from '../shared/demo';
 import { SignOutButton } from '../sync/SignOutButton';
-import { AccountsPanel } from './AccountsPanel';
-import { CalendarPanel } from './CalendarPanel';
-import { DataPanel } from './DataPanel';
-import { NotificationsPanel } from './NotificationsPanel';
+import { SignInCard } from './AccountsPanel';
+import { CalendarRow } from './CalendarPanel';
+import { DataCard } from './DataPanel';
+import { PushRow } from './NotificationsPanel';
 import { PreferencesPanel } from './PreferencesPanel';
+
+const DEMO_NOTE = 'settings-demo';
+
+const LINKS: {
+  to: '/household' | '/contacts' | '/sync';
+  title: MessageKey;
+  hint: MessageKey;
+}[] = [
+  { to: '/household', title: 'nav.household', hint: 'more.householdHint' },
+  { to: '/contacts', title: 'contacts.title', hint: 'more.contactsHint' },
+  { to: '/sync', title: 'nav.sync', hint: 'more.syncHint' },
+];
 
 /** Everything the user can change about themselves (CAP-19, CAP-20). */
 export function SettingsPage() {
   const user = useSessionStore((s) => s.user);
   const demo = useDemo();
   return (
-    <div className="flex max-w-xl flex-col gap-8">
-      <h1 className="text-2xl font-semibold">{t('settings.title')}</h1>
-      {user ? (
-        <section aria-labelledby="profile-title" className="flex flex-col gap-1">
-          <h2 id="profile-title" className="text-xl font-semibold">
-            {t('settings.profile')}
-          </h2>
-          <p>{user.name}</p>
-          <p className="text-muted">{user.email}</p>
-        </section>
-      ) : null}
-      <PreferencesPanel />
-      <NotificationsPanel />
-      <CalendarPanel />
-      <AccountsPanel />
-      <DataPanel />
-      <Link to="/contacts" className="underline">
-        {t('contacts.title')}
-      </Link>
-      <Link to="/sync" className="underline">
-        {t('nav.sync')}
-      </Link>
-      {demo ? null : (
-        <div className="acts">
-          <SignOutButton />
+    <>
+      <PageHeader
+        title={t('settings.title')}
+        {...(user ? { lede: t('settings.lede', { name: user.name, email: user.email }) } : {})}
+      />
+      {demo ? <Banner id={DEMO_NOTE}>{t('settings.demo')}</Banner> : null}
+      <div className="two">
+        <div className="stack">
+          <Card>
+            <PushRow demoNoteId={DEMO_NOTE} />
+            <CalendarRow demoNoteId={DEMO_NOTE} />
+          </Card>
+          <PreferencesPanel />
         </div>
-      )}
-    </div>
+        <div className="stack">
+          <SignInCard demoNoteId={DEMO_NOTE} />
+          <DataCard demoNoteId={DEMO_NOTE} />
+          <Card>
+            <SectionHeader title={t('settings.more')} />
+            {LINKS.map((row) => (
+              <Link key={row.to} to={row.to} className="mrow">
+                <span className="l">
+                  <b>{t(row.title)}</b>
+                  <span>{t(row.hint)}</span>
+                </span>
+                <span className="muted">
+                  <Icon name="next" />
+                </span>
+              </Link>
+            ))}
+          </Card>
+          {demo ? null : <SignOutButton />}
+        </div>
+      </div>
+    </>
   );
 }

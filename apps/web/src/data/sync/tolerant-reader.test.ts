@@ -100,3 +100,40 @@ describe('tolerant reader', () => {
     expect((await db.meta.get(UNKNOWN_TYPES_KEY))?.value).toEqual(['zzOther']);
   });
 });
+
+// QA-37 re-run with the real CON-003 types: a client built from CON-002's registry.
+describe('a CON-002 client against real careLog and mealPreset changes', () => {
+  const oldRegistry = new Set(
+    [...registryTypes()].filter((t) => t !== 'careLog' && t !== 'mealPreset'),
+  );
+  const log = envelope('careLog', 5, {
+    petId: pet.id,
+    kind: 'walk',
+    occurredAt: '2026-06-01T09:00:00Z',
+    durationMin: 30,
+  });
+  const preset = envelope('mealPreset', 6, {
+    petId: pet.id,
+    foodName: 'Kibble',
+    quantity: 1,
+    quantityUnit: 'cup',
+  });
+
+  it('skips them without error, advances the cursor, and re-pulls after the upgrade', async () => {
+    const applied = await applyPullPage(db, page('c1', [pet, log, preset]), oldRegistry);
+    expect(applied.changedTypes).toEqual(new Set(['pet']));
+    expect((await db.meta.get(CURSOR_KEY))?.value).toBe('c1');
+    expect((await db.meta.get(UNKNOWN_TYPES_KEY))?.value).toEqual(['careLog', 'mealPreset']);
+
+    expect(await reconcileUnknownTypes(db, oldRegistry)).toBe(false);
+    expect(await reconcileUnknownTypes(db)).toBe(true);
+    expect(await db.meta.get(CURSOR_KEY)).toBeUndefined();
+
+    // The re-pull from cursor 0 now stores them.
+    await applyPullPage(db, page('c2', [pet, log, preset]));
+    expect(await db.records('careLog').get(log.id)).toMatchObject({ data: { durationMin: 30 } });
+    expect(await db.records('mealPreset').get(preset.id)).toMatchObject({
+      data: { quantityUnit: 'cup' },
+    });
+  });
+});

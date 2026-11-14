@@ -226,6 +226,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     list: (type, householdId) => current().records.list(type, householdId),
     get: (type, id) => current().records.get(type, id),
     create: (type, householdId, fields) => current().records.create(type, householdId, fields),
+    createMany: (householdId, items) => current().records.createMany(householdId, items),
     update: (type, id, fields) => current().records.update(type, id, fields),
     remove: (type, id) => current().records.remove(type, id),
   };
@@ -254,12 +255,14 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
   const health = new HealthService(records);
   const documents = new DocumentService(records);
   const expenses = new ExpenseService(records);
+  const today = new TodayService(records);
   const files: Services['files'] = {
     attach: (householdId, file) => current().files.attach(householdId, file),
     open: (fileId) => current().files.open(fileId),
     release: (url) => URL.revokeObjectURL(url),
     discard: (fileId) => current().files.discard(fileId),
   };
+  const reducer = new CanvasImageReducer();
   const services: Services = {
     session,
     sync: {
@@ -268,15 +271,15 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       problems: () => (data ? data.sync.problems() : Promise.resolve([])),
     },
     pets: new PetService(records),
-    photos: new PetPhotoService(records, files, new CanvasImageReducer()),
+    photos: new PetPhotoService(records, files, reducer),
     measurements,
     health,
-    today: new TodayService(records),
+    today,
     push: createPushRemote(),
     files,
     documents,
     expenses,
-    log: new LogService(measurements, health, expenses, documents, files),
+    log: new LogService(measurements, health, expenses, documents, files, reducer, records, today),
     contacts: new ContactService(records),
     households: new HouseholdService(householdApi, refreshHouseholds),
     emergency: new EmergencyService(records, createEmergencyRemote()),

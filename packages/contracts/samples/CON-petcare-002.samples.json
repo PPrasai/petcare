@@ -1,52 +1,562 @@
 {
-  "valid": [
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "type": "pet", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 3,
-      "createdAt": "2026-11-01T08:00:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-04T10:15:00Z", "updatedBy": "usr_b2", "deletedAt": null,
-      "data": { "name": "Momo", "species": "dog", "breed": "Tibetan Terrier", "isMixedBreed": false, "sex": "female", "neutered": true,
-        "birthDate": "2021-03-14", "birthDateEstimated": false, "colour": "white and gold", "markings": null, "microchipId": "900215001234567",
-        "photoFileId": null, "adoptedOn": "2021-06-01", "insurance": { "provider": "PetSure", "policyNumber": "PS-1029", "renewsOn": "2027-06-01" },
-        "diet": "Dry food twice daily", "bloodType": "DEA 1.1 negative", "sizeCategory": "medium", "archivedAt": null, "archivedReason": null } },
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f81", "type": "vaccination", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-02T09:00:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-02T09:00:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "vaccineName": "Rabies", "givenOn": "2025-11-20", "batchNumber": "RB-7781",
-        "contactId": null, "nextDueOn": "2026-11-20", "certificateFileId": null, "note": "" } },
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f82", "type": "medication", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 2,
-      "createdAt": "2026-11-02T09:05:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-03T07:00:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "name": "Carprofen", "dose": 25, "doseUnit": "mg",
-        "schedule": { "tz": "Asia/Kathmandu", "kind": "daily", "times": ["08:00", "20:00"], "startOn": "2026-11-02", "endOn": "2026-11-12" },
-        "prescribedByContactId": null, "note": "With food" } },
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f83", "type": "medicationDose", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-03T02:20:00Z", "createdBy": "usr_b2", "updatedAt": "2026-11-03T02:20:00Z", "updatedBy": "usr_b2", "deletedAt": null,
-      "data": { "medicationId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f82", "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
-        "occurrenceAt": "2026-11-03T02:15:00Z", "givenAt": "2026-11-03T02:20:00Z", "skipped": false } },
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f84", "type": "careRoutine", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-02T09:10:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-02T09:10:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "kind": "deworming", "title": "Deworming tablet",
-        "schedule": { "tz": "Asia/Kathmandu", "kind": "everyNDays", "everyN": 90, "times": [], "startOn": "2026-09-01", "endOn": null }, "active": true } },
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f85", "type": "expense", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-02T09:20:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-02T09:20:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "spentOn": "2026-11-02", "category": "vet", "amountMinor": 250000, "currency": "NPR", "note": "Annual check-up", "fileId": null } },
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f86", "type": "emergencyCard", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 4,
-      "createdAt": "2026-11-02T09:30:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-05T06:00:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "visibleFields": ["photo", "name", "breed", "allergies", "ownerDisplayName", "ownerPhone"],
-        "ownerDisplayName": "Parikshit", "ownerPhone": "+977-9800000000", "notes": "Shy, do not chase", "isLost": true,
-        "lostSince": "2026-11-05T05:30:00Z", "lostMessage": "Lost near Jawalakhel, please call" } },
-    { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f87", "type": "contact", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 2,
-      "createdAt": "2026-11-02T09:40:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-04T09:40:00Z", "updatedBy": "usr_a1", "deletedAt": "2026-11-04T09:40:00Z",
-      "data": { "name": "City Vet Clinic", "role": "clinic", "phone": "+977-1-5550000", "email": null, "address": "Lalitpur", "website": "https://example.org", "note": "" } }
-  ],
-  "invalid": [
-    { "why": "money as float", "record": { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f90", "type": "expense", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-02T09:20:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-02T09:20:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "spentOn": "2026-11-02", "category": "vet", "amountMinor": 2500.5, "currency": "NPR" } } },
-    { "why": "weekly schedule without daysOfWeek", "record": { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f91", "type": "careRoutine", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-02T09:10:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-02T09:10:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "kind": "grooming", "title": "Brush", "schedule": { "tz": "UTC", "kind": "weekly", "startOn": "2026-11-01" }, "active": true } } },
-    { "why": "unknown field in data", "record": { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f92", "type": "pet", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-02T09:10:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-02T09:10:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "name": "Rex", "species": "dog", "favouriteColour": "blue" } } },
-    { "why": "non-UTC instant", "record": { "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f93", "type": "measurement", "householdId": "01930f6e-0000-7000-8000-000000000001", "version": 1,
-      "createdAt": "2026-11-02T09:10:00Z", "createdBy": "usr_a1", "updatedAt": "2026-11-02T09:10:00Z", "updatedBy": "usr_a1", "deletedAt": null,
-      "data": { "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80", "kind": "weight", "value": 12.4, "measuredAt": "2026-11-02T15:10:00+05:45" } } }
-  ]
+ "valid": [
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+   "type": "pet",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 3,
+   "createdAt": "2026-11-01T08:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-04T10:15:00Z",
+   "updatedBy": "usr_b2",
+   "deletedAt": null,
+   "data": {
+    "name": "Momo",
+    "species": "dog",
+    "breed": "Tibetan Terrier",
+    "isMixedBreed": false,
+    "sex": "female",
+    "neutered": true,
+    "birthDate": "2021-03-14",
+    "birthDateEstimated": false,
+    "colour": "white and gold",
+    "markings": null,
+    "microchipId": "900215001234567",
+    "photoFileId": null,
+    "adoptedOn": "2021-06-01",
+    "insurance": {
+     "provider": "PetSure",
+     "policyNumber": "PS-1029",
+     "renewsOn": "2027-06-01"
+    },
+    "diet": "Dry food twice daily",
+    "bloodType": "DEA 1.1 negative",
+    "sizeCategory": "medium",
+    "archivedAt": null,
+    "archivedReason": null
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f81",
+   "type": "vaccination",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-02T09:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-02T09:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "vaccineName": "Rabies",
+    "givenOn": "2025-11-20",
+    "batchNumber": "RB-7781",
+    "contactId": null,
+    "nextDueOn": "2026-11-20",
+    "certificateFileId": null,
+    "note": ""
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f82",
+   "type": "medication",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 2,
+   "createdAt": "2026-11-02T09:05:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-03T07:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "name": "Carprofen",
+    "dose": 25,
+    "doseUnit": "mg",
+    "schedule": {
+     "tz": "Asia/Kathmandu",
+     "kind": "daily",
+     "times": [
+      "08:00",
+      "20:00"
+     ],
+     "startOn": "2026-11-02",
+     "endOn": "2026-11-12"
+    },
+    "prescribedByContactId": null,
+    "note": "With food"
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f83",
+   "type": "medicationDose",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-03T02:20:00Z",
+   "createdBy": "usr_b2",
+   "updatedAt": "2026-11-03T02:20:00Z",
+   "updatedBy": "usr_b2",
+   "deletedAt": null,
+   "data": {
+    "medicationId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f82",
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "occurrenceAt": "2026-11-03T02:15:00Z",
+    "givenAt": "2026-11-03T02:20:00Z",
+    "skipped": false
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f84",
+   "type": "careRoutine",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-02T09:10:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-02T09:10:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "kind": "deworming",
+    "title": "Deworming tablet",
+    "schedule": {
+     "tz": "Asia/Kathmandu",
+     "kind": "everyNDays",
+     "everyN": 90,
+     "times": [],
+     "startOn": "2026-09-01",
+     "endOn": null
+    },
+    "active": true
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f85",
+   "type": "expense",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-02T09:20:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-02T09:20:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "spentOn": "2026-11-02",
+    "category": "vet",
+    "amountMinor": 250000,
+    "currency": "NPR",
+    "note": "Annual check-up",
+    "fileId": null
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f86",
+   "type": "emergencyCard",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 4,
+   "createdAt": "2026-11-02T09:30:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-05T06:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "visibleFields": [
+     "photo",
+     "name",
+     "breed",
+     "allergies",
+     "ownerDisplayName",
+     "ownerPhone"
+    ],
+    "ownerDisplayName": "Parikshit",
+    "ownerPhone": "+977-9800000000",
+    "notes": "Shy, do not chase",
+    "isLost": true,
+    "lostSince": "2026-11-05T05:30:00Z",
+    "lostMessage": "Lost near Jawalakhel, please call"
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f87",
+   "type": "contact",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 2,
+   "createdAt": "2026-11-02T09:40:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-04T09:40:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": "2026-11-04T09:40:00Z",
+   "data": {
+    "name": "City Vet Clinic",
+    "role": "clinic",
+    "phone": "+977-1-5550000",
+    "email": null,
+    "address": "Lalitpur",
+    "website": "https://example.org",
+    "note": ""
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fa0",
+   "type": "careLog",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-09T07:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-09T07:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "kind": "meal",
+    "occurredAt": "2026-11-09T06:45:00Z",
+    "foodName": "Kibble",
+    "quantity": 120,
+    "quantityUnit": "g"
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fa1",
+   "type": "careLog",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-09T07:00:00Z",
+   "createdBy": "usr_b2",
+   "updatedAt": "2026-11-09T07:00:00Z",
+   "updatedBy": "usr_b2",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "kind": "walk",
+    "occurredAt": "2026-11-09T12:00:00Z",
+    "durationMin": 30
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fa2",
+   "type": "careLog",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-09T07:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-09T07:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "kind": "grooming",
+    "occurredAt": "2026-11-09T13:00:00Z",
+    "groomingTasks": [
+     "bath",
+     "nailTrim"
+    ],
+    "note": "Oatmeal shampoo"
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fa3",
+   "type": "careLog",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-09T07:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-09T07:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "kind": "medication",
+    "occurredAt": "2026-11-09T02:20:00Z",
+    "medicationName": "Carprofen",
+    "medicationId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f82",
+    "route": "oral",
+    "doseText": "1 tablet"
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fa4",
+   "type": "mealPreset",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 2,
+   "createdAt": "2026-11-09T07:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-09T07:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "foodName": "Wet food",
+    "quantity": 1,
+    "quantityUnit": "pouch"
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fa5",
+   "type": "reminder",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-09T07:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-09T07:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "title": "Annual check-up",
+    "category": "vetVisit",
+    "audienceUserId": null,
+    "active": true,
+    "schedule": {
+     "tz": "Asia/Kathmandu",
+     "kind": "yearly",
+     "times": [
+      "09:00"
+     ],
+     "startOn": "2027-11-09",
+     "endOn": null,
+     "notBefore": "2026-11-09T07:00:00Z"
+    }
+   }
+  },
+  {
+   "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fa6",
+   "type": "reminder",
+   "householdId": "01930f6e-0000-7000-8000-000000000001",
+   "version": 1,
+   "createdAt": "2026-11-09T07:00:00Z",
+   "createdBy": "usr_a1",
+   "updatedAt": "2026-11-09T07:00:00Z",
+   "updatedBy": "usr_a1",
+   "deletedAt": null,
+   "data": {
+    "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+    "title": "Evening walk",
+    "category": "walk",
+    "audienceUserId": "usr_a1",
+    "active": true,
+    "schedule": {
+     "tz": "Asia/Kathmandu",
+     "kind": "daily",
+     "times": [
+      "07:00",
+      "18:00"
+     ],
+     "startOn": "2026-11-09",
+     "notBefore": "2026-11-09T07:00:00Z"
+    }
+   }
+  }
+ ],
+ "invalid": [
+  {
+   "why": "money as float",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f90",
+    "type": "expense",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-02T09:20:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-02T09:20:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "spentOn": "2026-11-02",
+     "category": "vet",
+     "amountMinor": 2500.5,
+     "currency": "NPR"
+    }
+   }
+  },
+  {
+   "why": "weekly schedule without daysOfWeek",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f91",
+    "type": "careRoutine",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-02T09:10:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-02T09:10:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+     "kind": "grooming",
+     "title": "Brush",
+     "schedule": {
+      "tz": "UTC",
+      "kind": "weekly",
+      "startOn": "2026-11-01"
+     },
+     "active": true
+    }
+   }
+  },
+  {
+   "why": "unknown field in data",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f92",
+    "type": "pet",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-02T09:10:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-02T09:10:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "name": "Rex",
+     "species": "dog",
+     "favouriteColour": "blue"
+    }
+   }
+  },
+  {
+   "why": "non-UTC instant",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f93",
+    "type": "measurement",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-02T09:10:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-02T09:10:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+     "kind": "weight",
+     "value": 12.4,
+     "measuredAt": "2026-11-02T15:10:00+05:45"
+    }
+   }
+  },
+  {
+   "why": "meal log carrying a walk field",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fb0",
+    "type": "careLog",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-09T07:00:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-09T07:00:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+     "kind": "meal",
+     "occurredAt": "2026-11-09T06:45:00Z",
+     "foodName": "Kibble",
+     "durationMin": 10
+    }
+   }
+  },
+  {
+   "why": "walk log without duration",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fb1",
+    "type": "careLog",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-09T07:00:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-09T07:00:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+     "kind": "walk",
+     "occurredAt": "2026-11-09T12:00:00Z"
+    }
+   }
+  },
+  {
+   "why": "meal quantity without unit",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fb2",
+    "type": "careLog",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-09T07:00:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-09T07:00:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+     "kind": "meal",
+     "occurredAt": "2026-11-09T06:45:00Z",
+     "foodName": "Kibble",
+     "quantity": 120
+    }
+   }
+  },
+  {
+   "why": "metric unit not in the kitchen-unit list",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fb3",
+    "type": "mealPreset",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-09T07:00:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-09T07:00:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+     "foodName": "Kibble",
+     "quantity": 120,
+     "quantityUnit": "ml"
+    }
+   }
+  },
+  {
+   "why": "unknown reminder category",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fb4",
+    "type": "reminder",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-09T07:00:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-09T07:00:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "title": "Swim",
+     "category": "swim",
+     "active": true,
+     "schedule": {
+      "tz": "UTC",
+      "kind": "daily",
+      "startOn": "2026-11-09"
+     }
+    }
+   }
+  },
+  {
+   "why": "grooming log with no tasks",
+   "record": {
+    "id": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7fb5",
+    "type": "careLog",
+    "householdId": "01930f6e-0000-7000-8000-000000000001",
+    "version": 1,
+    "createdAt": "2026-11-09T07:00:00Z",
+    "createdBy": "usr_a1",
+    "updatedAt": "2026-11-09T07:00:00Z",
+    "updatedBy": "usr_a1",
+    "deletedAt": null,
+    "data": {
+     "petId": "01930f6e-7c2a-7b3e-8a11-2f4c5d6e7f80",
+     "kind": "grooming",
+     "occurredAt": "2026-11-09T13:00:00Z",
+     "groomingTasks": []
+    }
+   }
+  }
+ ]
 }

@@ -55,8 +55,3 @@ export function nextBatch(db: LocalDb, size: number): Promise<OutboxEntry[]> {
 export function pendingCount(db: LocalDb): Promise<number> {
   return db.outbox.count();
 }
-
-/** True when any outbox entry still exists for the record. */
-export async function hasPending(db: LocalDb, type: RecordType, id: string): Promise<boolean> {
-  return (await db.outbox.where('[type+id]').equals([type, id]).count()) > 0;
-}

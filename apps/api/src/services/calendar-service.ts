@@ -59,7 +59,7 @@ export function createCalendarService(deps: CalendarServiceDeps) {
         }
       }
       const byId = new Map(records.map((r) => [r.id, r]));
-      for (const o of dueOccurrences(records, window, prefs.timeZone)) {
+      for (const o of dueOccurrences(records, window, prefs.timeZone, userId)) {
         const source = byId.get(o.sourceId);
         if (!source || source.data.active === false) continue;
         const name = String(

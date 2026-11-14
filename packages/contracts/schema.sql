@@ -1,4 +1,4 @@
--- PetCare Postgres schema (CON-petcare-002, normative). Target: PostgreSQL 17, database "petcare".
+-- PetCare Postgres schema (CON-petcare-003, normative; supersedes CON-petcare-002, expand-only delta). Target: PostgreSQL 17, database "petcare".
 -- Implementation expresses this in Drizzle (apps/api/src/db/schema/*.ts); the generated migration must produce
 -- an equivalent schema (checked by the schema-diff test, SPEC §5). Better Auth's own tables (user, session,
 -- account, verification) are created by its Drizzle adapter schema and are NOT redefined here; "user".id is text.
@@ -153,7 +153,8 @@ CREATE TABLE reminders (
   id uuid PRIMARY KEY, household_id uuid NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   version integer NOT NULL CHECK (version >= 1), created_at timestamptz NOT NULL, created_by text NOT NULL,
   updated_at timestamptz NOT NULL, updated_by text NOT NULL, deleted_at timestamptz,
-  pet_id uuid, title text NOT NULL, schedule jsonb NOT NULL, active boolean NOT NULL DEFAULT true, note text
+  pet_id uuid, title text NOT NULL, schedule jsonb NOT NULL, active boolean NOT NULL DEFAULT true, note text,
+  category text, audience_user_id text                      -- CON-petcare-003: nullable, no default (expand-only)
 );
 CREATE INDEX reminders_household_idx ON reminders (household_id);
 
@@ -198,6 +199,26 @@ CREATE TABLE contacts (
   name text NOT NULL, role text NOT NULL, phone text, email text, address text, website text, note text
 );
 CREATE INDEX contacts_household_idx ON contacts (household_id);
+
+-- CON-petcare-003 (Pebble): everyday care logs (appendOnly) and meal presets (mergeable)
+CREATE TABLE care_logs (
+  id uuid PRIMARY KEY, household_id uuid NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  version integer NOT NULL CHECK (version >= 1), created_at timestamptz NOT NULL, created_by text NOT NULL,
+  updated_at timestamptz NOT NULL, updated_by text NOT NULL, deleted_at timestamptz,
+  pet_id uuid NOT NULL, kind text NOT NULL, occurred_at timestamptz NOT NULL, note text,
+  food_name text, quantity numeric(12,4) CHECK (quantity > 0), quantity_unit text,
+  duration_min integer CHECK (duration_min BETWEEN 1 AND 1440), grooming_tasks text[] NOT NULL DEFAULT '{}',
+  medication_name text, medication_id uuid, route text, dose_text text
+);
+CREATE INDEX care_logs_pet_idx ON care_logs (pet_id, occurred_at);
+
+CREATE TABLE meal_presets (
+  id uuid PRIMARY KEY, household_id uuid NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  version integer NOT NULL CHECK (version >= 1), created_at timestamptz NOT NULL, created_by text NOT NULL,
+  updated_at timestamptz NOT NULL, updated_by text NOT NULL, deleted_at timestamptz,
+  pet_id uuid NOT NULL, food_name text NOT NULL, quantity numeric(12,4) NOT NULL CHECK (quantity > 0), quantity_unit text NOT NULL
+);
+CREATE INDEX meal_presets_pet_idx ON meal_presets (pet_id);
 
 CREATE TABLE emergency_cards (
   id uuid PRIMARY KEY, household_id uuid NOT NULL REFERENCES households(id) ON DELETE CASCADE,

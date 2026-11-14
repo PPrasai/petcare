@@ -31,6 +31,11 @@ const PATHS = {
     '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.3 3.5 8.5s-1 6-3.5 8.5C9.5 18 8.5 15.2 8.5 12s1-6 3.5-8.5z"/>',
   print:
     '<path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="2.5"/><path d="M7 14h10v6H7z"/>',
+  meal: '<path d="M4 12h16a8 8 0 01-16 0z"/><path d="M9 8c0-1.5 1.5-1.5 1.5-3M14 8c0-1.5 1.5-1.5 1.5-3"/>',
+  pill: '<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 9.5l5 5"/>',
+  groom:
+    '<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 002.5 2.5"/>',
+  walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="M9 21l2-6-2.5-2.5L10 8l4 1.5 2 3.5M11 15l3 2 1 4M10 8l-3 3"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;

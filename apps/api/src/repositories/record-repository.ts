@@ -21,7 +21,11 @@ export function toEnvelope(type: RecordType, row: RecordRow): RecordEnvelope {
   const data: Record<string, unknown> = {};
   for (const [key, column] of Object.entries(columnsOf(type).data)) {
     const value = row[key];
-    if (value !== null && value !== undefined) data[key] = fromColumnValue(column, value);
+    if (value === null || value === undefined) continue;
+    // care_logs.grooming_tasks is NOT NULL DEFAULT '{}' (CON-003): empty means "not a grooming log".
+    if (type === 'careLog' && key === 'groomingTasks' && Array.isArray(value) && value.length === 0)
+      continue;
+    data[key] = fromColumnValue(column, value);
   }
   return {
     id: row.id,
