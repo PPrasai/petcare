@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, addReminder, pushRoutine, signUp, waitSynced } from './support/app';
+import { addPet, addReminder, createInvite, pushRoutine, signUp, waitSynced } from './support/app';
 
-// P4: CAP-07 (create, edit, delete) and CAP-10 on the Care tab, with shapes that exist since
-// increment 1 (no category, notBefore, audienceUserId or yearly: R-2).
+// P4/P6 (QA-30): CAP-07 (create, edit, delete; type, yearly, second time, audience) and CAP-10 on
+// the Care tab.
+test.use({ actionTimeout: 5_000 });
+
 type Change = { type: string; deletedAt: string | null; data: Record<string, unknown> };
 const live = async (page: Page, type: string): Promise<Change[]> => {
   const pull = await (await page.request.get('/api/sync/pull')).json();
@@ -78,7 +80,7 @@ test('a reminder is created with each repeat, edited, switched off and deleted',
   await sheet(page, 'Edit reminder').getByRole('button', { name: 'Delete reminder' }).click();
   await expect(rowOf(page, 'Vet call')).toHaveCount(0);
 
-  // Only fields that existed in increment 1 are written.
+  // The type chip wrote a category, notBefore was set, and "Everyone" left the audience empty.
   await waitSynced(page);
   const reminders = await live(page, 'reminder');
   expect(reminders.map((r) => r.data.title).sort()).toEqual([
@@ -87,7 +89,15 @@ test('a reminder is created with each repeat, edited, switched off and deleted',
     'Flea treatment',
   ]);
   for (const r of reminders) {
-    expect(Object.keys(r.data).sort()).toEqual(['active', 'petId', 'schedule', 'title']);
+    expect(Object.keys(r.data).sort()).toEqual([
+      'active',
+      'category',
+      'petId',
+      'schedule',
+      'title',
+    ]);
+    expect(r.data.category).toBe('walk');
+    expect(typeof (r.data.schedule as { notBefore?: unknown }).notBefore).toBe('string');
   }
   const walk = reminders.find((r) => r.data.title === 'Evening walk');
   expect((walk?.data.schedule as { times: string[] }).times).toEqual(['18:00']);
@@ -97,6 +107,7 @@ test('the sheet asks for a name and for a weekday', async ({ page }) => {
   await careTab(page, 'rem-invalid');
   await page.getByRole('button', { name: /^Add a reminder for/ }).click();
   const form = sheet(page, 'New reminder');
+  await form.getByLabel('Reminder name').fill('');
   await form.getByRole('button', { name: 'Save reminder' }).click();
   await expect(form.getByText('Name the reminder')).toBeVisible();
   await expect(form.getByLabel('Reminder name')).toBeFocused();
@@ -150,4 +161,130 @@ test('a routine from an older version can be edited and paused, and a meal stays
   await row.click();
   await expect(page.getByRole('heading', { name: 'Up next' })).toBeVisible();
   await expect(page.locator('.task').filter({ hasText: 'Breakfast' })).toHaveCount(0);
+});
+
+test('the type chips set the category, a name and a time; the sheet offers Yearly', async ({
+  page,
+}) => {
+  await careTab(page, 'rem-types');
+  await page.getByRole('button', { name: /^Add a reminder for/ }).click();
+  const form = sheet(page, 'New reminder');
+  const types = form.getByRole('group', { name: 'What to remind about' });
+  await expect(types.getByRole('button')).toHaveText([
+    'Walk',
+    'Medication',
+    'Grooming',
+    'Vet visit',
+    'Weigh-in',
+    'Other',
+  ]);
+  await expect(types.getByRole('button', { name: 'Walk' })).toHaveAttribute('aria-pressed', 'true');
+  await types.getByRole('button', { name: 'Medication' }).click();
+  await expect(form.getByLabel('Reminder name')).toHaveValue('Medication');
+  await expect(form.getByLabel('Time', { exact: true })).toHaveValue('08:00');
+  await types.getByRole('button', { name: 'Other' }).click();
+  await expect(form.getByLabel('Reminder name')).toHaveValue('');
+  await form.getByRole('button', { name: 'Close' }).click();
+
+  // A yearly vet visit starting on 29 February.
+  await addReminder(page, {
+    title: 'Check-up',
+    type: 'Vet visit',
+    repeat: 'Yearly',
+    date: '2028-02-29',
+    time: '09:30',
+  });
+  await expect(rowOf(page, 'Check-up')).toContainText('Every year from');
+  await expect(rowOf(page, 'Check-up')).toContainText('at 09:30');
+  await waitSynced(page);
+  const [yearly] = await live(page, 'reminder');
+  expect(yearly?.data).toMatchObject({ title: 'Check-up', category: 'vetVisit' });
+  expect(yearly?.data.schedule).toMatchObject({
+    kind: 'yearly',
+    startOn: '2028-02-29',
+    times: ['09:30'],
+  });
+  expect(typeof (yearly?.data.schedule as { notBefore?: unknown }).notBefore).toBe('string');
+
+  // A rename keeps notBefore and the category; the type chips are not on the edit sheet.
+  const before = (yearly?.data.schedule as { notBefore: string }).notBefore;
+  await page.getByRole('button', { name: 'Edit reminder: Check-up' }).click();
+  const edit = sheet(page, 'Edit reminder');
+  await expect(edit.getByRole('group', { name: 'What to remind about' })).toHaveCount(0);
+  await edit.getByLabel('Reminder name').fill('Annual check-up');
+  await edit.getByRole('button', { name: 'Save changes' }).click();
+  await expect(rowOf(page, 'Annual check-up')).toBeVisible();
+  await waitSynced(page);
+  const [renamed] = await live(page, 'reminder');
+  expect((renamed?.data.schedule as { notBefore: string }).notBefore).toBe(before);
+  expect(renamed?.data.category).toBe('vetVisit');
+
+  // Moving it renews notBefore.
+  await page.getByRole('button', { name: 'Edit reminder: Annual check-up' }).click();
+  await sheet(page, 'Edit reminder').getByLabel('Time', { exact: true }).fill('10:15');
+  await sheet(page, 'Edit reminder').getByRole('button', { name: 'Save changes' }).click();
+  await expect(rowOf(page, 'Annual check-up')).toContainText('at 10:15');
+  await waitSynced(page);
+  const [moved] = await live(page, 'reminder');
+  expect((moved?.data.schedule as { notBefore: string }).notBefore > before).toBe(true);
+});
+
+test('a reminder for just me is marked, and another member sees whose it is and gets no task', async ({
+  page,
+  browser,
+}) => {
+  await careTab(page, 'rem-aud');
+  // Both remind at 00:01 every day, so each is due today whenever the test runs.
+  await addReminder(page, { title: 'Shared walk', repeat: 'Daily', time: '00:01' });
+  await addReminder(page, {
+    title: 'Private pill',
+    repeat: 'Daily',
+    time: '00:01',
+    who: 'Just me',
+  });
+  await expect(rowOf(page, 'Private pill')).toContainText('Only you');
+  await expect(rowOf(page, 'Shared walk')).not.toContainText('Only');
+  await waitSynced(page);
+  const mine = (await live(page, 'reminder')).find((r) => r.data.title === 'Private pill');
+  expect(typeof mine?.data.audienceUserId).toBe('string');
+
+  // The audience can be changed back to everyone and to me again.
+  await page.getByRole('button', { name: 'Edit reminder: Private pill' }).click();
+  await expect(sheet(page, 'Edit reminder').getByLabel('Remind')).toHaveValue('me');
+  await sheet(page, 'Edit reminder').getByLabel('Remind').selectOption('everyone');
+  await sheet(page, 'Edit reminder').getByRole('button', { name: 'Save changes' }).click();
+  await expect(rowOf(page, 'Private pill')).not.toContainText('Only');
+  await page.getByRole('button', { name: 'Edit reminder: Private pill' }).click();
+  await sheet(page, 'Edit reminder').getByLabel('Remind').selectOption('me');
+  await sheet(page, 'Edit reminder').getByRole('button', { name: 'Save changes' }).click();
+  await expect(rowOf(page, 'Private pill')).toContainText('Only you');
+  await waitSynced(page);
+
+  // A caretaker joins the household.
+  await page.getByRole('link', { name: 'Household', exact: true }).click();
+  await createInvite(page);
+  const code = (await page.getByTestId('invite-code').textContent()) ?? '';
+  const ctx = await browser.newContext();
+  const guest = await ctx.newPage();
+  await signUp(guest, 'rem-guest');
+  await guest.goto('/join');
+  await guest.getByLabel('Invite code').fill(code.toLowerCase());
+  await guest.getByRole('button', { name: 'Check code' }).click();
+  await guest.getByRole('button', { name: 'Join household' }).click();
+  await expect(guest.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await guest.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await guest.getByTestId('pet-row').filter({ hasText: 'Momo' }).click();
+
+  // The guest has no task from the private reminder, but does from the shared one.
+  await expect(guest.locator('.task').filter({ hasText: 'Shared walk' }).first()).toBeVisible();
+  await expect(guest.locator('.task').filter({ hasText: 'Private pill' })).toHaveCount(0);
+  // On the Care tab both are listed, the private one marked with the owner's name.
+  await guest.getByRole('tab', { name: 'Care' }).click();
+  await expect(rowOf(guest, 'Private pill')).toContainText('Only for rem-aud Person');
+  await expect(rowOf(guest, 'Shared walk')).not.toContainText('Only');
+  // The owner has both tasks.
+  await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+  await page.getByTestId('pet-row').filter({ hasText: 'Momo' }).click();
+  await expect(page.locator('.task').filter({ hasText: 'Private pill' }).first()).toBeVisible();
+  await ctx.close();
 });

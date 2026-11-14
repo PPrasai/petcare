@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { signUp, waitSynced } from './support/app';
 
 // QA-31 / CAP-25: the add-pet wizard. A name alone saves a pet in three interactions; the full path
-// writes only the reminders that were ticked, and only in shapes that exist before contract v2.
+// writes only the reminders that were ticked, with their category (P6).
 
 type Change = { type: string; data: Record<string, unknown> };
 const pulled = async (page: Page, type: string): Promise<Change[]> => {
@@ -111,8 +111,12 @@ test('the suggestions start unticked and only the ticked ones become reminders',
   await page.getByLabel('Age', { exact: true }).fill('3');
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  // A cat is offered flea prevention and brushing; the yearly check-up waits for contract v2.
-  await expect(page.getByRole('switch')).toHaveCount(2);
+  // A cat is offered flea prevention, brushing and the yearly check-up (P6).
+  await expect(page.getByRole('switch')).toHaveCount(3);
+  await expect(page.getByRole('switch', { name: 'Annual check-up' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
   await expect(page.getByRole('switch', { name: 'Flea and tick prevention' })).toHaveAttribute(
     'aria-checked',
     'false',
@@ -121,7 +125,6 @@ test('the suggestions start unticked and only the ticked ones become reminders',
     'aria-checked',
     'false',
   );
-  await expect(page.getByText('Annual check-up')).toHaveCount(0);
 
   await page
     .locator('.sugrow')
@@ -148,15 +151,33 @@ test('the suggestions start unticked and only the ticked ones become reminders',
     times: ['08:30'],
     daysOfWeek: [6],
   });
-  // Nothing that only contract 003 allows (R-2).
-  for (const key of ['category', 'audienceUserId', 'notBefore']) {
-    expect(brush?.data).not.toHaveProperty(key);
-  }
-  expect(JSON.stringify(brush?.data.schedule)).not.toContain('yearly');
+  // CON-003 fields: a category, and notBefore = now so it is not born overdue; no audience.
+  expect(brush?.data.category).toBe('grooming');
+  expect(brush?.data).not.toHaveProperty('audienceUserId');
+  expect(typeof (brush?.data.schedule as { notBefore?: unknown }).notBefore).toBe('string');
   const [pet] = await pulled(page, 'pet');
   expect(pet?.data).toMatchObject({ name: 'Biralo', species: 'cat', breed: 'Siamese' });
   expect(pet?.data.birthDateEstimated).toBe(true);
   expect(typeof pet?.data.birthDate).toBe('string');
+});
+
+test('the annual check-up is a yearly reminder that starts in twelve months', async ({ page }) => {
+  await signUp(page, 'wiz-yearly');
+  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Momo');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('switch', { name: 'Annual check-up' }).click();
+  await page.getByRole('button', { name: 'Save pet' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
+
+  await waitSynced(page);
+  const [checkup] = await pulledEventually(page, 'reminder', 1);
+  expect(checkup?.data).toMatchObject({ title: 'Annual check-up', category: 'vetVisit' });
+  const schedule = checkup?.data.schedule as { kind: string; startOn: string };
+  expect(schedule.kind).toBe('yearly');
+  const year = new Date().getFullYear();
+  expect(schedule.startOn.slice(0, 4)).toBe(String(year + 1));
 });
 
 test('Skip leaves out the details, and a photo chosen in the wizard becomes the pet photo', async ({

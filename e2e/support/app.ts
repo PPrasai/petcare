@@ -38,8 +38,12 @@ function uuid7(): string {
 
 export interface ReminderInput {
   title: string;
-  repeat?: 'Once' | 'Daily' | 'Weekly' | 'Monthly';
+  /** The type chip to press first; the sheet starts on Walk. Pressing one renames the reminder. */
+  type?: 'Walk' | 'Medication' | 'Grooming' | 'Vet visit' | 'Weigh-in' | 'Other';
+  repeat?: 'Once' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   time?: string;
+  /** Who is reminded; the sheet starts on Everyone. */
+  who?: 'Everyone' | 'Just me';
   time2?: string;
   /** For Once and Monthly; defaults to the sheet's own date (today). */
   date?: string;
@@ -53,6 +57,12 @@ export interface ReminderInput {
 export async function addReminder(page: Page, r: ReminderInput) {
   await page.getByRole('button', { name: /^Add a reminder for/ }).click();
   const sheet = page.getByRole('dialog', { name: 'New reminder' });
+  if (r.type) {
+    await sheet
+      .getByRole('group', { name: 'What to remind about' })
+      .getByRole('button', { name: r.type, exact: true })
+      .click();
+  }
   await sheet.getByLabel('Reminder name').fill(r.title);
   if (r.repeat) {
     await sheet
@@ -66,7 +76,11 @@ export async function addReminder(page: Page, r: ReminderInput) {
       .getByRole('button', { name: day, exact: true })
       .click();
   }
-  if (r.date) await sheet.getByLabel(r.repeat === 'Monthly' ? 'Starting' : 'Date').fill(r.date);
+  if (r.date) {
+    await sheet
+      .getByLabel(r.repeat === 'Monthly' || r.repeat === 'Yearly' ? 'Starting' : 'Date')
+      .fill(r.date);
+  }
   if (r.daysAgo) {
     const field = sheet.getByLabel('Date');
     const today = await field.inputValue();
@@ -74,6 +88,7 @@ export async function addReminder(page: Page, r: ReminderInput) {
     await field.fill(past.toISOString().slice(0, 10));
   }
   if (r.time) await sheet.getByLabel('Time', { exact: true }).fill(r.time);
+  if (r.who) await sheet.getByLabel('Remind').selectOption({ label: r.who });
   if (r.time2) await sheet.getByLabel('Second time (optional)').fill(r.time2);
   await sheet.getByRole('button', { name: 'Save reminder' }).click();
   await expect(sheet).toBeHidden();
