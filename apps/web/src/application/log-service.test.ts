@@ -5,6 +5,7 @@ import { HealthService } from './health-service';
 import { LogService } from './log-service';
 import { MeasurementService } from './measurement-service';
 import type { FileGateway } from './ports/file-gateway';
+import { TodayService } from './today-service';
 import { PhotoUnusable } from './ports/image-reducer';
 import type { ImageReducer } from './ports/image-reducer';
 import type { RecordStore, StoredRecord } from './ports/record-store';
@@ -44,9 +45,14 @@ function memoryStore() {
       rows.push(row);
       return Promise.resolve(row);
     },
-    createMany: () => Promise.reject(new Error('unused')),
+    createMany: (householdId, items) =>
+      Promise.all(items.map((i) => store.create(i.type, householdId, i.data))),
     update: () => Promise.reject(new Error('unused')),
-    remove: () => Promise.reject(new Error('unused')),
+    remove: (type, id) => {
+      const row = rows.find((r) => r.type === type && r.id === id);
+      if (row) row.deletedAt = NOW.toISOString();
+      return Promise.resolve();
+    },
   };
   return { rows, store };
 }
@@ -66,6 +72,8 @@ function setup(reducer: ImageReducer = shrink) {
     new DocumentService(store),
     files,
     reducer,
+    store,
+    new TodayService(store),
   );
   return { rows, service };
 }
@@ -141,6 +149,8 @@ describe('LogService', () => {
         new DocumentService(store),
         files,
         reducer,
+        store,
+        new TodayService(store),
       );
     await build(shrink).photo(HOUSEHOLD, PET, new File(['original-bytes'], 'a.png'));
     expect(kept[0]?.size).toBe(5);
@@ -153,7 +163,7 @@ describe('LogService', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('writes none of the shapes that only contract 003 allows', async () => {
+  it('writes none of the care-log shapes for the five original kinds', async () => {
     const { rows, service } = setup();
     await service.weight(HOUSEHOLD, PET, 5, prefs, NOW);
     await service.note(HOUSEHOLD, PET, 'x', NOW);

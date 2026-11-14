@@ -16,10 +16,15 @@ import { PetAvatar } from '../shared/PetAvatar';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
+import { GroomingForm, MealForm, MedicationForm, WalkForm } from './CareForms';
 import { useLogSheetStore } from './log-sheet';
 import type { LogSheetRequest } from './log-sheet';
 
 const KINDS: { kind: LogKind; icon: IconName }[] = [
+  { kind: 'meal', icon: 'meal' },
+  { kind: 'walk', icon: 'walk' },
+  { kind: 'medication', icon: 'pill' },
+  { kind: 'grooming', icon: 'groom' },
   { kind: 'weight', icon: 'scale' },
   { kind: 'note', icon: 'note' },
   { kind: 'expense', icon: 'wallet' },
@@ -36,7 +41,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 interface FormProps {
   petId: string;
   petName: string;
-  done: (message: string) => void;
+  done: (message: string, undo?: () => void) => void;
 }
 
 function WeightForm({ petId, petName, done }: FormProps) {
@@ -327,8 +332,8 @@ function LogSheetBody({ request }: { request: LogSheetRequest }) {
 
   const pet = choices.find((p) => p.id === petId) ?? choices[0];
   const petName = pet ? String(pet.data.name) : '';
-  const finish = (message: string) => {
-    showToast(message);
+  const finish = (message: string, undo?: () => void) => {
+    showToast(message, undo ? { undo } : undefined);
     close();
   };
 
@@ -374,6 +379,18 @@ function LogSheetBody({ request }: { request: LogSheetRequest }) {
             </button>
           ))}
         </div>
+      ) : null}
+      {pet && kind === 'meal' ? (
+        <MealForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
+      ) : null}
+      {pet && kind === 'walk' ? (
+        <WalkForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
+      ) : null}
+      {pet && kind === 'medication' ? (
+        <MedicationForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
+      ) : null}
+      {pet && kind === 'grooming' ? (
+        <GroomingForm key={pet.id} petId={pet.id} petName={petName} done={finish} />
       ) : null}
       {pet && kind === 'weight' ? (
         <WeightForm key={pet.id} petId={pet.id} petName={petName} done={finish} />

@@ -8,6 +8,7 @@ import { Card, Disclosure, EmptyState, Line, SectionHeader, Switch } from '../..
 import { useHealthList } from '../health/hooks';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { MealPresets } from './MealPresets';
 import { ReminderSheet } from './ReminderSheet';
 import { useAudienceLabel } from './audience';
 import type { ReminderTarget } from './ReminderSheet';
@@ -123,11 +124,10 @@ export function CareLists({ pet }: { pet: StoredRecord }) {
       </Card>
       <Disclosure title={t('feeding.title')} hint={t('feeding.hint')}>
         <p className="muted">{t('feeding.body')}</p>
+        <MealPresets petId={pet.id} petName={petName} />
         {meals.length > 0 ? (
           <Rows rows={meals.sort(byTitle)} label={t('feeding.title')} onEdit={edit} />
-        ) : (
-          <EmptyState>{t('feeding.empty')}</EmptyState>
-        )}
+        ) : null}
       </Disclosure>
       <ReminderSheet target={target} onClose={() => setTarget(null)} />
     </div>
