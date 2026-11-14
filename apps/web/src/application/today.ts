@@ -95,6 +95,8 @@ export function buildToday(all: StoredRecord[], opts: TodayOptions): TodayView {
     envelopes,
     { from: overdueWindowStart(opts.now), to },
     opts.tz,
+    // CON-003 2.6: a Just-me reminder of someone else is not this person's to-do (PO-002 Q-08).
+    opts.userId,
   );
 
   const view: TodayView = { overdue: [], today: [], upcoming: [], snoozed: [], done: [] };

@@ -9,6 +9,7 @@ import { useHealthList } from '../health/hooks';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { ReminderSheet } from './ReminderSheet';
+import { useAudienceLabel } from './audience';
 import type { ReminderTarget } from './ReminderSheet';
 import { repeatText } from './repeat-text';
 
@@ -23,6 +24,7 @@ function Rows({ rows, label, onEdit }: { rows: Row[]; label: string; onEdit: (ro
   const prefs = useSessionStore((s) => s.preferences);
   const canUpdateReminder = useCan('update', 'reminder');
   const canUpdateRoutine = useCan('update', 'careRoutine');
+  const audienceLabel = useAudienceLabel(rows.map((r) => r.record.data.audienceUserId));
   return (
     <ul aria-label={label}>
       {rows.map((row) => {
@@ -31,12 +33,15 @@ function Rows({ rows, label, onEdit }: { rows: Row[]; label: string; onEdit: (ro
         const active = record.data.active === true;
         const schedule = scheduleSchema.safeParse(record.data.schedule);
         const when = schedule.success ? repeatText(schedule.data, prefs) : '';
+        const audience = type === 'reminder' ? record.data.audienceUserId : null;
         const canUpdate = type === 'reminder' ? canUpdateReminder : canUpdateRoutine;
         return (
           <Line
             key={record.id}
             title={title}
-            sub={active ? when : [when, t('routine.paused')].filter(Boolean).join(' · ')}
+            sub={[when, audienceLabel(audience), active ? '' : t('routine.paused')]
+              .filter(Boolean)
+              .join(' · ')}
             testId="reminder-row"
             actions={
               canUpdate ? (

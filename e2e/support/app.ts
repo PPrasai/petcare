@@ -1,6 +1,5 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { guardV2Writes } from './no-v2-writes';
 
 let counter = 0;
 export const uniqueEmail = (label: string) => `${label}-${Date.now()}-${counter++}@example.test`;
@@ -8,7 +7,6 @@ export const uniqueEmail = (label: string) => `${label}-${Date.now()}-${counter+
 /** Creates an account through the sign-up page and waits for the signed-in shell. */
 export async function signUp(page: Page, label = 'e2e') {
   const email = uniqueEmail(label);
-  await guardV2Writes(page); // R-2, until slice P6
   // Sign-up is limited to 5 a minute per client IP; each test pretends to be its own client.
   const octet = () => Math.floor(Math.random() * 250) + 1;
   await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': `198.51.${octet()}.${octet()}` });
@@ -40,8 +38,12 @@ function uuid7(): string {
 
 export interface ReminderInput {
   title: string;
-  repeat?: 'Once' | 'Daily' | 'Weekly' | 'Monthly';
+  /** The type chip to press first; the sheet starts on Walk. Pressing one renames the reminder. */
+  type?: 'Walk' | 'Medication' | 'Grooming' | 'Vet visit' | 'Weigh-in' | 'Other';
+  repeat?: 'Once' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   time?: string;
+  /** Who is reminded; the sheet starts on Everyone. */
+  who?: 'Everyone' | 'Just me';
   time2?: string;
   /** For Once and Monthly; defaults to the sheet's own date (today). */
   date?: string;
@@ -55,6 +57,12 @@ export interface ReminderInput {
 export async function addReminder(page: Page, r: ReminderInput) {
   await page.getByRole('button', { name: /^Add a reminder for/ }).click();
   const sheet = page.getByRole('dialog', { name: 'New reminder' });
+  if (r.type) {
+    await sheet
+      .getByRole('group', { name: 'What to remind about' })
+      .getByRole('button', { name: r.type, exact: true })
+      .click();
+  }
   await sheet.getByLabel('Reminder name').fill(r.title);
   if (r.repeat) {
     await sheet
@@ -68,7 +76,11 @@ export async function addReminder(page: Page, r: ReminderInput) {
       .getByRole('button', { name: day, exact: true })
       .click();
   }
-  if (r.date) await sheet.getByLabel(r.repeat === 'Monthly' ? 'Starting' : 'Date').fill(r.date);
+  if (r.date) {
+    await sheet
+      .getByLabel(r.repeat === 'Monthly' || r.repeat === 'Yearly' ? 'Starting' : 'Date')
+      .fill(r.date);
+  }
   if (r.daysAgo) {
     const field = sheet.getByLabel('Date');
     const today = await field.inputValue();
@@ -76,6 +88,7 @@ export async function addReminder(page: Page, r: ReminderInput) {
     await field.fill(past.toISOString().slice(0, 10));
   }
   if (r.time) await sheet.getByLabel('Time', { exact: true }).fill(r.time);
+  if (r.who) await sheet.getByLabel('Remind', { exact: true }).selectOption({ label: r.who });
   if (r.time2) await sheet.getByLabel('Second time (optional)').fill(r.time2);
   await sheet.getByRole('button', { name: 'Save reminder' }).click();
   await expect(sheet).toBeHidden();
@@ -94,7 +107,9 @@ export async function pushRoutine(
   const me = await (await page.request.get('/api/me')).json();
   const pull = await (await page.request.get('/api/sync/pull')).json();
   const pet = pull.changes.find((c: { type: string }) => c.type === 'pet');
-  const tz = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  // The account's own time zone (UTC unless changed), not the machine's: the app lists a task on
+  // the calendar day it has in that zone, so a routine in another zone can fall on yesterday.
+  const tz: string = me.preferences?.timeZone ?? 'UTC';
   const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
   const res = await page.request.post('/api/sync/push', {
     headers: { origin: 'http://localhost:4173' },

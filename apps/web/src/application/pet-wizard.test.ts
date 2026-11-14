@@ -6,6 +6,7 @@ import {
   approxBirthDate,
   emptyWizard,
   initialChoices,
+  nextYear,
   reminderFromSuggestion,
   wizardToPetForm,
 } from './pet-wizard';
@@ -13,16 +14,22 @@ import {
 const NOW = new Date('2026-11-09T10:00:00Z');
 
 describe('care suggestions', () => {
-  it('offer only existing shapes: no yearly check-up before slice 6', () => {
+  it('offer the yearly annual check-up last, for every species', () => {
     for (const species of ['dog', 'cat', 'other', 'bird']) {
       const list = careSuggestions(species, WIZARD_SLICE);
-      expect(list.length).toBeGreaterThan(0);
-      expect(list.some((s) => s.kind === 'yearly')).toBe(false);
+      expect(list.at(-1)).toMatchObject({ id: 'checkup', kind: 'yearly' });
     }
-    expect(careSuggestions('dog', 6).some((s) => s.kind === 'yearly')).toBe(true);
-    expect(careSuggestions('dog', WIZARD_SLICE).map((s) => s.id)).toEqual(['walk', 'flea']);
-    expect(careSuggestions('cat', WIZARD_SLICE).map((s) => s.id)).toEqual(['flea', 'brush']);
-    expect(careSuggestions('other', WIZARD_SLICE).map((s) => s.id)).toEqual(['weighIn']);
+    expect(careSuggestions('dog', WIZARD_SLICE).map((s) => s.id)).toEqual([
+      'walk',
+      'flea',
+      'checkup',
+    ]);
+    expect(careSuggestions('cat', WIZARD_SLICE).map((s) => s.id)).toEqual([
+      'flea',
+      'brush',
+      'checkup',
+    ]);
+    expect(careSuggestions('other', WIZARD_SLICE).map((s) => s.id)).toEqual(['weighIn', 'checkup']);
   });
 
   it('start unticked', () => {
@@ -50,6 +57,7 @@ describe('reminderFromSuggestion', () => {
       kind: 'daily',
       times: ['18:00'],
       startOn: '2026-11-09',
+      notBefore: NOW.toISOString(),
     });
     const late = reminderFromSuggestion(
       walk,
@@ -62,7 +70,7 @@ describe('reminderFromSuggestion', () => {
     expect((late.schedule as { startOn: string }).startOn).toBe('2026-11-10');
   });
 
-  it('writes a monthly day and a weekly day and never a category', () => {
+  it('writes a monthly day and a weekly day, a category and notBefore, and no audience', () => {
     // 09:00 has passed at 10:00, so the first monthly occurrence is tomorrow.
     const monthly = reminderFromSuggestion(flea, 'Flea', choice(flea), 'p', 'UTC', NOW);
     expect(monthly.schedule).toMatchObject({
@@ -77,9 +85,27 @@ describe('reminderFromSuggestion', () => {
       daysOfWeek: [7],
       startOn: '2026-11-15',
     });
+    expect(monthly.category).toBe('medication');
+    expect(weekly.category).toBe('grooming');
     for (const r of [monthly, weekly]) {
-      expect(Object.keys(r).sort()).toEqual(['active', 'petId', 'schedule', 'title']);
+      expect(Object.keys(r).sort()).toEqual(['active', 'category', 'petId', 'schedule', 'title']);
+      expect((r.schedule as { notBefore: string }).notBefore).toBe(NOW.toISOString());
     }
+  });
+
+  it('starts the yearly check-up in 12 months, clamping 29 February', () => {
+    const checkup = pick('dog', 'checkup');
+    const r = reminderFromSuggestion(checkup, 'Annual check-up', choice(checkup), 'p', 'UTC', NOW);
+    expect(r.category).toBe('vetVisit');
+    expect(r.schedule).toEqual({
+      tz: 'UTC',
+      kind: 'yearly',
+      times: ['09:00'],
+      startOn: '2027-11-09',
+      notBefore: NOW.toISOString(),
+    });
+    expect(nextYear('2028-02-29')).toBe('2029-02-28');
+    expect(nextYear('2026-12-31')).toBe('2027-12-31');
   });
 });
 

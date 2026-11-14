@@ -17,6 +17,14 @@ describe('demo seed', () => {
     }
   });
 
+  it('has one yearly reminder and one for just the demo user (P6)', () => {
+    const reminders = records.filter((r) => r.type === 'reminder');
+    expect(reminders.some((r) => (r.data.schedule as { kind: string }).kind === 'yearly')).toBe(
+      true,
+    );
+    expect(reminders.filter((r) => r.data.audienceUserId === DEMO_SEED.user.id)).toHaveLength(1);
+  });
+
   it('is valid against every entity schema, with unique ids', () => {
     for (const record of records) {
       const parsed = getEntity(record.type).schema.safeParse(record.data);

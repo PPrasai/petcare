@@ -44,6 +44,12 @@
       "commit": "8a06d3d",
       "precacheBytes": 1475039,
       "entryChunkGzipBytes": 153339
+    },
+    {
+      "slice": "P6",
+      "commit": "0eb47f4",
+      "precacheBytes": 1478853,
+      "entryChunkGzipBytes": 154021
     }
   ]
 }

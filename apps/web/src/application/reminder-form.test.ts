@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Schedule } from '@petcare/domain';
-import { emptyReminderForm, reminderSchedule, reminderToForm } from './reminder-form';
+import {
+  audienceOf,
+  emptyReminderForm,
+  notBeforeFor,
+  reminderSchedule,
+  reminderToForm,
+} from './reminder-form';
 
 const TODAY = '2026-11-09';
 const base: Schedule = { tz: 'UTC', kind: 'daily', startOn: '2026-10-01', times: ['08:00'] };
@@ -23,8 +29,8 @@ describe('reminderSchedule', () => {
 
   it('builds a daily reminder with a second time, and drops a repeated one', () => {
     const v = { ...emptyReminderForm(TODAY), time2: '20:00' };
-    expect(reminderSchedule(v, 'UTC', TODAY).times).toEqual(['09:00', '20:00']);
-    expect(reminderSchedule({ ...v, time2: '09:00' }, 'UTC', TODAY).times).toEqual(['09:00']);
+    expect(reminderSchedule(v, 'UTC', TODAY).times).toEqual(['18:00', '20:00']);
+    expect(reminderSchedule({ ...v, time2: '18:00' }, 'UTC', TODAY).times).toEqual(['18:00']);
   });
 
   it('builds a weekly reminder with sorted days and a monthly one with the day of the month', () => {
@@ -59,5 +65,39 @@ describe('reminderSchedule', () => {
       kind: 'everyNDays',
       everyN: 3,
     });
+  });
+});
+
+describe('notBefore (CON-003 2.6)', () => {
+  const NOW = new Date('2026-11-09T18:00:00Z');
+  const v = { ...emptyReminderForm(TODAY), time: '08:00' };
+
+  it('is now for a new schedule, except a one-off, which keeps its own date', () => {
+    expect(reminderSchedule(v, 'UTC', TODAY, undefined, NOW).notBefore).toBe(NOW.toISOString());
+    const once = { ...v, repeat: 'once' as const };
+    expect('notBefore' in reminderSchedule(once, 'UTC', TODAY, undefined, NOW)).toBe(false);
+  });
+
+  it('is kept when an edit leaves the schedule alone and renewed when it changes', () => {
+    const earlier = '2026-10-01T10:00:00.000Z';
+    const stored: Schedule = { ...base, startOn: TODAY, notBefore: earlier };
+    const form = reminderToForm('Meds', stored);
+    expect(reminderSchedule(form, 'UTC', TODAY, stored, NOW).notBefore).toBe(earlier);
+    const moved = reminderSchedule({ ...form, time: '09:30' }, 'UTC', TODAY, stored, NOW);
+    expect(moved.notBefore).toBe(NOW.toISOString());
+    // The end date is not a schedule change.
+    const ends = { ...stored, endOn: '2027-01-01' };
+    expect(notBeforeFor({ ...stored, endOn: '2027-06-01' }, ends, NOW)).toBe(earlier);
+  });
+
+  it('writes yearly with its date, and reads an audience as seen by one user', () => {
+    const yearly = { ...v, repeat: 'yearly' as const, date: '2027-03-01' };
+    expect(reminderSchedule(yearly, 'UTC', TODAY, undefined, NOW)).toMatchObject({
+      kind: 'yearly',
+      startOn: '2027-03-01',
+    });
+    expect(audienceOf(null, 'u1')).toBe('everyone');
+    expect(audienceOf('u1', 'u1')).toBe('me');
+    expect(audienceOf('u2', 'u1')).toBe('other');
   });
 });

@@ -594,6 +594,45 @@
       }
     },
     {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000407",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "title": "Annual check-up",
+        "category": "vetVisit",
+        "audienceUserId": null,
+        "schedule": {
+          "tz": "UTC",
+          "kind": "yearly",
+          "startOn": {
+            "$daysFromToday": 45
+          },
+          "times": ["09:00"]
+        },
+        "active": true
+      }
+    },
+    {
+      "type": "reminder",
+      "id": "0190e5a0-0000-7000-8000-000000000408",
+      "data": {
+        "petId": "0190e5a0-0000-7000-8000-000000000101",
+        "title": "Weigh Momo",
+        "category": "weighIn",
+        "audienceUserId": "demo-user",
+        "schedule": {
+          "tz": "UTC",
+          "kind": "weekly",
+          "startOn": {
+            "$daysFromToday": 3
+          },
+          "times": ["10:00"],
+          "daysOfWeek": [7]
+        },
+        "active": true
+      }
+    },
+    {
       "type": "reminderCompletion",
       "id": "0190e5a0-0000-7000-8000-000000001501",
       "data": {
