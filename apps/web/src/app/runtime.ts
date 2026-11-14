@@ -255,6 +255,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
   const health = new HealthService(records);
   const documents = new DocumentService(records);
   const expenses = new ExpenseService(records);
+  const today = new TodayService(records);
   const files: Services['files'] = {
     attach: (householdId, file) => current().files.attach(householdId, file),
     open: (fileId) => current().files.open(fileId),
@@ -273,12 +274,12 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     photos: new PetPhotoService(records, files, reducer),
     measurements,
     health,
-    today: new TodayService(records),
+    today,
     push: createPushRemote(),
     files,
     documents,
     expenses,
-    log: new LogService(measurements, health, expenses, documents, files, reducer),
+    log: new LogService(measurements, health, expenses, documents, files, reducer, records, today),
     contacts: new ContactService(records),
     households: new HouseholdService(householdApi, refreshHouseholds),
     emergency: new EmergencyService(records, createEmergencyRemote()),
