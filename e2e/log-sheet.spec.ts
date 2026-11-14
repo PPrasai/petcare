@@ -247,7 +247,7 @@ test('a medication log checks off the matching dose, and Undo deletes both recor
   await page.getByRole('tab', { name: 'Health' }).click();
   await page.getByRole('button', { name: 'Add a medication' }).click();
   await page.getByLabel('Medication', { exact: true }).fill('Carprofen');
-  await page.getByLabel('Times (24-hour, comma separated)').fill('09:00');
+  await page.getByLabel('Time', { exact: true }).fill('09:00');
   await page.getByRole('button', { name: 'Add medication' }).click();
   const doses = page.getByRole('list', { name: 'Doses of Carprofen' });
   await expect(doses.getByRole('listitem').first()).toBeVisible();

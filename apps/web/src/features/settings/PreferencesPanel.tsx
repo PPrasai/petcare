@@ -7,7 +7,6 @@ import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { useSessionStore } from '../../state/session';
 import { Banner, Button, Card, Disclosure, SectionHeader, SelectField, TextField } from '../../ui';
-import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 
 const opts = (pairs: [string, string][]) => pairs.map(([value, label]) => ({ value, label }));
@@ -15,7 +14,6 @@ const opts = (pairs: [string, string][]) => pairs.map(([value, label]) => ({ val
 /** Units, time zone, date format, currency, theme and reminder lead times (CAP-19). */
 export function PreferencesPanel() {
   const { account } = useServices();
-  const demo = useDemo();
   const saved = useSessionStore((s) => s.preferences);
   const [draft, setDraft] = useState<Preferences>(saved);
   const [note, setNote] = useState<{ tone: 'info' | 'warn'; text: string } | null>(null);
@@ -165,7 +163,7 @@ export function PreferencesPanel() {
             ))}
           </fieldset>
         </Disclosure>
-        <Button type="submit" disabled={busy || demo}>
+        <Button type="submit" disabled={busy}>
           {t('settings.prefs.save')}
         </Button>
         {note ? <Banner tone={note.tone}>{note.text}</Banner> : null}
