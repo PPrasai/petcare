@@ -20,6 +20,12 @@
       "commit": "722b2f2",
       "precacheBytes": 1440371,
       "entryChunkGzipBytes": 171519
+    },
+    {
+      "slice": "P1b-4",
+      "commit": "baf5d37",
+      "precacheBytes": 1450690,
+      "entryChunkGzipBytes": 151954
     }
   ]
 }
