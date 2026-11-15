@@ -54,7 +54,7 @@ function TodayRow({
   return (
     <li className={`task ${checked ? 'checked' : ''}`} data-testid="today-row">
       {pet ? <PetAvatar pet={pet.record} size={28} /> : null}
-      <span className="tx">
+      <span className="tt">
         <b>{item.title}</b>
         <span className={checked ? 'ok' : item.status}>
           {t('home.petWhen', { pet: name, when: whenText(item, item.status, now, tz) })}
@@ -234,7 +234,7 @@ export function HomeDashboard(p: Props) {
                   return (
                     <li key={item.key} className="task checked" data-testid="today-row">
                       {pet ? <PetAvatar pet={pet.record} size={28} /> : null}
-                      <span className="tx">
+                      <span className="tt">
                         <b>{item.title}</b>
                         <span className="ok">{pet?.name ?? item.petName ?? ''}</span>
                       </span>

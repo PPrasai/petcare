@@ -21,7 +21,7 @@ export async function signUp(page: Page, label = 'e2e') {
 
 export async function addPet(page: Page, name: string) {
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
