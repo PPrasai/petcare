@@ -6,7 +6,7 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   page,
 }) => {
   await signUp(page, 'pets');
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Momo');
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByLabel('Breed (optional)').fill('Terrier');
@@ -59,7 +59,7 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   await expect(page.getByText('This pet is archived')).toBeVisible();
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
   await page.locator('summary').filter({ hasText: 'Archived pets' }).click();
-  await page.getByRole('link', { name: 'Momo' }).click();
+  await page.getByRole('link', { name: 'Momo' }).first().click();
   await openDetails(page);
   await page.getByRole('button', { name: 'Restore pet' }).click();
   await expect(page.getByText('This pet is archived')).toHaveCount(0);

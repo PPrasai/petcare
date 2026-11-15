@@ -154,7 +154,7 @@ test('a contact can be added and linked to a vet visit', async ({ page }) => {
   await signUp(page, 'contacts');
   await addPet(page, 'Momo');
   await page.getByRole('link', { name: 'Settings' }).click();
-  await page.getByRole('link', { name: 'Contacts' }).click();
+  await page.getByRole('link', { name: 'Contacts' }).first().click();
   await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name').fill('Dr. Rai');
   await page.getByLabel('Phone').fill('+977 1 555 0100');
@@ -166,7 +166,7 @@ test('a contact can be added and linked to a vet visit', async ({ page }) => {
   );
 
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-  await page.getByRole('link', { name: 'Momo' }).click();
+  await page.getByRole('link', { name: 'Momo' }).first().click();
   await page.getByRole('tab', { name: 'Health' }).click();
   await openDisclosure(page, 'Vet visits');
   await page.getByRole('button', { name: 'Add a visit' }).click();

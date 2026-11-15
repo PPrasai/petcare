@@ -68,6 +68,12 @@ test('reminders and a legacy routine show on the Care tab and can be done, skipp
   expect(snooze?.data.sourceType).toBe('reminder');
 });
 
+// The pet list is the Home list on a phone and the sidebar on a desktop.
+const petLink = (page: Page, name: string) =>
+  page
+    .locator('[data-testid=pet-row]:visible, [data-testid=side-pet]:visible')
+    .filter({ hasText: name });
+
 test('Up next shows the next task, and the Care tab works offline', async ({ page, context }) => {
   await signUp(page, 'todayoff');
   await addPet(page, 'Momo');
@@ -78,7 +84,7 @@ test('Up next shows the next task, and the Care tab works offline', async ({ pag
 
   await context.setOffline(true);
   await page.reload();
-  await page.getByTestId('pet-row').filter({ hasText: 'Momo' }).click();
+  await petLink(page, 'Momo').first().click();
   await expect(page.getByRole('heading', { name: 'Up next' })).toBeVisible();
   await expect(task(page, 'Brush teeth')).toBeVisible();
   await act(page, 'Brush teeth', 'Done');
@@ -87,7 +93,7 @@ test('Up next shows the next task, and the Care tab works offline', async ({ pag
   await expect(task(page, 'Brush teeth')).toContainText('Done by you');
 
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-  await page.getByTestId('pet-row').filter({ hasText: 'Biralo' }).click();
+  await petLink(page, 'Biralo').first().click();
   await expect(page.locator('.task').filter({ hasText: 'Brush teeth' })).toHaveCount(0);
   await context.setOffline(false);
   await waitSynced(page);

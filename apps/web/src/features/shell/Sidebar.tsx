@@ -119,33 +119,37 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           </Link>
         ) : null}
       </div>
-      <ul className="sbpets" aria-label={t('nav.pets')}>
-        {ranked.map((r) => (
-          <li key={r.pet.id}>
-            <Link
-              to="/pets/$petId"
-              params={{ petId: r.pet.id }}
-              search={{ tab: 'overview' }}
-              className="spet"
-              data-testid="side-pet"
-              title={r.pet.name}
-              aria-current={current === r.pet.id ? 'page' : undefined}
-            >
-              <PetAvatar
-                pet={r.pet.record}
-                size={30}
-                dot={r.status === 'clear' ? 'ok' : r.status}
-              />
-              <span className="tx">
-                <b>{r.pet.name}</b>
-                <span className={r.top ? r.top.status : 'ok'}>
-                  {r.top ? r.top.title : t('home.label.allCaughtUp')}
+      {ranked.length === 0 ? (
+        <div className="sbpets" aria-hidden="true" />
+      ) : (
+        <ul className="sbpets" aria-label={t('nav.pets')}>
+          {ranked.map((r) => (
+            <li key={r.pet.id}>
+              <Link
+                to="/pets/$petId"
+                params={{ petId: r.pet.id }}
+                search={{ tab: 'overview' }}
+                className="spet"
+                data-testid="side-pet"
+                title={r.pet.name}
+                aria-current={current === r.pet.id ? 'page' : undefined}
+              >
+                <PetAvatar
+                  pet={r.pet.record}
+                  size={30}
+                  dot={r.status === 'clear' ? 'ok' : r.status}
+                />
+                <span className="tx">
+                  <b>{r.pet.name}</b>
+                  <span className={r.top ? r.top.status : 'ok'}>
+                    {r.top ? r.top.title : t('home.label.allCaughtUp')}
+                  </span>
                 </span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="sbfoot">
         {demo ? null : <SyncIndicator />}
         <div className="me">

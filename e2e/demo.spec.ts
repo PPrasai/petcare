@@ -109,7 +109,7 @@ test('the demo works end to end with no request to /api, and reset restores the 
   );
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByText(/Phone notifications need an account/)).toBeVisible();
-  await page.getByRole('link', { name: 'Contacts' }).click();
+  await page.getByRole('link', { name: 'Contacts' }).first().click();
   await expect(page.getByText('Dr. Rai')).toBeVisible();
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByRole('link', { name: 'Sync activity' }).click();
@@ -123,7 +123,7 @@ test('the demo works end to end with no request to /api, and reset restores the 
   // Changes stay on the device, survive a reload, and are gone after a reset.
   const fresh = await snapshot(page);
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Pixel');
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Pixel' })).toBeVisible();

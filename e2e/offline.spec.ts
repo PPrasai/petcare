@@ -51,7 +51,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   await page.getByLabel(/^Value/).fill('12.5');
   await page.getByRole('button', { name: 'Add measurement' }).click();
   await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
-  await page.getByRole('link', { name: 'Contacts' }).click();
+  await page.getByRole('link', { name: 'Contacts' }).first().click();
   await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Temp clinic');
   await page.getByRole('button', { name: 'Add contact' }).click();
@@ -147,7 +147,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   await expect(page.getByRole('list', { name: 'Expenses' }).getByRole('listitem')).toHaveCount(1);
 
   await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
-  await page.getByRole('link', { name: 'Contacts' }).click();
+  await page.getByRole('link', { name: 'Contacts' }).first().click();
   await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Dr Rao');
   await page.getByRole('button', { name: 'Add contact' }).click();

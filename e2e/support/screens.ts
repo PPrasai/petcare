@@ -989,11 +989,9 @@ export const SCREENS: Screen[] = [
     open: async (page) => {
       await page.context().setOffline(true);
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-      if (!pets.has(page)) {
-        await addPet(page, 'Momo');
-        pets.add(page);
-      }
-      await page.getByRole('link', { name: 'Home', exact: true }).click();
+      // A change made while offline is what makes the count non-zero, so this one is always made.
+      await addPet(page, 'Pending');
+      await page.getByRole('link', { name: 'Home', exact: true }).first().click();
       await expect(page.getByTestId('pending-count')).not.toHaveAttribute('data-count', '0');
     },
     desk: { layout: 'home' },
