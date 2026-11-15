@@ -80,6 +80,15 @@ for (const [name, tokens] of [
       expect(ratio(c('ink'), mix(c('accent'), c('surface'), 0.12))).toBeGreaterThanOrEqual(4.5);
       expect(ratio(c('accent'), mix(c('accent'), c('surface'), 0.12))).toBeGreaterThanOrEqual(4.5);
     });
+    it('muted on the sunk surface (hover rows, segmented track, viewer ground) is at least 4.5:1', () => {
+      expect(ratio(c('muted'), c('sunk'))).toBeGreaterThanOrEqual(4.5);
+    });
+    it('the overdue count badge (warn on a 12% warn tint) is at least 4.5:1', () => {
+      expect(ratio(c('warn'), mix(c('warn'), c('surface'), 0.12))).toBeGreaterThanOrEqual(4.5);
+    });
+    it('the sign-in side panel (muted on a 5% accent tint over bg) is at least 4.5:1', () => {
+      expect(ratio(c('muted'), mix(c('accent'), c('bg'), 0.05))).toBeGreaterThanOrEqual(4.5);
+    });
     it('ink on the alert tint is at least 4.5:1', () => {
       expect(ratio(c('ink'), mix(c('bad'), c('surface'), 0.12))).toBeGreaterThanOrEqual(4.5);
     });

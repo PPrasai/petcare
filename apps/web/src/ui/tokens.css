@@ -12,6 +12,9 @@
   --warn: #8a5a12;
   --bad: #b0352f;
   --r: 10px;
+  --sunk: #eae8e4;
+  --scrim: rgba(29, 34, 48, 0.36);
+  --sbw: 236px;
   --fd: 'Fraunces', 'Fraunces Fallback', Georgia, serif;
   --fb: 'Hanken Grotesk', 'Hanken Grotesk Fallback', system-ui, sans-serif;
 }
@@ -28,6 +31,8 @@
     --ok: #66c08c;
     --warn: #e3ae59;
     --bad: #f2877f;
+    --sunk: #171920;
+    --scrim: rgba(0, 0, 0, 0.55);
     color-scheme: dark;
   }
 }
@@ -43,5 +48,7 @@
   --ok: #66c08c;
   --warn: #e3ae59;
   --bad: #f2877f;
+  --sunk: #171920;
+  --scrim: rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
