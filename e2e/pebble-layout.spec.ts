@@ -85,7 +85,9 @@ forEachCell('layout', (cell, browser) =>
             const grid = document.querySelector('main .two[data-layout]');
             const box = main ? getComputedStyle(main) : null;
             const content = box
-              ? main!.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight)
+              ? (main as HTMLElement).clientWidth -
+                parseFloat(box.paddingLeft) -
+                parseFloat(box.paddingRight)
               : 0;
             const tracks = grid
               ? getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length

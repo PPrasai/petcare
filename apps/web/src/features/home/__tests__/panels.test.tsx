@@ -24,7 +24,7 @@ const pet = (id: string, name: string): HomePet => ({
   id,
   name,
   archived: false,
-  record: { id, data: { name, species: 'dog' } } as HomePet['record'],
+  record: { id, data: { name, species: 'dog' } } as unknown as HomePet['record'],
 });
 const pets = new Map([['p1', pet('p1', 'Momo')]]);
 
@@ -65,10 +65,10 @@ describe('WeekAhead', () => {
   it('lists what is due with the pet and the day, and counts the rest', async () => {
     await mount(<WeekAhead week={{ items: [item(1), item(2)], more: 3 }} pets={pets} tz="UTC" />);
     expect(screen.getByRole('heading', { level: 2, name: 'This week' })).toBeTruthy();
-    const rows = screen.getAllByTestId('week-row');
+    const rows = screen.getAllByTestId('week-row') as [HTMLElement, HTMLElement];
     expect(rows).toHaveLength(2);
-    expect(within(rows[0]!).getByText('Task 1')).toBeTruthy();
-    expect(within(rows[0]!).getByText(/^Momo · /)).toBeTruthy();
+    expect(within(rows[0]).getByText('Task 1')).toBeTruthy();
+    expect(within(rows[0]).getByText(/^Momo · /)).toBeTruthy();
     expect(screen.getByText('+3 more')).toBeTruthy();
   });
 

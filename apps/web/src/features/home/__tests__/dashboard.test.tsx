@@ -20,7 +20,7 @@ import type { HomePet } from '../use-home-data';
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 const record = (id: string, name: string) =>
-  ({ id, data: { name, species: 'dog' } }) as HomePet['record'];
+  ({ id, data: { name, species: 'dog' } }) as unknown as HomePet['record'];
 const pets: HomePet[] = [
   { id: 'p1', name: 'Momo', archived: false, record: record('p1', 'Momo') },
   { id: 'p2', name: 'Biralo', archived: false, record: record('p2', 'Biralo') },
@@ -125,15 +125,18 @@ describe('HomeDashboard', () => {
     const onCheck = vi.fn();
     await mount(<HomeDashboard {...props(onCheck, ['t1'])} />);
     const checks = await screen.findAllByTestId('today-check');
-    const walk = checks.find((c) => c.getAttribute('aria-label')?.includes('Evening walk'))!;
+    const named = (label: string) =>
+      checks.find((c) => c.getAttribute('aria-label')?.includes(label)) as HTMLElement;
+    const walk = named('Evening walk');
     expect(walk.getAttribute('aria-pressed')).toBe('true');
-    const flea = checks.find((c) => c.getAttribute('aria-label')?.includes('Flea treatment'))!;
+    const flea = named('Flea treatment');
     expect(flea.getAttribute('aria-pressed')).toBe('false');
     fireEvent.click(flea);
     expect(onCheck).toHaveBeenCalledTimes(1);
-    expect((onCheck.mock.calls[0]![0] as RankedItem).key).toBe('o1');
-    expect(onCheck.mock.calls[0]![1]).toBe('Momo');
-    expect(onCheck.mock.calls[0]![2]).toBe(false);
+    const [ticked, petName, already] = onCheck.mock.calls[0] as [RankedItem, string, boolean];
+    expect(ticked.key).toBe('o1');
+    expect(petName).toBe('Momo');
+    expect(already).toBe(false);
   });
 
   it('is one panel with the invitation on a first run', async () => {
