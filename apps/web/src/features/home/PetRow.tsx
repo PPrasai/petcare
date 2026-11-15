@@ -6,7 +6,7 @@ import { Icon } from '../../ui';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useCan } from '../shared/permissions';
 import { whenText } from '../shared/when';
-import type { HomePet } from './HomePage';
+import type { HomePet } from './use-home-data';
 
 /** One pet on Home: status dot, name, the most urgent task and how many more there are. */
 export function PetRow({

@@ -1,7 +1,9 @@
+import { instantToLocalDate } from '@petcare/domain';
 import type { ActivityEntry } from '../../application/activity';
 import type { MessageKey } from '../../i18n/en';
 import { t } from '../../i18n/t';
 import { amountText } from '../log/quantity';
+import { dateText, timeText } from './when';
 
 /** The line of text of one entry. */
 export function activityText(e: ActivityEntry): string {
@@ -34,4 +36,11 @@ export function activityText(e: ActivityEntry): string {
     case 'done':
       return t(e.skipped ? 'activity.skipped' : 'activity.done', { title: e.title });
   }
+}
+
+/** "Today, 6:00 pm" for today, else "Sat, 14 Nov, 6:00 pm". */
+export function activityWhen(iso: string, tz: string, now: Date): string {
+  return instantToLocalDate(Date.parse(iso), tz) === instantToLocalDate(now.getTime(), tz)
+    ? t('activity.today', { time: timeText(iso, tz) })
+    : `${dateText(iso, tz)}, ${timeText(iso, tz)}`;
 }

@@ -2,9 +2,7 @@ import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { t } from '../../i18n/t';
-import type { MessageKey } from '../../i18n/en';
 import { Icon } from '../../ui';
-import type { IconName } from '../../ui';
 import { LogSheet } from '../log/LogSheet';
 import { useLogSheet } from '../log/log-sheet';
 import { useCan } from '../shared/permissions';
@@ -12,59 +10,17 @@ import { useDemo } from '../shared/demo';
 import { useWideScreen } from '../shared/use-wide-screen';
 import { SyncIndicator } from '../sync/SyncIndicator';
 import { DemoBanner } from './DemoBanner';
+import { EMERGENCY, EXPENSES, HOME, MORE, isCurrent, openPetId } from './destinations';
+import type { Destination } from './destinations';
+import { Sidebar } from './Sidebar';
 import { ToastHost } from './ToastHost';
-
-interface Destination {
-  to: '/' | '/expenses' | '/emergency' | '/household' | '/settings' | '/more';
-  icon: IconName;
-  label: MessageKey;
-  /** Paths that belong to this destination besides its own. */
-  also: string[];
-}
-
-const HOME: Destination = { to: '/', icon: 'home', label: 'nav.home', also: ['/pets'] };
-const EXPENSES: Destination = { to: '/expenses', icon: 'wallet', label: 'nav.expenses', also: [] };
-const EMERGENCY: Destination = {
-  to: '/emergency',
-  icon: 'shield',
-  label: 'nav.emergency',
-  also: [],
-};
-const HOUSEHOLD: Destination = {
-  to: '/household',
-  icon: 'users',
-  label: 'nav.household',
-  also: [],
-};
-const SETTINGS: Destination = {
-  to: '/settings',
-  icon: 'sliders',
-  label: 'nav.settings',
-  also: ['/contacts', '/sync'],
-};
-const MORE: Destination = {
-  to: '/more',
-  icon: 'more',
-  label: 'nav.more',
-  also: ['/household', '/settings', '/contacts', '/sync'],
-};
-
-/** The pet whose page is open, so Log starts with that pet rather than the first one. */
-const openPetId = (pathname: string): string | undefined => {
-  const id = pathname.startsWith('/pets/') ? pathname.split('/')[2] : undefined;
-  return id && id !== 'new' ? id : undefined;
-};
-
-const isCurrent = (dest: Destination, pathname: string) =>
-  dest.to === '/'
-    ? pathname === '/' || dest.also.some((p) => pathname.startsWith(p))
-    : pathname === dest.to || dest.also.some((p) => pathname.startsWith(p));
+import { useSidebarState } from './use-sidebar-state';
 
 /**
  * The frame around every signed-in page. A phone gets a bottom bar with a centre + that opens the
- * Log sheet; from 860 px a top nav with a Log button. Only one of the two is ever in the page,
- * so there is exactly one Log control per viewport (QA-27). `children` replaces the routed page,
- * which is how the not-found page sits inside the shell.
+ * Log sheet; from 860 px a sidebar with the Log button (SPEC-petcare-004). Only one of the two is
+ * ever in the page, so there is exactly one Log control per viewport (QA-27). `children` replaces
+ * the routed page, which is how the not-found page sits inside the shell.
  */
 export function AppShell({ children }: { children?: ReactNode }): ReactNode {
   const demo = useDemo();
@@ -72,10 +28,29 @@ export function AppShell({ children }: { children?: ReactNode }): ReactNode {
   const { pathname } = useLocation();
   const logSheet = useLogSheet();
   const canLog = useCan('create', 'measurement');
+  const sidebar = useSidebarState();
 
-  const destinations = wide
-    ? [HOME, EXPENSES, EMERGENCY, HOUSEHOLD, SETTINGS]
-    : [HOME, EXPENSES, null, EMERGENCY, MORE];
+  if (wide) {
+    // One grid, locked to the window: the sidebar, then the banner above the content column.
+    return (
+      <div className="app" data-sidebar={sidebar.collapsed ? 'collapsed' : 'expanded'}>
+        <a href="#content" className="skip">
+          {t('app.skipToContent')}
+        </a>
+        <div className="shell">
+          <Sidebar collapsed={sidebar.collapsed} onToggle={sidebar.toggle} />
+          {demo ? <DemoBanner /> : null}
+          <main id="content" className="main">
+            {children ?? <Outlet />}
+          </main>
+        </div>
+        <LogSheet />
+        <ToastHost />
+      </div>
+    );
+  }
+
+  const destinations = [HOME, EXPENSES, null, EMERGENCY, MORE];
 
   const link = (dest: Destination) => (
     <Link
@@ -93,7 +68,7 @@ export function AppShell({ children }: { children?: ReactNode }): ReactNode {
     <button
       type="button"
       data-testid="log-open"
-      className={wide ? 'btn primary' : 'lnk log'}
+      className="lnk log"
       aria-label={t('log.open')}
       onClick={() => {
         const petId = openPetId(pathname);
@@ -101,7 +76,6 @@ export function AppShell({ children }: { children?: ReactNode }): ReactNode {
       }}
     >
       <Icon name="plus" />
-      {wide ? <span>{t('log.openShort')}</span> : null}
     </button>
   );
 
@@ -129,7 +103,6 @@ export function AppShell({ children }: { children?: ReactNode }): ReactNode {
               )}
             </div>
           </nav>
-          {wide && canLog ? <div className="foot">{logButton}</div> : null}
         </div>
         <main id="content" className="main">
           {children ?? <Outlet />}

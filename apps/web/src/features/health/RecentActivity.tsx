@@ -1,13 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { instantToLocalDate } from '@petcare/domain';
 import { useState } from 'react';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
 import { Card, EmptyState, Line, SectionHeader } from '../../ui';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
-import { activityText } from '../shared/activity-text';
-import { dateText, timeText } from '../shared/when';
+import { activityText, activityWhen } from '../shared/activity-text';
 
 const PAGE = 20;
 
@@ -33,16 +31,12 @@ export function RecentActivity({ petId }: { petId: string }) {
     retry: false,
   });
   const now = new Date();
-  const today = instantToLocalDate(now.getTime(), tz);
 
   const who = (id: string) =>
     id === me
       ? t('activity.you')
       : (members.data?.find((m) => m.userId === id)?.name ?? t('activity.someone'));
-  const when = (iso: string) =>
-    instantToLocalDate(Date.parse(iso), tz) === today
-      ? t('activity.today', { time: timeText(iso, tz) })
-      : `${dateText(iso, tz)}, ${timeText(iso, tz)}`;
+  const when = (iso: string) => activityWhen(iso, tz, now);
 
   const all = entries.data ?? [];
   return (
