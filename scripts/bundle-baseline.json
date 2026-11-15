@@ -62,6 +62,12 @@
       "commit": "747ca16",
       "precacheBytes": 1499625,
       "entryChunkGzipBytes": 157820
+    },
+    {
+      "slice": "audit-A",
+      "commit": "5434c74",
+      "precacheBytes": 1509076,
+      "entryChunkGzipBytes": 159316
     }
   ]
 }
