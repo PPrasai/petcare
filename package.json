@@ -19,7 +19,8 @@
     "e2e": "playwright test",
     "shots": "playwright test -c playwright.shots.config.ts",
     "perf": "node scripts/perf.mjs",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "fingerprint": "tsx e2e/support/fingerprint.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "~4.14",
