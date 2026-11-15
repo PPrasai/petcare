@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { formatMoney } from '@petcare/domain';
 import { InvalidInput } from '../../application/pet-service';
+import { FileStorageUnavailable } from '../../application/ports/file-gateway';
 import type { StoredRecord } from '../../application/ports/record-store';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
@@ -8,6 +9,7 @@ import { useSessionStore } from '../../state/session';
 import { Button, SelectField, Sheet, SheetHead, TextField } from '../../ui';
 import { FilePicker } from '../files/FilePicker';
 import { useHouseholdId } from '../shared/permissions';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
@@ -52,20 +54,34 @@ function ExpenseForm({ onClose, pets, today }: Omit<Props, 'open'>) {
   const set = (name: keyof typeof values) => (e: { target: { value: string } }) =>
     setValues({ ...values, [name]: e.target.value });
 
+  const failure = useSaveFailure();
   const submit = async () => {
+    failure.clear();
     try {
-      const fileId = file ? (await files.attach(householdId, file)).fileId : '';
+      // Some browser modes cannot keep a file: the expense is still saved, without its receipt.
+      let fileId = '';
+      let receiptSkipped = false;
+      if (file) {
+        try {
+          fileId = (await files.attach(householdId, file)).fileId;
+        } catch (e) {
+          if (!(e instanceof FileStorageUnavailable)) throw e;
+          receiptSkipped = true;
+        }
+      }
       const saved = await expenses.add(householdId, { ...values, fileId });
       const pet = pets.find((p) => p.id === values.petId);
-      showToast(
-        t('expenses.added', {
-          amount: formatMoney(Number(saved.data.amountMinor), String(saved.data.currency)),
-          name: pet ? String(pet.data.name) : t('expenses.noPet'),
-        }),
-      );
+      const added = t('expenses.added', {
+        amount: formatMoney(Number(saved.data.amountMinor), String(saved.data.currency)),
+        name: pet ? String(pet.data.name) : t('expenses.noPet'),
+      });
+      showToast(receiptSkipped ? `${added} ${t('expenses.receiptSkipped')}` : added);
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors({ [e.path]: t('form.invalid') });
     }
   };
@@ -128,6 +144,7 @@ function ExpenseForm({ onClose, pets, today }: Omit<Props, 'open'>) {
           onPick={setFile}
           onRefused={(message) => setErrors({ file: message })}
         />
+        {failure.view}
         <Button type="submit">{t('expenses.add')}</Button>
       </form>
     </>

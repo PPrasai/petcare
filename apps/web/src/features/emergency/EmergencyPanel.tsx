@@ -29,6 +29,7 @@ import { LinkQr } from '../shared/LinkQr';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useDemo } from '../shared/demo';
 import { useCan, useHouseholdId } from '../shared/permissions';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 
@@ -53,6 +54,7 @@ function CardSheet({
   const [phone, setPhone] = useState(text(card?.data.ownerPhone));
   const [notes, setNotes] = useState(text(card?.data.notes));
   const [error, setError] = useState('');
+  const failure = useSaveFailure();
 
   const toggle = (field: EmergencyField, on: boolean) =>
     setFields((current) => (on ? [...current, field] : current.filter((f) => f !== field)));
@@ -64,6 +66,7 @@ function CardSheet({
         aria-label={t('emergency.editTitle')}
         onSubmit={(e) => {
           e.preventDefault();
+          failure.clear();
           void emergency
             .save(householdId, petId, {
               visibleFields: fields,
@@ -76,7 +79,10 @@ function CardSheet({
               onClose();
             })
             .catch((err: unknown) => {
-              if (!(err instanceof InvalidInput)) throw err;
+              if (!(err instanceof InvalidInput)) {
+                failure.fail(err);
+                return;
+              }
               setError(t('form.invalid'));
             });
         }}
@@ -115,6 +121,7 @@ function CardSheet({
           onChange={(e) => setNotes(e.target.value)}
         />
         {error ? <Banner tone="warn">{error}</Banner> : null}
+        {failure.view}
         <Button type="submit">{t('emergency.save')}</Button>
       </form>
     </>

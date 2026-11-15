@@ -14,6 +14,24 @@ export const ALLOWED_FILE_TYPES = [
   'application/pdf',
 ] as const;
 
+/**
+ * The browser refused to keep the file on this device (WebKit private or ephemeral sessions do not
+ * let IndexedDB store a Blob). Nothing was stored; the rest of a save can go ahead without it.
+ */
+export class FileStorageUnavailable extends Error {
+  constructor() {
+    super('files cannot be stored in this browser mode');
+    this.name = 'FileStorageUnavailable';
+  }
+}
+
+/** True for the errors browsers raise when IndexedDB refuses a Blob. */
+export function isBlobStorageError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const text = `${error.name} ${error.message}`;
+  return /blob|DataCloneError/i.test(text);
+}
+
 /** The result of storing a file locally: the id records refer to until the upload happens. */
 export interface AttachedFile {
   fileId: string;

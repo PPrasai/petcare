@@ -5,6 +5,7 @@ import { formatDate } from '../../lib/format';
 import { useConnectivityStore } from '../../state/connectivity';
 import { useSessionStore } from '../../state/session';
 import { Banner, Card, Disclosure, EmptyState, Line, PageHeader, SectionHeader } from '../../ui';
+import { useDemo } from '../shared/demo';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { LastSyncedLine } from './LastSyncedLine';
@@ -84,13 +85,16 @@ export function SyncPage() {
   const refresh = () => client.invalidateQueries({ queryKey: ['syncConflicts'] });
   const open = (list.data ?? []).filter((c) => c.resolvedAt === null);
   const done = (list.data ?? []).filter((c) => c.resolvedAt !== null);
-  const lede = !online
-    ? t('sync.offline')
-    : pending === 0
-      ? t('sync.upToDate')
-      : pending === 1
-        ? t('sync.pendingOne')
-        : t('sync.pending', { count: pending });
+  const demo = useDemo();
+  const lede = demo
+    ? t('sync.demo.lede')
+    : !online
+      ? t('sync.offline')
+      : pending === 0
+        ? t('sync.upToDate')
+        : pending === 1
+          ? t('sync.pendingOne')
+          : t('sync.pending', { count: pending });
 
   return (
     <>

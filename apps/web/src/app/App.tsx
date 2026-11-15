@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { useEffect } from 'react';
+import { CrashBoundary } from '../features/shell/CrashScreen';
 import { ServicesProvider } from '../features/shared/services-context';
 import { useUiPreferences } from '../state/ui-preferences';
 import type { Runtime } from './runtime';
@@ -24,10 +25,12 @@ export function App({ runtime }: { runtime: Runtime }) {
   }, [theme]);
 
   return (
-    <ServicesProvider value={runtime.services}>
-      <QueryClientProvider client={runtime.queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ServicesProvider>
+    <CrashBoundary>
+      <ServicesProvider value={runtime.services}>
+        <QueryClientProvider client={runtime.queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </ServicesProvider>
+    </CrashBoundary>
   );
 }

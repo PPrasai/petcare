@@ -10,6 +10,7 @@ import type { HouseholdService } from './household-service';
 import type { TodayService } from './today-service';
 import type { LogService } from './log-service';
 import type { MeasurementService } from './measurement-service';
+import type { RemovalService } from './removal-service';
 import type { PetService } from './pet-service';
 import type { PetPhotoService } from './photo-service';
 import type { PushControl } from './ports/push-control';
@@ -52,4 +53,5 @@ export interface Services {
   emergency: EmergencyService;
   account: AccountService;
   log: LogService;
+  removal: RemovalService;
 }

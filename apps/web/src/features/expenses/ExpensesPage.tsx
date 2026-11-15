@@ -20,6 +20,7 @@ import { FileViewButton } from '../files/FileViewButton';
 import { useToday } from '../health/hooks';
 import { LoadError } from '../shared/LoadError';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
 import { useServices } from '../shared/services-context';
 import { AddExpenseSheet } from './AddExpenseSheet';
 import { SpendSummary } from './SpendSummary';
@@ -31,6 +32,7 @@ export function ExpensesPage() {
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'expense');
   const canDelete = useCanDelete('expense');
+  const removeRecord = useRemoval();
   const today = useToday();
   const [period, setPeriod] = useState<Period>('month');
   const [adding, setAdding] = useState(false);
@@ -130,7 +132,7 @@ export function ExpensesPage() {
                               type="button"
                               className="xbtn"
                               aria-label={t('form.deleteLabel', { name: title })}
-                              onClick={() => void expenses.remove(x.id)}
+                              onClick={() => void removeRecord(x, title)}
                             >
                               <Icon name="x" />
                             </button>

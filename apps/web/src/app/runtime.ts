@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { v7 as uuidv7 } from 'uuid';
 import { DEFAULT_PREFERENCES, preferencesSchema } from '@petcare/domain';
 import type { Preferences } from '@petcare/domain';
 import { ConflictService } from '../application/conflict-service';
@@ -13,6 +14,7 @@ import { ExpenseService } from '../application/expense-service';
 import { HealthService } from '../application/health-service';
 import { createFilesRemote } from '../data/remote/files-remote';
 import { createPushRemote } from '../data/remote/push-remote';
+import { RemovalService } from '../application/removal-service';
 import { TodayService } from '../application/today-service';
 import { LogService } from '../application/log-service';
 import { MeasurementService } from '../application/measurement-service';
@@ -46,10 +48,16 @@ import { useConnectivityStore } from '../state/connectivity';
 import { useUiPreferences } from '../state/ui-preferences';
 import { useSessionStore } from '../state/session';
 import { createAccountRemote } from '../data/remote/account-remote';
-import type { AccountApi } from '../application/ports/account-api';
+import type { PreferenceDevice } from '../application/ports/preference-device';
+import { adoptDeviceTimeZone } from '../application/time-zone';
 
 /** Where the demo keeps its preferences: in the demo database, not on the server. */
 const DEMO_PREFERENCES_KEY = 'demoPreferences';
+/** A real account's preferences on this device, and the copy the server has not received yet. */
+const PREFERENCES_KEY = 'preferences';
+const PENDING_PREFERENCES_KEY = 'preferencesPending';
+/** Set once per account and device when the device time zone has been offered (a new account starts on UTC). */
+const ZONE_ADOPTED_PREFIX = 'petcare-zone-adopted:';
 
 export interface Runtime {
   queryClient: QueryClient;
@@ -95,10 +103,15 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     data = opened;
     scheduler = createScheduler(opened.engine);
     useSessionStore.getState().setSignedIn(me.user, me.households, me.preferences);
-    const onOnline = () => scheduler?.nudge();
+    const onOnline = () => {
+      scheduler?.nudge();
+      void services.account.flush().catch(() => undefined);
+    };
     const onOffline = () => useConnectivityStore.getState().update({ online: false });
     const onVisible = () => {
-      if (document.visibilityState === 'visible') scheduler?.nudge();
+      if (document.visibilityState !== 'visible') return;
+      scheduler?.nudge();
+      void services.account.flush().catch(() => undefined);
     };
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
@@ -110,6 +123,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     };
     void opened.engine.refreshPending();
     scheduler.start();
+    void resumePreferences().catch(() => undefined);
   }
 
   function close(): void {
@@ -235,6 +249,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     createMany: (householdId, items) => current().records.createMany(householdId, items),
     update: (type, id, fields) => current().records.update(type, id, fields),
     remove: (type, id) => current().records.remove(type, id),
+    restore: (record) => current().records.restore(record),
   };
 
   const householdApi = createHouseholdRemote();
@@ -242,8 +257,10 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
   async function refreshHouseholds(): Promise<void> {
     const me = await auth.me();
     if (!me) return;
-    rememberSession(me);
-    useSessionStore.getState().setHouseholds(me.households);
+    // The device's own preferences win over the server's while a save is still waiting.
+    const state = useSessionStore.getState();
+    rememberSession(state.demo ? me : { ...me, preferences: state.preferences });
+    state.setHouseholds(me.households);
     scheduler?.request();
   }
 
@@ -271,16 +288,67 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     discard: (fileId) => current().files.discard(fileId),
   };
   const reducer = new CanvasImageReducer();
-  // In the demo preferences are kept in the demo database, like every other change.
-  const remoteAccount = createAccountRemote();
-  const accountApi: AccountApi = {
-    ...remoteAccount,
-    savePreferences: async (preferences) => {
-      if (!useSessionStore.getState().demo) return remoteAccount.savePreferences(preferences);
-      await current().writeSetting(DEMO_PREFERENCES_KEY, JSON.stringify(preferences));
-      return preferences;
+  const accountApi = createAccountRemote();
+  const readJson = async (key: string): Promise<Preferences | null> => {
+    const raw = data ? await data.readSetting(key) : undefined;
+    if (!raw) return null;
+    try {
+      const parsed = preferencesSchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  };
+  /** Preferences are written to this device first; the server save follows when it can (offline first). */
+  const preferenceDevice: PreferenceDevice = {
+    localOnly: () => useSessionStore.getState().demo,
+    async write(preferences, pending) {
+      const json = JSON.stringify(preferences);
+      if (useSessionStore.getState().demo) {
+        await current().writeSetting(DEMO_PREFERENCES_KEY, json);
+        return;
+      }
+      await current().writeSetting(PREFERENCES_KEY, json);
+      if (pending) await current().writeSetting(PENDING_PREFERENCES_KEY, json);
+      useSessionStore.getState().setPreferencesPending(pending);
+    },
+    pending: () => readJson(PENDING_PREFERENCES_KEY),
+    async settle(sent) {
+      const waiting = await readJson(PENDING_PREFERENCES_KEY);
+      // A newer save replaced it while this one was in flight: leave that one waiting.
+      if (waiting && JSON.stringify(waiting) !== JSON.stringify(sent)) return;
+      await current().writeSetting(PENDING_PREFERENCES_KEY, '');
+      useSessionStore.getState().setPreferencesPending(false);
     },
   };
+
+  /**
+   * After sign-in: preferences still waiting from an earlier session come back (and win over the
+   * server's copy), a new account's untouched UTC default becomes this device's time zone (once),
+   * and anything waiting is sent.
+   */
+  async function resumePreferences(): Promise<void> {
+    const state = useSessionStore.getState();
+    if (state.demo || !data || !state.user) return;
+    const waiting = await readJson(PENDING_PREFERENCES_KEY);
+    if (waiting) {
+      applyPreferences(waiting);
+      state.setPreferencesPending(true);
+    } else {
+      const flag = ZONE_ADOPTED_PREFIX + state.user.id;
+      let adopted = false;
+      try {
+        adopted = localStorage.getItem(flag) === '1';
+        if (!adopted) localStorage.setItem(flag, '1');
+      } catch {
+        // Without storage the check repeats next time; it only ever changes an untouched default.
+      }
+      const next = adopted ? null : adoptDeviceTimeZone(state.preferences);
+      if (next) await services.account.savePreferences(next);
+    }
+    await services.account.flush();
+  }
+
   const services: Services = {
     session,
     sync: {
@@ -288,7 +356,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       pendingCount: () => (data ? data.sync.pendingCount() : Promise.resolve(0)),
       problems: () => (data ? data.sync.problems() : Promise.resolve([])),
     },
-    pets: new PetService(records),
+    pets: new PetService(records, { next: () => uuidv7() }),
     photos: new PetPhotoService(records, files, reducer),
     measurements,
     health,
@@ -298,10 +366,11 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     documents,
     expenses,
     log: new LogService(measurements, health, expenses, documents, files, reducer, records, today),
+    removal: new RemovalService(records),
     contacts: new ContactService(records),
     households: new HouseholdService(householdApi, refreshHouseholds),
     emergency: new EmergencyService(records, createEmergencyRemote()),
-    account: new AccountService(accountApi, applyPreferences),
+    account: new AccountService(accountApi, applyPreferences, preferenceDevice),
     conflicts: new ConflictService(
       {
         list: (householdId) => current().conflicts.list(householdId),
@@ -312,34 +381,53 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     ),
   };
 
+  /** Decides who is signed in; throws only for trouble that bootstrap turns into the sign-in page. */
+  async function start(): Promise<void> {
+    const store = useSessionStore.getState();
+    store.setStartupProblem(false);
+    if (demoFlag()) {
+      await openDemo();
+      return;
+    }
+    try {
+      store.setConfig(await auth.config());
+    } catch {
+      store.setConfig(null);
+    }
+    try {
+      const me = await auth.me();
+      if (me) {
+        rememberSession(me);
+        open(me);
+      } else store.setSignedOut();
+    } catch (error) {
+      // Any reply the app cannot use (no connection, a 5xx or 404, a body that is not JSON) is
+      // treated like being offline: the last user's own data on this device opens, if there is any.
+      const last = recalledSession();
+      useConnectivityStore.getState().update({ online: false });
+      if (last) open(last);
+      else {
+        store.setSignedOut();
+        // Plain offline shows the ordinary sign-in page; anything else says what happened.
+        if (!(error instanceof NetworkError)) store.setStartupProblem(true);
+      }
+    }
+  }
+
   return {
     queryClient,
     services,
     households: () => (data ? data.households() : Promise.resolve([])),
     async bootstrap() {
-      const store = useSessionStore.getState();
-      if (demoFlag()) {
-        await openDemo();
-        return;
-      }
       try {
-        store.setConfig(await auth.config());
+        await start();
       } catch {
-        store.setConfig(null);
-      }
-      try {
-        const me = await auth.me();
-        if (me) {
-          rememberSession(me);
-          open(me);
-        } else store.setSignedOut();
-      } catch (error) {
-        if (!(error instanceof NetworkError)) throw error;
-        // Offline: open the last user's own data on this device, if there is any.
-        const last = recalledSession();
-        useConnectivityStore.getState().update({ online: false });
-        if (last) open(last);
-        else store.setSignedOut();
+        // Whatever else went wrong (storage, say), the app still opens, on the sign-in page.
+        close();
+        setDemoFlag(false);
+        blockNetwork(false);
+        useSessionStore.getState().setSignedOut();
+        useSessionStore.getState().setStartupProblem(true);
       }
     },
   };

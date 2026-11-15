@@ -292,7 +292,13 @@ export class LogService {
 
   /** Takes back what a log wrote (the Undo toast): every record is deleted. */
   async undo(records: StoredRecord[]): Promise<void> {
-    for (const r of records) await this.records.remove(r.type, r.id);
+    for (const r of records) {
+      await this.records.remove(r.type, r.id);
+      // A photo's file goes with its document, unless a queued change still needs it.
+      if (r.type === 'document' && typeof r.data.fileId === 'string') {
+        await this.files.discard(r.data.fileId);
+      }
+    }
   }
 
   /** A `once` reminder N days on, at the logged time or 09:00, born at `now` (AS-002 4.2). */
@@ -341,24 +347,37 @@ export class LogService {
   }
 
   /** A weight as the user's unit shows it ("12.5" in kg or lb). Stored in kg. */
-  async weight(householdId: string, petId: string, shown: number, prefs: LogPrefs, now: Date) {
+  async weight(
+    householdId: string,
+    petId: string,
+    shown: number,
+    prefs: LogPrefs,
+    now: Date,
+  ): Promise<StoredRecord[]> {
     if (!Number.isFinite(shown) || shown <= 0) throw new InvalidInput('value');
-    await this.measurements.add(householdId, {
+    const saved = await this.measurements.add(householdId, {
       petId,
       kind: 'weight',
       value: toStored('weight', shown, prefs),
       measuredAt: now.toISOString(),
     });
+    return [saved];
   }
 
-  async note(householdId: string, petId: string, description: string, now: Date) {
+  async note(
+    householdId: string,
+    petId: string,
+    description: string,
+    now: Date,
+  ): Promise<StoredRecord[]> {
     const text = description.trim();
     if (text === '') throw new InvalidInput('description');
-    await this.health.add('symptomEntry', householdId, {
+    const saved = await this.health.add('symptomEntry', householdId, {
       petId,
       observedAt: now.toISOString(),
       description: text,
     });
+    return [saved];
   }
 
   async expense(
@@ -368,8 +387,8 @@ export class LogService {
     category: string,
     prefs: LogPrefs,
     now: Date,
-  ) {
-    await this.expenses.add(householdId, {
+  ): Promise<StoredRecord[]> {
+    const saved = await this.expenses.add(householdId, {
       petId,
       spentOn: instantToLocalDate(now.getTime(), prefs.timeZone),
       category,
@@ -378,6 +397,7 @@ export class LogService {
       note: '',
       fileId: '',
     });
+    return [saved];
   }
 
   async vetVisit(
@@ -387,14 +407,14 @@ export class LogService {
     cost: string,
     prefs: LogPrefs,
     now: Date,
-  ) {
+  ): Promise<StoredRecord[]> {
     const text = reason.trim();
     if (text === '') throw new InvalidInput('reason');
     const amount = cost.trim() === '' ? undefined : Number(cost.replace(',', '.'));
     if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) {
       throw new InvalidInput('cost');
     }
-    await this.health.add('vetVisit', householdId, {
+    const saved = await this.health.add('vetVisit', householdId, {
       petId,
       visitedOn: instantToLocalDate(now.getTime(), prefs.timeZone),
       reason: text,
@@ -402,6 +422,7 @@ export class LogService {
         ? {}
         : { costMinor: toMinor(amount, prefs.currency), currency: prefs.currency }),
     });
+    return [saved];
   }
 
   /**
@@ -409,17 +430,18 @@ export class LogService {
    * (uploaded by the next sync) and files it under the pet. Throws `PhotoUnusable` for a file
    * that cannot be decoded; nothing is written then.
    */
-  async photo(householdId: string, petId: string, file: File) {
+  async photo(householdId: string, petId: string, file: File): Promise<StoredRecord[]> {
     const reduced = await this.reducer.reduce(file);
     const { fileId } = await this.files.attach(
       householdId,
       new File([reduced], 'photo.jpg', { type: reduced.type || 'image/jpeg' }),
     );
-    await this.documents.add(householdId, {
+    const saved = await this.documents.add(householdId, {
       petId,
       title: file.name || 'photo',
       category: 'photo',
       fileId,
     });
+    return [saved];
   }
 }

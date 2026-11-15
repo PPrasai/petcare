@@ -15,6 +15,7 @@ import { HomePage } from '../features/home/HomePage';
 import { parseTab } from '../features/pets/profile-tabs';
 import { WIDE_QUERY } from '../features/shared/use-wide-screen';
 import { MorePage } from '../features/shell/MorePage';
+import { CrashScreen } from '../features/shell/CrashScreen';
 import { NotFoundPage } from '../features/shell/NotFoundPage';
 import { preloadProfilePanes } from '../features/pets/lazy-panes';
 import { AppShell } from '../features/shell/AppShell';
@@ -203,7 +204,12 @@ const routeTree = root.addChildren([
   publicRoute('/sign-up', 'signUp'),
 ]);
 
-export const router = createRouter({ routeTree, defaultPreload: false });
+export const router = createRouter({
+  routeTree,
+  defaultPreload: false,
+  // A screen that throws (or a chunk that will not load) shows the friendly screen, not a blank page.
+  defaultErrorComponent: () => <CrashScreen />,
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

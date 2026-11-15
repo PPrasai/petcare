@@ -23,6 +23,8 @@ import {
 import { FILE_ACCEPT, FilePicker, fileProblem, useMaxFileBytes } from '../files/FilePicker';
 import { FileViewButton, useFileViewer } from '../files/FileViewButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
@@ -65,18 +67,23 @@ function AddDocument({
   const [errors, setErrors] = useState<Record<string, string>>({});
   useFocusInvalid(form, errors);
 
+  const failure = useSaveFailure();
   const submit = async () => {
     if (!file) {
       setErrors({ file: t('files.required') });
       return;
     }
+    failure.clear();
     try {
       const { fileId } = await files.attach(householdId, file);
       await documents.add(householdId, { petId, title, category, fileId });
       show(t('files.added'));
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors({ [e.path]: t('form.invalid') });
     }
   };
@@ -118,6 +125,7 @@ function AddDocument({
           onRefused={(message) => setErrors({ file: message })}
         />
       )}
+      {failure.view}
       <Button type="submit">{t('documents.add')}</Button>
     </form>
   );
@@ -125,8 +133,9 @@ function AddDocument({
 
 /** One photo as a tile. The picture loads the first time the tile scrolls into view. */
 function PhotoTile({ doc }: { doc: StoredRecord }) {
-  const { files, documents } = useServices();
+  const { files } = useServices();
   const canDelete = useCanDelete('document');
+  const removeRecord = useRemoval();
   const title = String(doc.data.title);
   const fileId = String(doc.data.fileId);
   const tile = useRef<HTMLDivElement>(null);
@@ -138,7 +147,7 @@ function PhotoTile({ doc }: { doc: StoredRecord }) {
       <Button
         variant="secondary"
         aria-label={t('form.deleteLabel', { name: title })}
-        onClick={() => void documents.remove(doc.id)}
+        onClick={() => void removeRecord(doc, title)}
       >
         {t('form.delete')}
       </Button>
@@ -212,6 +221,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'document');
   const canDelete = useCanDelete('document');
+  const removeRecord = useRemoval();
   const max = useMaxFileBytes();
   const list = useQuery({
     queryKey: ['document', householdId, { petId }],
@@ -301,7 +311,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
                           <Button
                             variant="secondary"
                             aria-label={t('form.deleteLabel', { name })}
-                            onClick={() => void documents.remove(d.id)}
+                            onClick={() => void removeRecord(d, name)}
                           >
                             {t('form.delete')}
                           </Button>

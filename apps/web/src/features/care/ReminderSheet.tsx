@@ -20,6 +20,8 @@ import { useSessionStore } from '../../state/session';
 import { Button, Chip, Sheet, SheetHead, SelectField, TextField } from '../../ui';
 import { useToday } from '../health/hooks';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
@@ -52,6 +54,7 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
     target.mode === 'edit' ? scheduleSchema.safeParse(target.record.data.schedule) : null;
   const base: Schedule | undefined = stored?.success ? stored.data : undefined;
   const canDelete = useCanDelete(type);
+  const removeRecord = useRemoval();
   const canUpdate = useCan('update', type);
   const storedAudience =
     target.mode === 'edit' ? audienceOf(target.record.data.audienceUserId, me) : 'everyone';
@@ -84,6 +87,7 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
         : [...values.days, day],
     });
 
+  const failure = useSaveFailure();
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const title = values.title.trim();
@@ -98,6 +102,7 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
     setErrors(next);
     if (Object.keys(next).length > 0) return;
     const schedule = reminderSchedule(values, prefs.timeZone, today, base, new Date());
+    failure.clear();
     try {
       if (target.mode === 'new') {
         await health.add('reminder', householdId, {
@@ -126,16 +131,17 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
       }
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors({ form: t('form.invalid') });
     }
   };
 
   const remove = async () => {
     if (target.mode !== 'edit') return;
-    await health.remove(type, target.record.id);
-    show(t('reminder.deleted', { title: String(target.record.data.title ?? '') }));
-    onClose();
+    if (await removeRecord(target.record, String(target.record.data.title ?? ''))) onClose();
   };
 
   const repeats: Repeat[] = base?.kind === 'everyNDays' ? [...REPEATS, base.kind] : [...REPEATS];
@@ -249,6 +255,7 @@ function ReminderForm({ target, onClose }: { target: ReminderTarget; onClose: ()
           {errors.form}
         </p>
       ) : null}
+      {failure.view}
       {editable ? (
         <Button type="submit">
           {t(target.mode === 'new' ? 'reminder.save' : 'reminder.saveChanges')}

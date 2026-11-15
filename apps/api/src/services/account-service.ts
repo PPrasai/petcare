@@ -1,4 +1,4 @@
-import { DEFAULT_PREFERENCES, preferencesSchema } from '@petcare/domain';
+import { DEFAULT_PREFERENCES, isKnownTimeZone, preferencesSchema } from '@petcare/domain';
 import type { Preferences } from '@petcare/domain';
 import type { HouseholdSummary, UnitOfWork } from '../repositories';
 import { AppError, invalid } from './app-error';
@@ -70,6 +70,7 @@ export function createAccountService(deps: AccountServiceDeps) {
 
   async function savePreferences(userId: string, input: unknown): Promise<Preferences> {
     const preferences = preferencesSchema.parse(input);
+    if (!isKnownTimeZone(preferences.timeZone)) throw invalid('unknown time zone', '/timeZone');
     return unitOfWork.repositories.preferences.save(userId, preferences);
   }
 

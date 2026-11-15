@@ -8,6 +8,8 @@ import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
 import { Button, Card, EmptyState, Icon, Line, Pill, SectionHeader } from '../../ui';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { errorsFor, useHealthList, useToday } from './hooks';
@@ -41,8 +43,10 @@ function AddMedication({ petId, onClose }: { petId: string; onClose: () => void 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [scheduleError, setScheduleError] = useState<string | undefined>();
 
+  const failure = useSaveFailure();
   const submit = async () => {
     const dose = values.dose ? Number(values.dose) : undefined;
+    failure.clear();
     try {
       await health.add('medication', householdId, {
         petId,
@@ -55,7 +59,10 @@ function AddMedication({ petId, onClose }: { petId: string; onClose: () => void 
       show(t('form.added', { name: values.name?.trim() ?? '' }));
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       const field = e.path.split('.')[0] ?? '';
       setScheduleError(field === 'schedule' ? t('form.invalid') : undefined);
       setErrors(field === 'schedule' ? {} : errorsFor(e.path, t('form.invalid')));
@@ -73,6 +80,7 @@ function AddMedication({ petId, onClose }: { petId: string; onClose: () => void 
       submitLabel={t('med.add')}
     >
       <ScheduleFields values={schedule} onChange={setSchedule} error={scheduleError} />
+      {failure.view}
     </RecordForm>
   );
 }
@@ -85,6 +93,7 @@ export function MedicationsPanel({ petId }: { petId: string }) {
   const canCreate = useCan('create', 'medication');
   const canLog = useCan('create', 'medicationDose');
   const canDelete = useCanDelete('medication');
+  const removeRecord = useRemoval();
   const today = useToday();
   const meds = useHealthList('medication', petId);
   const doses = useHealthList('medicationDose', petId);
@@ -130,7 +139,7 @@ export function MedicationsPanel({ petId }: { petId: string }) {
                       <Button
                         variant="secondary"
                         aria-label={t('form.deleteLabel', { name })}
-                        onClick={() => void health.remove('medication', m.id)}
+                        onClick={() => void removeRecord(m, name)}
                       >
                         {t('form.delete')}
                       </Button>

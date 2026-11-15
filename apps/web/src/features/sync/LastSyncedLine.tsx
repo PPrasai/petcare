@@ -1,5 +1,6 @@
 import { t } from '../../i18n/t';
 import { useConnectivityStore } from '../../state/connectivity';
+import { useDemo } from '../shared/demo';
 import { Button, Line } from '../../ui';
 import { useServices } from '../shared/services-context';
 import { useNow } from '../shared/use-now';
@@ -12,6 +13,11 @@ export function LastSyncedLine() {
   const pending = useConnectivityStore((s) => s.pendingCount);
   const syncing = useConnectivityStore((s) => s.syncing);
   const now = useNow();
+  const demo = useDemo();
+  // The demo never syncs: its data lives on this device, so there is nothing to sync now.
+  if (demo) {
+    return <Line as="div" title={t('sync.demo.title')} sub={t('sync.demo.hint')} />;
+  }
   const when = lastSyncedAt ? relativeTime(lastSyncedAt, now) : '';
   const hint = !lastSyncedAt
     ? t('settings.data.neverSynced')

@@ -1,5 +1,6 @@
 import { v7 as uuidv7 } from 'uuid';
 import type { FileApi } from '../../application/ports/file-api';
+import { FileStorageUnavailable, isBlobStorageError } from '../../application/ports/file-gateway';
 import type { FileGateway } from '../../application/ports/file-gateway';
 import { cacheFile, cachedFile, uncacheFile } from './file-cache';
 import type { LocalDb } from './local-db';
@@ -14,13 +15,19 @@ export function createFileGateway(
   return {
     async attach(householdId, file) {
       const id = uuidv7();
-      await db.pendingFiles.put({
-        id,
-        householdId,
-        name: file.name,
-        mimeType: file.type,
-        blob: file,
-      });
+      try {
+        await db.pendingFiles.put({
+          id,
+          householdId,
+          name: file.name,
+          mimeType: file.type,
+          blob: file,
+        });
+      } catch (error) {
+        // WebKit private and ephemeral sessions refuse to keep a Blob in IndexedDB.
+        if (isBlobStorageError(error)) throw new FileStorageUnavailable();
+        throw error;
+      }
       requestSync();
       return { fileId: id };
     },
