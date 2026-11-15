@@ -1685,10 +1685,11 @@
   .facts {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  /* The sidebar lists the pets, so the profile has the whole content column (SPEC-petcare-004 S-11). */
   .split {
-    grid-template-columns: 360px minmax(0, 1fr);
-    gap: 36px;
+    grid-template-columns: minmax(0, 1fr);
   }
+  .split .listcol,
   .split .back,
   .strip {
     display: none;
