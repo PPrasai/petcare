@@ -49,6 +49,12 @@ const MORE: Destination = {
   also: ['/household', '/settings', '/contacts', '/sync'],
 };
 
+/** The pet whose page is open, so Log starts with that pet rather than the first one. */
+const openPetId = (pathname: string): string | undefined => {
+  const id = pathname.startsWith('/pets/') ? pathname.split('/')[2] : undefined;
+  return id && id !== 'new' ? id : undefined;
+};
+
 const isCurrent = (dest: Destination, pathname: string) =>
   dest.to === '/'
     ? pathname === '/' || dest.also.some((p) => pathname.startsWith(p))
@@ -89,7 +95,10 @@ export function AppShell({ children }: { children?: ReactNode }): ReactNode {
       data-testid="log-open"
       className={wide ? 'btn primary' : 'lnk log'}
       aria-label={t('log.open')}
-      onClick={() => logSheet.open()}
+      onClick={() => {
+        const petId = openPetId(pathname);
+        logSheet.open(petId ? { petId } : {});
+      }}
     >
       <Icon name="plus" />
       {wide ? <span>{t('log.openShort')}</span> : null}

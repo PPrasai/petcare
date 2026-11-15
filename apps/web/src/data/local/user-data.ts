@@ -21,6 +21,9 @@ export interface UserData {
   files: FileGateway;
   conflicts: ConflictStore;
   households(): Promise<HouseholdRow[]>;
+  /** Small per-user settings kept in this database (the demo's preferences). */
+  readSetting(key: string): Promise<string | undefined>;
+  writeSetting(key: string, value: string): Promise<void>;
   /** Closes the database and deletes it and every cached file (sign-out). */
   wipe(): Promise<void>;
   close(): void;
@@ -128,6 +131,13 @@ export function openUserData(
     },
     files: createFileGateway(db, fileApi, userId, () => hooks.onChanged([])),
     households: () => db.households.toArray(),
+    async readSetting(key) {
+      const value = (await db.meta.get(key))?.value;
+      return typeof value === 'string' ? value : undefined;
+    },
+    async writeSetting(key, value) {
+      await db.meta.put({ key, value });
+    },
     async wipe() {
       await db.wipe();
       await clearFileCaches();

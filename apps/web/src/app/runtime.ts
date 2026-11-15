@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { DEFAULT_PREFERENCES } from '@petcare/domain';
+import { DEFAULT_PREFERENCES, preferencesSchema } from '@petcare/domain';
 import type { Preferences } from '@petcare/domain';
 import { ConflictService } from '../application/conflict-service';
 import { AccountService } from '../application/account-service';
@@ -46,6 +46,10 @@ import { useConnectivityStore } from '../state/connectivity';
 import { useUiPreferences } from '../state/ui-preferences';
 import { useSessionStore } from '../state/session';
 import { createAccountRemote } from '../data/remote/account-remote';
+import type { AccountApi } from '../application/ports/account-api';
+
+/** Where the demo keeps its preferences: in the demo database, not on the server. */
+const DEMO_PREFERENCES_KEY = 'demoPreferences';
 
 export interface Runtime {
   queryClient: QueryClient;
@@ -142,10 +146,12 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       onChanged: invalidate,
       onStatus: () => undefined,
     });
-    const preferences = {
-      ...DEFAULT_PREFERENCES,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
+    const stored = await data.readSetting(DEMO_PREFERENCES_KEY);
+    const parsed = stored ? preferencesSchema.safeParse(JSON.parse(stored)) : null;
+    const preferences = parsed?.success
+      ? parsed.data
+      : { ...DEFAULT_PREFERENCES, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    if (parsed?.success) useUiPreferences.getState().setTheme(preferences.theme);
     useSessionStore
       .getState()
       .setSignedIn(
@@ -246,6 +252,8 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     const state = useSessionStore.getState();
     state.setPreferences(preferences);
     useUiPreferences.getState().setTheme(preferences.theme);
+    // The demo's preferences stay in the demo database, never in the offline copy of a real session.
+    if (state.demo) return;
     const last = recalledSession();
     if (last) rememberSession({ ...last, preferences });
   }
@@ -263,6 +271,16 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     discard: (fileId) => current().files.discard(fileId),
   };
   const reducer = new CanvasImageReducer();
+  // In the demo preferences are kept in the demo database, like every other change.
+  const remoteAccount = createAccountRemote();
+  const accountApi: AccountApi = {
+    ...remoteAccount,
+    savePreferences: async (preferences) => {
+      if (!useSessionStore.getState().demo) return remoteAccount.savePreferences(preferences);
+      await current().writeSetting(DEMO_PREFERENCES_KEY, JSON.stringify(preferences));
+      return preferences;
+    },
+  };
   const services: Services = {
     session,
     sync: {
@@ -283,7 +301,7 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     contacts: new ContactService(records),
     households: new HouseholdService(householdApi, refreshHouseholds),
     emergency: new EmergencyService(records, createEmergencyRemote()),
-    account: new AccountService(createAccountRemote(), applyPreferences),
+    account: new AccountService(accountApi, applyPreferences),
     conflicts: new ConflictService(
       {
         list: (householdId) => current().conflicts.list(householdId),

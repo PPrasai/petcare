@@ -93,7 +93,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   await page.getByLabel('Medication', { exact: true }).fill('Amoxicillin');
   await page.getByLabel('Dose', { exact: true }).fill('5');
   await page.getByLabel('Dose unit').selectOption('mg');
-  await page.getByLabel('Times (24-hour, comma separated)').fill('09:00');
+  await page.getByLabel('Time', { exact: true }).fill('09:00');
   await page.getByRole('button', { name: 'Add medication' }).click();
   await expect(page.getByText('Amoxicillin').first()).toBeVisible();
 
