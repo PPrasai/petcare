@@ -2239,6 +2239,7 @@
     overflow: auto;
     overscroll-behavior: contain;
     padding: 0 16px 12px;
+    min-height: 152px;
     max-height: max(320px, 60vh);
   }
   .two[data-layout] > [data-area] > * {
@@ -2297,8 +2298,11 @@
   .two[data-layout='home'] .prow {
     padding: 6px 10px 6px 6px;
   }
-  .two[data-layout='home'] li + li {
+  .two[data-layout='home'] .plist > li + li {
     margin-top: 8px;
+  }
+  .two[data-layout] .line {
+    padding: 7px 0;
   }
   .two[data-layout='home'] .prow .nm > b {
     font-size: 17px;
@@ -2321,6 +2325,7 @@
 @container content (min-width: 600px) {
   .two[data-layout] {
     flex: 1 1 0;
+    min-height: 0;
   }
   .two[data-layout] > [data-area] {
     max-height: none;

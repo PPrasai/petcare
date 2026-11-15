@@ -7,7 +7,8 @@ import type { Screen, Session } from './screens';
 /** The widths and themes every screen state is checked at (SPEC-petcare-003 §6.2). */
 export const WIDTHS = [
   { w: 390, h: 844, touch: true },
-  { w: 1280, h: 800, touch: false },
+  { w: 900, h: 720, touch: false },
+  { w: 1280, h: 720, touch: false },
 ] as const;
 export const THEMES = ['light', 'dark'] as const;
 
@@ -89,6 +90,9 @@ async function startSession(page: Page, session: Session) {
 
 /** Puts the page into the state a screen entry describes. */
 async function enter(page: Page, screen: Screen, browser: Browser) {
+  // A state may leave the connection off or the sidebar choice stored; the next one starts clean.
+  await page.context().setOffline(false);
+  await page.evaluate(() => localStorage.removeItem('pc:sidebar')).catch(() => undefined);
   const path = typeof screen.path === 'function' ? await screen.path(browser) : screen.path;
   // A full load keeps the session (the demo and the account both survive a reload). A change of
   // the hash alone would not load the page again, so leave it first.
@@ -115,7 +119,9 @@ export async function walkScreens(
     const screens = SCREENS.filter(
       (s) =>
         s.session === session &&
-        (options.include ? options.include(s) : (s.widths ?? [390, 1280]).includes(cell.width.w)),
+        (options.include
+          ? options.include(s)
+          : (s.widths ?? [390, 900, 1280]).includes(cell.width.w)),
     );
     if (screens.length === 0) continue;
     const { context, page } = await open(browser, cell, options);
