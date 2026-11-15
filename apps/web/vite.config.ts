@@ -48,6 +48,14 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
+    resolve: {
+      alias: [
+        // Their default entries are ES5 or UMD builds; these are the same code as modern ES modules
+        // (about 11 KB less for dexie, which also drops the UMD wrapper and its dual-package shim).
+        { find: /^dexie$/, replacement: 'dexie/dist/modern/dexie.mjs' },
+        { find: /^workbox-window$/, replacement: 'workbox-window/build/workbox-window.prod.mjs' },
+      ],
+    },
     server: { port: 5173, proxy },
     preview: { port: 4173, proxy },
     build: { sourcemap: false },

@@ -33,32 +33,30 @@ const paw = [
   [74, 46, 8.5],
 ];
 
+// Two flat colours and no anti-aliasing, so each pixel is one bit of a 2-entry palette. The image
+// is the same as 8-bit RGBA, only about a fifth of the bytes (the icons are in the precache).
 function render(size, scale) {
-  const raw = Buffer.alloc((size * 4 + 1) * size);
+  const stride = Math.ceil(size / 8) + 1;
+  const raw = Buffer.alloc(stride * size);
   for (let y = 0; y < size; y += 1) {
-    raw[y * (size * 4 + 1)] = 0;
     for (let x = 0; x < size; x += 1) {
       // Map pixel to the 100-unit box, shrunk by `scale` around the centre.
       const u = (((x + 0.5) / size - 0.5) / scale) * 100 + 50;
       const v = (((y + 0.5) / size - 0.5) / scale) * 100 + 50;
       const inside = paw.some(([cx, cy, r]) => (u - cx) ** 2 + (v - cy) ** 2 <= r * r);
-      const [r, g, b] = inside ? FG : BG;
-      const o = y * (size * 4 + 1) + 1 + x * 4;
-      raw[o] = r;
-      raw[o + 1] = g;
-      raw[o + 2] = b;
-      raw[o + 3] = 255;
+      if (inside) raw[y * stride + 1 + (x >> 3)] |= 0x80 >> (x & 7);
     }
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(size, 0);
   ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
+  ihdr[8] = 1; // bit depth
+  ihdr[9] = 3; // indexed colour
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
+    chunk('PLTE', Buffer.from([...BG, ...FG])),
+    chunk('IDAT', deflateSync(raw, { level: 9 })),
     chunk('IEND', Buffer.alloc(0)),
   ]);
 }
