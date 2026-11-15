@@ -1,50 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { instantToLocalDate } from '@petcare/domain';
 import { useState } from 'react';
-import type { ActivityEntry } from '../../application/activity';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
 import { Card, EmptyState, Line, SectionHeader } from '../../ui';
-import { amountText } from '../log/quantity';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { activityText } from '../shared/activity-text';
 import { dateText, timeText } from '../shared/when';
-import type { MessageKey } from '../../i18n/en';
 
 const PAGE = 20;
-
-/** The line of text of one entry. */
-function textOf(e: ActivityEntry): string {
-  switch (e.kind) {
-    case 'meal':
-      return t('activity.meal', {
-        food: e.food,
-        amount:
-          e.quantity !== undefined && e.unit
-            ? t('activity.meal.amount', { amount: amountText(e.quantity, e.unit) })
-            : '',
-      });
-    case 'walk':
-      return t('activity.walk', { count: e.minutes });
-    case 'grooming':
-      return t('activity.grooming', {
-        tasks: e.tasks.map((x) => t(`log.groom.task.${x}` as MessageKey)).join(', '),
-        note: e.note ? t('activity.grooming.note', { note: e.note }) : '',
-      });
-    case 'medication':
-      return t('activity.med', {
-        name: e.name,
-        route: e.route
-          ? t('activity.med.route', { route: t(`log.med.route.${e.route}` as MessageKey) })
-          : '',
-        dose: e.dose ? t('activity.med.dose', { dose: e.dose }) : '',
-      });
-    case 'note':
-      return e.text;
-    case 'done':
-      return t(e.skipped ? 'activity.skipped' : 'activity.done', { title: e.title });
-  }
-}
 
 /**
  * Recent activity (SPEC-petcare-002 P7): care logs, completions and notes of one pet with who did
@@ -90,7 +55,7 @@ export function RecentActivity({ petId }: { petId: string }) {
             <Line
               key={e.key}
               testId="activity-row"
-              title={textOf(e)}
+              title={activityText(e)}
               sub={t('activity.sub', { when: when(e.at), who: who(e.by) })}
             />
           ))}
