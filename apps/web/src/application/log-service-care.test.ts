@@ -47,6 +47,7 @@ function setup() {
       return out;
     },
     update: () => Promise.reject(new Error('unused')),
+    restore: () => Promise.reject(new Error('unused')),
     remove: (type, id) => {
       const row = rows.find((r) => r.type === type && r.id === id);
       if (row) row.deletedAt = NOW.toISOString();

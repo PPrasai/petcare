@@ -48,6 +48,7 @@ function memoryStore() {
     createMany: (householdId, items) =>
       Promise.all(items.map((i) => store.create(i.type, householdId, i.data))),
     update: () => Promise.reject(new Error('unused')),
+    restore: () => Promise.reject(new Error('unused')),
     remove: (type, id) => {
       const row = rows.find((r) => r.type === type && r.id === id);
       if (row) row.deletedAt = NOW.toISOString();
@@ -127,6 +128,26 @@ describe('LogService', () => {
       type: 'document',
       data: { petId: PET, title: 'beach.jpg', category: 'photo' },
     });
+  });
+
+  it('returns what weight, note, expense, vet visit and photo wrote, so Undo can take it back', async () => {
+    const { rows, service } = setup();
+    const written = [
+      await service.weight(HOUSEHOLD, PET, 12, prefs, NOW),
+      await service.note(HOUSEHOLD, PET, 'Limping', NOW),
+      await service.expense(HOUSEHOLD, PET, '5', 'food', prefs, NOW),
+      await service.vetVisit(HOUSEHOLD, PET, 'Recheck', '', prefs, NOW),
+      await service.photo(HOUSEHOLD, PET, new File(['x'], 'a.jpg', { type: 'image/jpeg' })),
+    ];
+    expect(written.map((w) => w.map((r) => r.type))).toEqual([
+      ['measurement'],
+      ['symptomEntry'],
+      ['expense'],
+      ['vetVisit'],
+      ['document'],
+    ]);
+    for (const records of written) await service.undo(records);
+    expect(rows.every((r) => r.deletedAt !== null)).toBe(true);
   });
 
   it('keeps the reduced picture, not the original, and writes nothing for an unusable file', async () => {

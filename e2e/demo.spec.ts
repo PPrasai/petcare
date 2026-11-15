@@ -113,8 +113,12 @@ test('the demo works end to end with no request to /api, and reset restores the 
   await expect(page.getByText('Dr. Rai')).toBeVisible();
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByRole('link', { name: 'Sync activity' }).click();
-  await expect(page.getByRole('button', { name: 'Sync now' })).toBeVisible();
-  await page.getByRole('button', { name: 'Sync now' }).click();
+  // The demo keeps its data on the device: no contradiction, and nothing to sync.
+  await expect(page.getByText('Demo data is kept on this device')).toBeVisible();
+  await expect(page.getByText('Kept on this device', { exact: true })).toBeVisible();
+  await expect(page.getByText('All changes saved')).toHaveCount(0);
+  await expect(page.getByText('Not synced yet')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sync now' })).toHaveCount(0);
 
   // Changes stay on the device, survive a reload, and are gone after a reset.
   const fresh = await snapshot(page);
