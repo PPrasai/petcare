@@ -8,18 +8,42 @@ import type { Page } from '@playwright/test';
  * more or fewer fingerprints the same.
  */
 export async function fingerprint(page: Page): Promise<string[]> {
+  // Data arrives after the first paint (a link or a button, a longer or shorter list), so the
+  // fingerprint is taken once two reads, 400 ms apart, agree.
+  let last = await read(page);
+  for (let i = 0; i < 10; i++) {
+    await page.waitForTimeout(400);
+    const next = await read(page);
+    if (JSON.stringify(next) === JSON.stringify(last)) return next;
+    last = next;
+  }
+  return last;
+}
+
+async function read(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const out: string[] = [];
     const visible = (el: Element) => {
       const r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden';
     };
-    const sig = (el: Element) => [el.tagName.toLowerCase(), ...[...el.classList].sort()].join('.');
+    // Two things depend on timing, not layout: the current pet of the strip (`active`, set by the
+    // ranking at that moment) and an avatar showing its photo (`img`) or its drawing (`svg`).
+    const sig = (el: Element) => {
+      const tag = el.tagName.toLowerCase();
+      return [
+        tag === 'img' ? 'svg' : tag,
+        ...[...el.classList].filter((c) => c !== 'active').sort(),
+      ].join('.');
+    };
     // Elements without a box of their own (`display: contents`) are walked through, not listed.
     const walk = (el: Element, depth: number) => {
       const shown = visible(el);
       if (shown) out.push(`${'  '.repeat(depth)}${sig(el)}`);
       const next = shown ? depth + 1 : depth;
+      // An avatar's insides (photo or drawing, and the camera badge) arrive when its photo has
+      // loaded, so the avatar counts as one box.
+      if (el.classList.contains('avwrap') || el.classList.contains('av')) return;
       const kids = [...el.children];
       for (let i = 0; i < kids.length; i++) {
         const child = kids[i] as Element;
