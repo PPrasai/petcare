@@ -68,6 +68,28 @@ export function classStrings(text) {
   return out;
 }
 
+// SPEC-petcare-004 5.7: the desktop block of pebble.css has one viewport breakpoint, 860 px. A
+// `@media` width other than 860 px, or an `@container app` width other than 860 px, fails.
+// (The sidebar's 1280 px default is a matchMedia in script, not CSS. `@container content` holds
+// the tiers, which are widths of the content column and not of the window.)
+export const DESKTOP_MARK = '/* desktop ≥860, fluid (SPEC-petcare-004) */';
+export function badBreakpoints(css) {
+  const at = css.indexOf(DESKTOP_MARK);
+  if (at < 0) return [`pebble.css has no "${DESKTOP_MARK}" block`];
+  const block = css.slice(at);
+  const bad = [];
+  for (const m of block.matchAll(/@(media|container\s+app)([^{]*)\{/g)) {
+    for (const w of m[2].matchAll(/(min|max)-width:\s*([\d.]+)px/g)) {
+      if (w[2] !== '860' && w[2] !== '859.98') bad.push(`@${m[1]}${m[2].trimEnd()}`);
+    }
+  }
+  return bad;
+}
+const css = readFileSync(join(web, 'ui', 'pebble.css'), 'utf8');
+const breakpointProblems = badBreakpoints(css).map(
+  (b) => `ui/pebble.css desktop block: a width breakpoint other than 860 px: ${b}`,
+);
+
 const files = [...tsxFiles(join(web, 'features')), join(web, 'app', 'router.tsx')];
 const hits = new Map();
 for (const file of files) {
@@ -76,7 +98,7 @@ for (const file of files) {
 }
 
 const allowed = existsSync(allowPath) ? JSON.parse(readFileSync(allowPath, 'utf8')) : [];
-const problems = [];
+const problems = [...breakpointProblems];
 for (const [file, found] of hits) {
   if (!allowed.includes(file)) {
     problems.push(`${file}: utility layout classes in a converted file: ${found.join(' | ')}`);
