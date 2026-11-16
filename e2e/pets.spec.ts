@@ -23,7 +23,7 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   await expect(page.getByText('985112003456789')).toBeVisible();
 
   // The edit sheet still reaches every field the wizard leaves out.
-  await page.getByRole('button', { name: 'Edit details' }).click();
+  await page.getByRole('button', { name: 'Edit details' }).first().click();
   await page.getByLabel('Mixed breed').check();
   await page.getByLabel('Date of birth is an estimate').check();
   await page.getByLabel('Insurance provider').fill('PetSure');
@@ -32,7 +32,7 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   await expect(page.getByText('2020-03-04 (estimated)')).toBeVisible();
   await expect(page.getByText('PetSure')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Edit details' }).click();
+  await page.getByRole('button', { name: 'Edit details' }).first().click();
   await page.getByLabel('Colour').fill('Brindle');
   await page.getByLabel('Insurance provider').fill('');
   await page.getByRole('button', { name: 'Save changes' }).click();

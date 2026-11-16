@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { openDisclosure } from './support/app';
 
 const SKIP_STORES = new Set(['outbox', 'meta', 'problems', 'conflicts', 'pendingFiles']);
 
@@ -85,9 +86,8 @@ test('the demo works end to end with no request to /api, and reset restores the 
     ['Files', 'Rabies certificate'],
   ] as const) {
     await page.getByRole('tab', { name: tab, exact: true }).click();
-    // Vet visits sit in a disclosure that starts closed.
-    if (text === 'Annual check-up')
-      await page.locator('summary').filter({ hasText: 'Vet visits' }).click();
+    // Vet visits sit in a disclosure that starts closed (a panel from 860 px).
+    if (text === 'Annual check-up') await openDisclosure(page, 'Vet visits');
     await expect(page.getByText(text).first()).toBeVisible();
   }
 
