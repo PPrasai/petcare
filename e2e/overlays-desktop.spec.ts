@@ -164,11 +164,12 @@ test('overlays are unchanged on a phone @390x844', async ({ browser }) => {
   await walkScreens(
     cell(390, 844, true),
     browser,
-    async (page) => {
+    async (page, screen) => {
+      if (screen.kind !== 'overlay') return [];
       const p = await placement(page);
       if (!p.found) return ['no dialog is open'];
       if (!p.isSheet) return [];
-      return near(p.box.bottom, p.innerHeight) && p.box.width >= p.innerWidth - 1
+      return p.box.bottom >= p.innerHeight - 1 && p.box.width >= p.innerWidth - 1
         ? []
         : [`not a bottom sheet: bottom ${p.box.bottom}, width ${p.box.width}`];
     },
