@@ -18,8 +18,12 @@ export function LinkQr({
   const [svg, setSvg] = useState('');
   useEffect(() => {
     let live = true;
-    void import('qrcode').then(async ({ default: QRCode }) => {
-      const markup = await QRCode.toString(link, { type: 'svg', margin: 1 });
+    // The library's SVG path only: `qrcode`'s own entry also pulls in the canvas renderer.
+    void Promise.all([
+      import('qrcode/lib/core/qrcode'),
+      import('qrcode/lib/renderer/svg-tag.js'),
+    ]).then(([{ default: QRCode }, { default: SvgRenderer }]) => {
+      const markup = SvgRenderer.render(QRCode.create(link), { margin: 1 });
       if (live) setSvg(markup);
     });
     return () => {
