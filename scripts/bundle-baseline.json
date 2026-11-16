@@ -104,6 +104,12 @@
       "commit": "e506d05",
       "precacheBytes": 1173015,
       "entryChunkGzipBytes": 160822
+    },
+    {
+      "slice": "D5",
+      "commit": "6b20327",
+      "precacheBytes": 1175552,
+      "entryChunkGzipBytes": 160917
     }
   ]
 }
