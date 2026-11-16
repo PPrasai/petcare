@@ -141,7 +141,8 @@ test('a routine from an older version can be edited and paused, and a meal stays
   );
   await expect(rowOf(page, 'Evening walk')).toBeVisible();
   await expect(page.locator('.task').filter({ hasText: 'Breakfast' })).toHaveCount(0);
-  await expect(rowOf(page, 'Breakfast')).toHaveCount(0);
+  // (Not in the Reminders list; from 860 px the Feeding panel is open and lists it.)
+  await expect(page.getByRole('list', { name: 'Reminders' }).getByText('Breakfast')).toHaveCount(0);
 
   // The meal sits in the Feeding disclosure (a panel from 860 px).
   await openDisclosure(page, 'Feeding');
