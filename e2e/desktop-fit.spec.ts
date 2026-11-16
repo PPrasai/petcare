@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { DESKTOP_SCOPE, inDesktopScope, sId } from './support/desktop-scope';
 import { walkScreens } from './support/matrix';
