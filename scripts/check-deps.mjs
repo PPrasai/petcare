@@ -4,7 +4,7 @@ import { readFileSync, globSync } from 'node:fs';
 const allowed = new Set(
   `zod date-fns @date-fns/tz uuid
 react react-dom @tanstack/react-router @tanstack/router-plugin @tanstack/react-query @tanstack/react-form zustand dexie dexie-react-hooks openapi-fetch
-vite @vitejs/plugin-react vite-plugin-pwa workbox-window tailwindcss lucide-react recharts qrcode
+vite @vitejs/plugin-react vite-plugin-pwa workbox-window tailwindcss lucide-react qrcode
 @opentelemetry/api @opentelemetry/sdk-trace @opentelemetry/instrumentation-fetch @opentelemetry/instrumentation-document-load @opentelemetry/exporter-trace-otlp-http
 fastify @fastify/cookie @fastify/helmet @fastify/rate-limit @fastify/multipart @fastify/static @fastify/otel
 better-auth drizzle-orm drizzle-kit pg ioredis pg-boss web-push ics file-type pino pino-opentelemetry-transport
