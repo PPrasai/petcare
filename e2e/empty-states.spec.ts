@@ -97,9 +97,7 @@ test('a new account sees the first-run invitation, and the wizard is the way in'
   await noEmptyLists(page);
 
   await empty.getByRole('link', { name: 'Add a pet' }).click();
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Meet your newest family member' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Meet your newest family member' })).toBeVisible();
   await noEmptyLists(page);
 
   await page.getByLabel('Name', { exact: true }).fill('Momo');

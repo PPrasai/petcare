@@ -32,6 +32,21 @@ export const DESKTOP_SCOPE: string[] = [
   'S-23',
   'S-24',
   'S-49',
+  // D4: Settings, Sync, Emergency, the wizard, sign-in and the public pages
+  'S-01',
+  'S-02',
+  'S-03',
+  'S-04',
+  'S-16',
+  'S-25',
+  'S-26',
+  'S-27',
+  'S-28',
+  'S-29',
+  'S-30',
+  'S-31',
+  'S-32',
+  'S-33',
 ];
 
 /** The S-id of a state id such as `S-06 collapsed`. */

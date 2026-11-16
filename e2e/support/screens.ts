@@ -44,6 +44,11 @@ const heading =
     await expect(page.getByRole('heading', { level, name })).toBeVisible();
   };
 
+/** The wizard's step heading is the page h1 on a phone and a panel h2 from 860 px. */
+const wizardReady = async (page: Page) => {
+  await expect(page.getByRole('heading', { name: 'Meet your newest family member' })).toBeVisible();
+};
+
 /** A pet's profile: a row opens it on a phone; from 860 px it already sits beside the list. */
 const profile = async (page: Page) => {
   const tabs = page.getByRole('tablist');
@@ -89,10 +94,10 @@ const addExpense = async (page: Page, amount: string, currency: string, receipt 
 const wizardStep = (step: 2 | 3) => async (page: Page) => {
   await page.getByLabel('Name', { exact: true }).fill('Momo');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'A few details' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A few details' })).toBeVisible();
   if (step === 2) return;
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Reminders for Momo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reminders for Momo' })).toBeVisible();
 };
 
 const membersLoaded = async (page: Page) => {
@@ -495,29 +500,33 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-16 step 1',
+    desk: { layout: 'wizard' },
     path: '/pets/new',
     session: 'account',
-    ready: heading('Meet your newest family member'),
+    ready: wizardReady,
   },
   {
     id: 'S-16 step 2',
+    desk: { layout: 'wizard' },
     path: '/pets/new',
     session: 'account',
-    ready: heading('Meet your newest family member'),
+    ready: wizardReady,
     open: wizardStep(2),
   },
   {
     id: 'S-16 step 3',
+    desk: { layout: 'wizard' },
     path: '/pets/new',
     session: 'account',
-    ready: heading('Meet your newest family member'),
+    ready: wizardReady,
     open: wizardStep(3),
   },
   {
     id: 'S-16 step 3, reminder opened',
+    desk: { layout: 'wizard' },
     path: '/pets/new',
     session: 'account',
-    ready: heading('Meet your newest family member'),
+    ready: wizardReady,
     open: async (page) => {
       await wizardStep(3)(page);
       await page
@@ -648,9 +657,30 @@ export const SCREENS: Screen[] = [
     },
   },
   // P1b-3: Settings, Sync activity and the Emergency hub
-  { id: 'S-25 demo', path: '/settings', session: 'demo', two: true, ready: settingsReady },
-  { id: 'S-32 demo', path: '/sync', session: 'demo', two: true, ready: heading('Sync activity') },
-  { id: 'S-33 demo', path: '/emergency', session: 'demo', two: true, ready: emergencyReady },
+  {
+    id: 'S-25 demo',
+    desk: { layout: 'settings' },
+    path: '/settings',
+    session: 'demo',
+    two: true,
+    ready: settingsReady,
+  },
+  {
+    id: 'S-32 demo',
+    desk: { layout: 'sync' },
+    path: '/sync',
+    session: 'demo',
+    two: true,
+    ready: heading('Sync activity'),
+  },
+  {
+    id: 'S-33 demo',
+    desk: { layout: 'emergency' },
+    path: '/emergency',
+    session: 'demo',
+    two: true,
+    ready: emergencyReady,
+  },
   {
     id: 'S-34 demo',
     path: '/emergency',
@@ -662,9 +692,17 @@ export const SCREENS: Screen[] = [
       await expect(dialogNamed('What a finder sees')(page)).toBeVisible();
     },
   },
-  { id: 'S-25', path: '/settings', session: 'account', two: true, ready: settingsReady },
+  {
+    id: 'S-25',
+    desk: { layout: 'settings' },
+    path: '/settings',
+    session: 'account',
+    two: true,
+    ready: settingsReady,
+  },
   {
     id: 'S-26 timing open',
+    desk: { layout: 'settings' },
     path: '/settings',
     session: 'account',
     two: true,
@@ -724,6 +762,7 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-32',
+    desk: { layout: 'sync' },
     path: '/sync',
     session: 'account',
     two: true,
@@ -734,6 +773,7 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-33 no pet',
+    desk: { layout: 'single' },
     path: '/emergency',
     session: 'account',
     ready: async (page) => {
@@ -742,6 +782,7 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-33 no card',
+    desk: { layout: 'emergency' },
     path: '/emergency',
     session: 'account',
     two: true,
@@ -766,6 +807,7 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-33 card saved',
+    desk: { layout: 'emergency' },
     path: '/emergency',
     session: 'account',
     two: true,
@@ -773,11 +815,12 @@ export const SCREENS: Screen[] = [
     open: async (page) => {
       await withCard(page);
       await page.goto('/emergency');
-      await expect(page.getByText('+1 555 0100')).toBeVisible();
+      await expect(page.getByText('+1 555 0100').first()).toBeVisible();
     },
   },
   {
     id: 'S-33 link created',
+    desk: { layout: 'emergency' },
     path: '/emergency',
     session: 'account',
     two: true,
@@ -805,6 +848,7 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-33 lost',
+    desk: { layout: 'emergency' },
     path: '/emergency',
     session: 'account',
     two: true,

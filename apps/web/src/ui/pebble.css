@@ -2399,6 +2399,10 @@
   }
 }
 @container content (min-width: 600px) and (max-width: 959.98px) {
+  .two[data-layout='settings'],
+  .two[data-layout='emergency'] {
+    grid-template-rows: minmax(150px, auto) minmax(150px, auto) minmax(150px, 1fr);
+  }
   .two[data-layout='overview'],
   .two[data-layout='care'],
   .two[data-layout='files'] {
@@ -2884,6 +2888,17 @@
   }
   .public .facts {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container content (min-width: 600px) {
+  .two[data-layout='settings'] [data-area],
+  .two[data-layout='emergency'] [data-area] {
+    min-height: 0;
+    overflow: auto;
+  }
+  .two[data-layout='settings'] .card[data-area],
+  .two[data-layout='emergency'] .card[data-area] {
+    min-height: 150px;
   }
 }
 @container content (min-width: 600px) and (max-width: 959.98px) {
