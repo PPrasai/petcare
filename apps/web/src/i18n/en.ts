@@ -742,6 +742,7 @@ export const en = {
   'log.open': 'Log something',
   'log.title': 'Log something',
   'log.back': 'Back',
+  'log.kinds': 'Kinds',
   'log.close': 'Close',
   'log.petGroup': 'Pet',
   'log.formTitle': '{kind} for {name}',

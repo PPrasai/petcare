@@ -701,6 +701,14 @@ export const SCREENS: Screen[] = [
     ready: settingsReady,
   },
   {
+    id: 'S-27',
+    desk: { layout: 'settings' },
+    path: '/settings',
+    session: 'account',
+    two: true,
+    ready: settingsReady,
+  },
+  {
     id: 'S-26 timing open',
     desk: { layout: 'settings' },
     path: '/settings',
@@ -1135,6 +1143,23 @@ export const SCREENS: Screen[] = [
       await expect(page.getByTestId('pending-count')).not.toHaveAttribute('data-count', '0');
     },
     desk: { layout: 'home' },
+  },
+  {
+    id: 'S-31',
+    path: '/',
+    session: 'account',
+    kind: 'overlay',
+    widths: [900, 1280],
+    ready: sidebarReady,
+    // Unsynced changes are what make Sign out ask first, so one is made while offline.
+    open: async (page) => {
+      await page.context().setOffline(true);
+      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+      await addPet(page, 'Unsynced');
+      await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
+      await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+      await expect(dialogNamed('You have changes that are not synced')(page)).toBeVisible();
+    },
   },
   // Last in the demo: ticking a task changes the order of the pets for the states after it.
   {

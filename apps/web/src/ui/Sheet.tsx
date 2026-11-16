@@ -6,14 +6,17 @@ interface SheetProps {
   /** The accessible name of the dialog. */
   label: string;
   onClose: () => void;
+  /** From 860 px: a right drawer (forms, the default), a centred dialog or the wide Log dialog. */
+  variant?: 'drawer' | 'dialog' | 'wide';
   children: ReactNode;
 }
 
 /**
- * A modal sheet on the native <dialog>: a bottom sheet below 860 px, centred above. The browser
- * traps focus, closes on Escape and gives focus back to the opener.
+ * A modal sheet on the native <dialog>: a bottom sheet below 860 px, where `variant` has no effect.
+ * From 860 px it is placed by `variant` (SPEC-petcare-004 5.6). The browser traps focus, closes on
+ * Escape and gives focus back to the opener.
  */
-export function Sheet({ open, label, onClose, children }: SheetProps) {
+export function Sheet({ open, label, onClose, variant = 'drawer', children }: SheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -30,7 +33,14 @@ export function Sheet({ open, label, onClose, children }: SheetProps) {
   return (
     // The backdrop click is a pointer convenience; Escape and the close button are the keyboard path.
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-    <dialog ref={ref} aria-label={label} className="sheetdlg" onClose={onClose} onClick={onClick}>
+    <dialog
+      ref={ref}
+      aria-label={label}
+      className="sheetdlg"
+      data-variant={variant}
+      onClose={onClose}
+      onClick={onClick}
+    >
       {open ? <div className="sheet">{children}</div> : null}
     </dialog>
   );

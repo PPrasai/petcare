@@ -38,9 +38,9 @@ for (const [label, viewport] of [
     await expect(page.getByTestId('log-open').filter({ visible: true })).toHaveCount(1);
 
     await openSheet(page);
-    // The nine kinds in the mock's order, and nothing else.
-    const kinds = sheet(page).locator('.types button');
-    await expect(kinds).toHaveText([
+    // The nine kinds in the mock's order, and nothing else: in the grid, and from 860 px also in
+    // the rail (SPEC-petcare-004 S-09).
+    const KINDS = [
       'Meal',
       'Walk',
       'Medication',
@@ -50,7 +50,17 @@ for (const [label, viewport] of [
       'Expense',
       'Vet visit',
       'Photo',
-    ]);
+    ];
+    await expect(sheet(page).locator('.types button')).toHaveText(KINDS);
+    const rail = sheet(page).getByRole('navigation', { name: 'Kinds' });
+    if (label === 'phone') await expect(rail).toHaveCount(0);
+    else {
+      await expect(rail.getByRole('button')).toHaveText(KINDS);
+      await expect(rail.getByRole('button', { name: 'Meal' })).not.toHaveAttribute(
+        'aria-current',
+        'true',
+      );
+    }
 
     // Focus stays inside the dialog however far the user tabs.
     for (let i = 0; i < 12; i++) {
@@ -63,7 +73,7 @@ for (const [label, viewport] of [
       ).toBe(true);
     }
 
-    // A bottom sheet on a phone, centred on a desktop.
+    // A bottom sheet on a phone; from 860 px the wide dialog, centred (880 px, or the window less 48).
     const box = await sheet(page).locator('.sheet').boundingBox();
     expect(box).not.toBeNull();
     if (box && label === 'phone') {
@@ -72,7 +82,8 @@ for (const [label, viewport] of [
     } else if (box) {
       expect(box.y).toBeGreaterThan(0);
       expect(box.y + box.height).toBeLessThan(viewport.height);
-      expect(box.width).toBeLessThan(viewport.width);
+      expect(Math.abs(box.width - Math.min(880, viewport.width - 48))).toBeLessThanOrEqual(1);
+      expect(Math.abs(box.x - (viewport.width - box.x - box.width))).toBeLessThanOrEqual(2);
     }
 
     // Escape closes it and focus goes back to the control that opened it.
@@ -89,7 +100,7 @@ test('each kind writes the right record and offers a way back', async ({ page })
 
   // Weight: the stepper starts from a default and moves in steps of 0.1.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Weight', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Weight', exact: true }).first().click();
   await expect(sheet(page).getByRole('heading', { name: 'Weight for Momo' })).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Raise by 0.1' }).click();
   await sheet(page).getByRole('button', { name: 'Raise by 0.1' }).click();
@@ -99,23 +110,31 @@ test('each kind writes the right record and offers a way back', async ({ page })
 
   // Note: a quick phrase fills the text.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Note', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Note', exact: true }).first().click();
   await sheet(page).getByRole('button', { name: 'Limping' }).click();
   await sheet(page).getByRole('button', { name: 'Save note' }).click();
   await expect(toast(page, 'Note saved for Momo')).toBeVisible();
 
   // An empty note is refused with a message and the sheet stays open.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Note', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Note', exact: true }).first().click();
   await sheet(page).getByRole('button', { name: 'Save note' }).click();
   await expect(sheet(page).getByText('Write a short note first')).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'Back' }).click();
-  await expect(sheet(page).locator('.types button')).toHaveCount(9);
+  // A phone goes Back to the grid; the desktop rail marks the kind it is on and has no Back.
+  const back = sheet(page).getByRole('button', { name: 'Back' });
+  if (await back.isVisible()) {
+    await back.click();
+    await expect(sheet(page).locator('.types button')).toHaveCount(9);
+  } else {
+    await expect(
+      sheet(page).getByRole('navigation', { name: 'Kinds' }).locator('[aria-current="true"]'),
+    ).toHaveText('Note');
+  }
   await page.keyboard.press('Escape');
 
   // Expense.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Expense', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Expense', exact: true }).first().click();
   await sheet(page).getByLabel('Amount').fill('12.50');
   await sheet(page).getByRole('button', { name: 'Vet', exact: true }).click();
   await sheet(page).getByRole('button', { name: 'Save expense' }).click();
@@ -123,7 +142,7 @@ test('each kind writes the right record and offers a way back', async ({ page })
 
   // "More" shows the other five categories, so none is lost (PO-002 Q-12).
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Expense', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Expense', exact: true }).first().click();
   const more = sheet(page).getByRole('button', { name: 'More', exact: true });
   await expect(more).toHaveAttribute('aria-expanded', 'false');
   await more.click();
@@ -143,14 +162,14 @@ test('each kind writes the right record and offers a way back', async ({ page })
 
   // Vet visit.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Vet visit', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Vet visit', exact: true }).first().click();
   await sheet(page).getByLabel('Reason').fill('Annual check-up');
   await sheet(page).getByRole('button', { name: 'Save visit' }).click();
   await expect(toast(page, 'Vet visit added for Momo')).toBeVisible();
 
   // Meal: with a quantity and "Remember as a preset" (on by default) it also makes a preset.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Meal', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Meal', exact: true }).first().click();
   await sheet(page).getByLabel('Food').fill('Salmon kibble');
   await sheet(page).getByLabel('Quantity').fill('300');
   await sheet(page).getByRole('button', { name: 'Save meal' }).click();
@@ -158,13 +177,13 @@ test('each kind writes the right record and offers a way back', async ({ page })
 
   // Walk: one tap on a length saves.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Walk', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Walk', exact: true }).first().click();
   await sheet(page).getByRole('button', { name: '45 min' }).click();
   await expect(toast(page, 'Logged a 45 minute walk for Momo')).toBeVisible();
 
   // Grooming: nothing picked is refused; two tasks and a note save.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Grooming', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Grooming', exact: true }).first().click();
   await sheet(page).getByRole('button', { name: 'Save grooming' }).click();
   await expect(sheet(page).getByText('Pick at least one thing you did')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Bath', exact: true }).click();
@@ -175,7 +194,7 @@ test('each kind writes the right record and offers a way back', async ({ page })
 
   // Medication with no matching task: only the log is written.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Medication', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Medication', exact: true }).first().click();
   await sheet(page).getByRole('button', { name: 'Save medication' }).click();
   await expect(sheet(page).getByText('Add the medication name')).toBeVisible();
   await sheet(page).getByLabel('Medication', { exact: true }).fill('Fish oil');
@@ -186,7 +205,7 @@ test('each kind writes the right record and offers a way back', async ({ page })
 
   // Photo.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Photo', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Photo', exact: true }).first().click();
   await sheet(page).getByLabel('Choose a photo').setInputFiles({
     name: 'momo.png',
     mimeType: 'image/png',
@@ -255,7 +274,7 @@ test('a medication log checks off the matching dose, and Undo deletes both recor
 
   const logCarprofen = async () => {
     await openSheet(page);
-    await sheet(page).getByRole('button', { name: 'Medication', exact: true }).click();
+    await sheet(page).getByRole('button', { name: 'Medication', exact: true }).first().click();
     // The pet's current medication is offered as a chip.
     await expect(
       sheet(page).getByRole('group', { name: 'Current medications' }).getByRole('button'),
@@ -284,7 +303,7 @@ test('a medication log checks off the matching dose, and Undo deletes both recor
 
   // A name shorter than three characters never checks anything off.
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Medication', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Medication', exact: true }).first().click();
   await sheet(page).getByLabel('Medication', { exact: true }).fill('Ca');
   await sheet(page).getByRole('button', { name: 'Save medication' }).click();
   await expect(toast(page, 'Logged Ca for Momo.')).toBeVisible();
@@ -297,7 +316,7 @@ test('"remind me again" adds a once reminder of the right category', async ({ pa
   await signUp(page, 'log-again');
   await addPet(page, 'Momo');
   await openSheet(page);
-  await sheet(page).getByRole('button', { name: 'Grooming', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Grooming', exact: true }).first().click();
   await sheet(page).getByRole('button', { name: 'Bath', exact: true }).click();
   await sheet(page).getByLabel('Remind me again (optional)').selectOption('In 1 week');
   await sheet(page).getByRole('button', { name: 'Save grooming' }).click();

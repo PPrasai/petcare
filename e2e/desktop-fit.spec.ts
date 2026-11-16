@@ -1,8 +1,9 @@
 import { test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { inDesktopScope } from './support/desktop-scope';
+import { DESKTOP_SCOPE, inDesktopScope, sId } from './support/desktop-scope';
 import { walkScreens } from './support/matrix';
 import type { Cell } from './support/matrix';
+import { SCREENS } from './support/screens';
 
 // QA-42: on a converted screen the page fits the window (SPEC-petcare-004 5.1): the document, main
 // and the sidebar do not scroll, only panels and the sidebar pet list do, and no panel is squashed.
@@ -92,4 +93,11 @@ test('fit @1280x600 (the page-scroll fallback)', async ({ browser }) => {
     async (page) => measure(page, false, true),
     { include },
   );
+});
+
+// D5: the scope is complete (SPEC-petcare-004 5.8): every S-id of the screens table except the
+// phone-only S-17, and nothing else.
+test('the desktop scope is every screen except S-17', () => {
+  const all = [...new Set(SCREENS.map((s) => sId(s.id)))].filter((id) => id !== 'S-17').sort();
+  expect([...DESKTOP_SCOPE].sort()).toEqual(all);
 });

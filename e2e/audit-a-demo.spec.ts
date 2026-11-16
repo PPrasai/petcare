@@ -35,6 +35,7 @@ test('every Log sheet kind offers Undo, and Undo removes what was logged', async
     await page
       .getByRole('dialog', { name: 'Log something' })
       .getByRole('button', { name: kind, exact: true })
+      .first()
       .click();
   };
   const sheet = page.getByRole('dialog', { name: 'Log something' });

@@ -18,6 +18,7 @@ import { useHouseholdId } from '../shared/permissions';
 import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { GroomingForm, MealForm, MedicationForm, WalkForm } from './CareForms';
 import { useLogSheetStore } from './log-sheet';
 import type { LogSheetRequest } from './log-sheet';
@@ -357,6 +358,7 @@ function LogSheetBody({ request }: { request: LogSheetRequest }) {
   const householdId = useHouseholdId();
   const [petId, setPetId] = useState(request.petId ?? '');
   const [kind, setKind] = useState<LogKind | null>(request.kind ?? null);
+  const wide = useWideScreen();
 
   const list = useQuery({
     queryKey: ['pet', householdId],
@@ -372,20 +374,23 @@ function LogSheetBody({ request }: { request: LogSheetRequest }) {
     close();
   };
 
-  return (
-    <>
-      <div className="sh-head">
-        {kind ? (
-          <button type="button" className="back" onClick={() => setKind(null)}>
-            <Icon name="back" /> {t('log.back')}
-          </button>
-        ) : (
-          <h2>{t('log.title')}</h2>
-        )}
-        <button type="button" className="xbtn" aria-label={t('log.close')} onClick={close}>
-          <Icon name="x" />
+  const head = (
+    <div className="sh-head">
+      {kind && !wide ? (
+        <button type="button" className="back" onClick={() => setKind(null)}>
+          <Icon name="back" /> {t('log.back')}
         </button>
-      </div>
+      ) : (
+        <h2>{t('log.title')}</h2>
+      )}
+      <button type="button" className="xbtn" aria-label={t('log.close')} onClick={close}>
+        <Icon name="x" />
+      </button>
+    </div>
+  );
+
+  const content = (
+    <>
       {kind && pet ? (
         <h2>{t('log.formTitle', { kind: t(`log.kind.${kind}`), name: petName })}</h2>
       ) : null}
@@ -444,6 +449,37 @@ function LogSheetBody({ request }: { request: LogSheetRequest }) {
       ) : null}
     </>
   );
+
+  if (!wide) {
+    return (
+      <>
+        {head}
+        {content}
+      </>
+    );
+  }
+  // From 860 px: a rail with the nine kinds beside the form (SPEC-petcare-004 S-09).
+  return (
+    <div className="logwide">
+      <nav className="kinds" aria-label={t('log.kinds')}>
+        {KINDS.map(({ kind: k, icon }) => (
+          <button
+            key={k}
+            type="button"
+            aria-current={k === kind ? 'true' : undefined}
+            onClick={() => setKind(k)}
+          >
+            <Icon name={icon} />
+            <span>{t(`log.kind.${k}`)}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="logmain">
+        {head}
+        {content}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -456,7 +492,7 @@ export function LogSheet() {
   const serial = useLogSheetStore((s) => s.serial);
   const close = useLogSheetStore((s) => s.close);
   return (
-    <Sheet open={request !== null} label={t('log.title')} onClose={close}>
+    <Sheet open={request !== null} label={t('log.title')} variant="wide" onClose={close}>
       {request ? <LogSheetBody key={serial} request={request} /> : null}
     </Sheet>
   );

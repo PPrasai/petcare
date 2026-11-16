@@ -11,7 +11,7 @@ const pulled = async (page: Page, type: string): Promise<Change[]> => {
 const sheet = (page: Page) => page.getByRole('dialog', { name: 'Log something' });
 const openMeal = async (page: Page) => {
   await page.getByTestId('log-open').filter({ visible: true }).click();
-  await sheet(page).getByRole('button', { name: 'Meal', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Meal', exact: true }).first().click();
   await expect(sheet(page).getByRole('heading', { name: 'Meal for Momo' })).toBeVisible();
 };
 const logMeal = async (page: Page, food: string, quantity: string, unit = 'g') => {
@@ -79,7 +79,7 @@ test('meal presets: saved, limited to the four newest, logged in three taps, uni
   await page.getByRole('link', { name: 'Expenses', exact: true }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: 'Expenses' })).toBeVisible();
   await page.getByTestId('log-open').filter({ visible: true }).click();
-  await sheet(page).getByRole('button', { name: 'Meal', exact: true }).click();
+  await sheet(page).getByRole('button', { name: 'Meal', exact: true }).first().click();
   await sheet(page).getByTestId('meal-preset').filter({ hasText: 'Food C' }).click();
   await expect(
     page.locator('.toast').filter({ hasText: 'Logged Food C, 120 g for Momo' }),

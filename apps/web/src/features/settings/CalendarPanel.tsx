@@ -104,7 +104,12 @@ export function CalendarRow({ demoNoteId }: { demoNoteId: string }) {
           </>
         }
       />
-      <Sheet open={sheet} label={t('settings.calendar.title')} onClose={() => setSheet(false)}>
+      <Sheet
+        open={sheet}
+        label={t('settings.calendar.title')}
+        variant="dialog"
+        onClose={() => setSheet(false)}
+      >
         <SheetHead title={t('settings.calendar.title')} onClose={() => setSheet(false)} />
         <p>{t('settings.calendar.once')}</p>
         {created ? (
