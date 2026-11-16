@@ -18,9 +18,13 @@ import {
   SheetHead,
   TextField,
 } from '../../ui';
+import { RecentCare } from '../home/RecentCare';
+import type { HomePet } from '../home/use-home-data';
 import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
+import { useNow } from '../shared/use-now';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { InviteSheet, NewInviteCard, OpenInvitesCard } from './InvitesPanel';
 import { MembersPanel, PeopleLines } from './MembersPanel';
 import { useHouseholdAction } from './useHouseholdAction';
@@ -110,6 +114,9 @@ export function HouseholdPage() {
   const current = useSessionStore(activeHousehold);
   const setActive = useSessionStore((s) => s.setActiveHousehold);
   const demo = useDemo();
+  const wide = useWideScreen();
+  const now = useNow();
+  const tz = useSessionStore((s) => s.preferences.timeZone);
   const [renaming, setRenaming] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -127,6 +134,13 @@ export function HouseholdPage() {
     queryFn: () => pets.list(householdId),
     enabled: householdId !== '',
   });
+
+  const petMap = new Map<string, HomePet>(
+    (petList.data ?? []).map((record) => [
+      record.id,
+      { id: record.id, name: String(record.data.name), archived: !!record.data.archivedAt, record },
+    ]),
+  );
 
   if (!current) return null;
   const isOwner = current.role === 'owner' && !demo;
@@ -187,6 +201,9 @@ export function HouseholdPage() {
                           onClose={() => setRenaming(false)}
                         />
                       </Sheet>
+                      {wide ? (
+                        <Button onClick={() => setInviting(true)}>{t('household.invite')}</Button>
+                      ) : null}
                     </>
                   ) : null}
                 </>
@@ -195,7 +212,7 @@ export function HouseholdPage() {
           : {})}
       />
       {demo ? (
-        <div className="two">
+        <div className="two" data-layout={wide ? 'household' : undefined}>
           <div className="stack">
             <Card>
               <SectionHeader title={t('household.people')} />
@@ -212,15 +229,17 @@ export function HouseholdPage() {
               </ul>
             </Card>
           </div>
+          {wide ? <RecentCare householdId={current.id} pets={petMap} tz={tz} now={now} /> : null}
         </div>
       ) : (
-        <div className="two">
+        <div className="two" data-layout={wide ? 'household' : undefined}>
           <div className="stack">
             <MembersPanel
               householdId={current.id}
               isOwner={isOwner}
               members={members}
               onInvite={() => setInviting(true)}
+              hideInvite={wide}
             >
               {isOwner ? (
                 <InviteSheet
@@ -233,7 +252,7 @@ export function HouseholdPage() {
             </MembersPanel>
             {isOwner ? <OpenInvitesCard householdId={current.id} /> : null}
           </div>
-          <div className="stack">
+          <div className="stack" data-area="more" data-scroll>
             {created ? <NewInviteCard invite={created} onHide={() => setCreated(null)} /> : null}
             <Card>
               <SectionHeader title={t('household.joinTitle')} />
@@ -280,6 +299,7 @@ export function HouseholdPage() {
               />
             </Card>
           </div>
+          {wide ? <RecentCare householdId={current.id} pets={petMap} tz={tz} now={now} /> : null}
         </div>
       )}
     </>

@@ -8,6 +8,7 @@ import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import {
+  Button,
   Card,
   EmptyState,
   Icon,
@@ -22,6 +23,7 @@ import { LoadError } from '../shared/LoadError';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { AddExpenseSheet } from './AddExpenseSheet';
 import { SpendSummary } from './SpendSummary';
 
@@ -36,6 +38,7 @@ export function ExpensesPage() {
   const today = useToday();
   const [period, setPeriod] = useState<Period>('month');
   const [adding, setAdding] = useState(false);
+  const wide = useWideScreen();
   const list = useQuery({
     queryKey: ['expense', householdId],
     queryFn: () => expenses.list(householdId),
@@ -60,25 +63,83 @@ export function ExpensesPage() {
           }),
         });
 
+  const seg = (
+    <SegmentedControl
+      label={t('expenses.period')}
+      value={period}
+      onChange={(v) => setPeriod(v === 'year' ? 'year' : 'month')}
+      options={[
+        { value: 'month', label: t('expenses.period.month') },
+        { value: 'year', label: t('expenses.period.year') },
+      ]}
+    />
+  );
+  const rowOf = (x: (typeof rows)[number]) => {
+    const category = t(`expenses.category.${String(x.data.category)}` as MessageKey);
+    const title = x.data.note ? String(x.data.note) : category;
+    const actions = (
+      <span className="acts">
+        {x.data.fileId ? (
+          <FileViewButton fileId={String(x.data.fileId)} label={t('expenses.receipt')} />
+        ) : null}
+        {canDelete(x.createdBy) ? (
+          <button
+            type="button"
+            className="xbtn"
+            aria-label={t('form.deleteLabel', { name: title })}
+            onClick={() => void removeRecord(x, title)}
+          >
+            <Icon name="x" />
+          </button>
+        ) : null}
+      </span>
+    );
+    const date = formatDate(String(x.data.spentOn), prefs);
+    const money = formatMoney(Number(x.data.amountMinor), String(x.data.currency));
+    if (wide)
+      return (
+        <tr key={x.id} data-testid="expense-row">
+          <td>{date}</td>
+          <th scope="row">{title}</th>
+          <td className="cat">{category}</td>
+          <td>{petName(x.data.petId)}</td>
+          <td className="amt">{money}</td>
+          <td>{actions}</td>
+        </tr>
+      );
+    return (
+      <Line
+        key={x.id}
+        title={title}
+        sub={`${date} · ${category} · ${petName(x.data.petId)}`}
+        aside={<span className="amt">{money}</span>}
+        actions={actions}
+      />
+    );
+  };
+
   return (
     <>
       <PageHeader
         title={t('expenses.title')}
         lede={lede}
         actions={
-          <SegmentedControl
-            label={t('expenses.period')}
-            value={period}
-            onChange={(v) => setPeriod(v === 'year' ? 'year' : 'month')}
-            options={[
-              { value: 'month', label: t('expenses.period.month') },
-              { value: 'year', label: t('expenses.period.year') },
-            ]}
-          />
+          wide ? (
+            <>
+              {seg}
+              {canCreate ? (
+                <Button onClick={() => setAdding(true)}>
+                  <Icon name="plus" /> {t('expenses.add')}
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            seg
+          )
         }
       />
       {list.isError ? <LoadError onRetry={() => void list.refetch()} /> : null}
-      <div className="two">
+      <div className="two" data-layout={wide ? 'expenses' : undefined}>
         <div className="stack">
           <SpendSummary
             expenses={list.data ?? []}
@@ -90,10 +151,10 @@ export function ExpensesPage() {
           />
         </div>
         <div className="stack">
-          <Card>
+          <Card data-area="tx">
             <SectionHeader
               title={t('expenses.transactions')}
-              {...(canCreate
+              {...(canCreate && !wide
                 ? {
                     action: {
                       label: t('ui.add'),
@@ -104,45 +165,28 @@ export function ExpensesPage() {
                 : {})}
             />
             {list.isPending ? <EmptyState busy>{t('ui.loading')}</EmptyState> : null}
-            {rows.length > 0 ? (
-              <ul aria-label={t('expenses.list')}>
-                {rows.map((x) => {
-                  const category = t(`expenses.category.${String(x.data.category)}` as MessageKey);
-                  const title = x.data.note ? String(x.data.note) : category;
-                  return (
-                    <Line
-                      key={x.id}
-                      title={title}
-                      sub={`${formatDate(String(x.data.spentOn), prefs)} · ${category} · ${petName(x.data.petId)}`}
-                      aside={
-                        <span className="amt">
-                          {formatMoney(Number(x.data.amountMinor), String(x.data.currency))}
-                        </span>
-                      }
-                      actions={
-                        <span className="acts">
-                          {x.data.fileId ? (
-                            <FileViewButton
-                              fileId={String(x.data.fileId)}
-                              label={t('expenses.receipt')}
-                            />
-                          ) : null}
-                          {canDelete(x.createdBy) ? (
-                            <button
-                              type="button"
-                              className="xbtn"
-                              aria-label={t('form.deleteLabel', { name: title })}
-                              onClick={() => void removeRecord(x, title)}
-                            >
-                              <Icon name="x" />
-                            </button>
-                          ) : null}
-                        </span>
-                      }
-                    />
-                  );
-                })}
-              </ul>
+            {wide && list.isSuccess && rows.length === 0 ? (
+              <p className="muted">{t('expenses.summaryEmpty')}</p>
+            ) : null}
+            {rows.length > 0 && wide ? (
+              <table className="ltable tx" aria-label={t('expenses.list')}>
+                <thead>
+                  <tr>
+                    <th scope="col">{t('expenses.date')}</th>
+                    <th scope="col">{t('expenses.what')}</th>
+                    <th scope="col" className="cat">
+                      {t('expenses.category')}
+                    </th>
+                    <th scope="col">{t('expenses.pet')}</th>
+                    <th scope="col">{t('expenses.amount')}</th>
+                    <td />
+                  </tr>
+                </thead>
+                <tbody>{rows.map(rowOf)}</tbody>
+              </table>
+            ) : null}
+            {rows.length > 0 && !wide ? (
+              <ul aria-label={t('expenses.list')}>{rows.map(rowOf)}</ul>
             ) : null}
             {canCreate ? (
               <AddExpenseSheet
