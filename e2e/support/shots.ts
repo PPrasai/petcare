@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { test } from '@playwright/test';
-import { forEachCell, walkScreens } from './matrix';
+import type { Browser } from '@playwright/test';
+import { THEMES, forEachCell, walkScreens } from './matrix';
 import type { Cell } from './matrix';
 
 /**
@@ -26,18 +27,33 @@ const taken: { id: string; cell: Cell }[] = [];
 
 test.beforeAll(() => mkdirSync(OUT, { recursive: true }));
 
-forEachCell('shots', (cell, browser) =>
-  walkScreens(cell, browser, async (page, screen) => {
-    // Let the display font and any transition settle, so a capture is not mid-change.
-    await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({
-      path: `${OUT}/${slug(screen.id)}-${cell.width.w}-${cell.theme}.png`,
-      fullPage: true,
-    });
-    taken.push({ id: screen.id, cell });
-    return [];
-  }),
-);
+const shoot = (cell: Cell, browser: Browser) =>
+  walkScreens(
+    cell,
+    browser,
+    async (page, screen) => {
+      // Let the display font and any transition settle, so a capture is not mid-change.
+      await page.evaluate(() => document.fonts.ready);
+      await page.screenshot({
+        path: `${OUT}/${slug(screen.id)}-${cell.width.w}-${cell.theme}.png`,
+        fullPage: true,
+      });
+      taken.push({ id: screen.id, cell });
+      return [];
+    },
+    // The 1920 x 1080 cell is not one of the matrix widths: it takes every state that has a desktop layout.
+    cell.width.w === 1920 ? { include: (s) => s.widths?.includes(1280) ?? true } : {},
+  );
+
+// 390, 900 x 720 and 1280 x 720 come from the matrix; 1920 x 1080 is added for the desktop review.
+forEachCell('shots', shoot);
+for (const theme of THEMES) {
+  const cell: Cell = { width: { w: 1920, h: 1080, touch: false }, theme, label: `1920/${theme}` };
+  test(`shots @${cell.label}`, async ({ browser }) => {
+    test.setTimeout(900_000);
+    await shoot(cell, browser);
+  });
+}
 
 test.afterAll(() => {
   const ids = [...new Set(taken.map((s) => s.id))];
