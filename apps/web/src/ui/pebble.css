@@ -1298,6 +1298,30 @@
     flex-direction: column;
     gap: 16px;
   }
+  .strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 2px 6px;
+  }
+  .strip a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    min-width: 68px;
+    text-decoration: none;
+  }
+  .strip a[aria-current='true'],
+  .strip a[aria-current='page'] {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    color: var(--accent);
+  }
   .ph {
     display: flex;
     gap: 18px;
@@ -1631,12 +1655,14 @@
   }
 
   /* hidden scrollbars on scrollers; scrolling by keyboard and wheel still works */
-  .tabs {
+  .tabs,
+  .strip {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
-  .tabs::-webkit-scrollbar {
+  .tabs::-webkit-scrollbar,
+  .strip::-webkit-scrollbar {
     display: none;
   }
 }
@@ -1664,7 +1690,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .split .listcol,
-  .split .back {
+  .split .back,
+  .strip {
     display: none;
   }
   .photos {
