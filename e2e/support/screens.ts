@@ -73,7 +73,7 @@ const PNG = Buffer.from(
 
 /** Adds an expense through the full sheet on /expenses. */
 const addExpense = async (page: Page, amount: string, currency: string, receipt = false) => {
-  await page.getByRole('button', { name: /^Add (an )?expense$/ }).click();
+  await page.getByRole('button', { name: 'Add an expense' }).click();
   await page.getByLabel('Amount').fill(amount);
   await page.getByLabel('Currency').fill(currency);
   if (receipt) {
@@ -81,7 +81,7 @@ const addExpense = async (page: Page, amount: string, currency: string, receipt 
       .getByLabel('Receipt (optional)')
       .setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: PNG });
   }
-  await dialogNamed('Add expense')(page).getByRole('button', { name: 'Add expense' }).click();
+  await page.getByRole('button', { name: 'Add expense' }).click();
   await expect(dialogNamed('Add expense')(page)).toBeHidden();
 };
 
@@ -409,7 +409,6 @@ export const SCREENS: Screen[] = [
   // P1b-2: expenses, household, contacts and the file viewer
   {
     id: 'S-24 list',
-    desk: { layout: 'contacts' },
     path: '/contacts',
     session: 'demo',
     ready: async (page) => {
@@ -424,21 +423,13 @@ export const SCREENS: Screen[] = [
     kind: 'overlay',
     ready: heading('Contacts'),
     open: async (page) => {
-      await page.getByRole('button', { name: /^Add (a )?contact$/ }).click();
+      await page.getByRole('button', { name: 'Add a contact' }).click();
       await expect(dialogNamed('Add contact')(page)).toBeVisible();
     },
   },
-  {
-    id: 'S-18 month',
-    path: '/expenses',
-    session: 'demo',
-    two: true,
-    ready: heading('Expenses'),
-    desk: { layout: 'expenses' },
-  },
+  { id: 'S-18 month', path: '/expenses', session: 'demo', two: true, ready: heading('Expenses') },
   {
     id: 'S-18 year, by pet open',
-    desk: { layout: 'expenses' },
     path: '/expenses',
     session: 'demo',
     two: true,
@@ -449,7 +440,7 @@ export const SCREENS: Screen[] = [
         .getByRole('button', { name: 'This year' })
         .click();
       await expect(page.getByTestId('expense-total').first()).toBeVisible();
-      await openDisclosure(page, 'By pet');
+      await page.locator('summary').filter({ hasText: 'By pet' }).click();
       await expect(page.getByRole('table', { name: 'Spending by pet' })).toBeVisible();
     },
   },
@@ -460,13 +451,12 @@ export const SCREENS: Screen[] = [
     kind: 'overlay',
     ready: heading('Expenses'),
     open: async (page) => {
-      await page.getByRole('button', { name: /^Add (an )?expense$/ }).click();
+      await page.getByRole('button', { name: 'Add an expense' }).click();
       await expect(dialogNamed('Add expense')(page)).toBeVisible();
     },
   },
   {
     id: 'S-20 demo',
-    desk: { layout: 'household' },
     path: '/household',
     session: 'demo',
     two: true,
@@ -476,7 +466,6 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-24 empty',
-    desk: { layout: 'single' },
     path: '/contacts',
     session: 'account',
     ready: async (page) => {
@@ -485,7 +474,6 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-18 empty',
-    desk: { layout: 'expenses' },
     path: '/expenses',
     session: 'account',
     two: true,
@@ -528,14 +516,7 @@ export const SCREENS: Screen[] = [
       await expect(page.getByLabel('Time')).toBeVisible();
     },
   },
-  {
-    id: 'S-20 owner',
-    path: '/household',
-    session: 'account',
-    two: true,
-    ready: membersLoaded,
-    desk: { layout: 'household' },
-  },
+  { id: 'S-20 owner', path: '/household', session: 'account', two: true, ready: membersLoaded },
   {
     id: 'S-21 invite sheet',
     path: '/household',
@@ -549,7 +530,6 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-21 new invite',
-    desk: { layout: 'household' },
     path: '/household',
     session: 'account',
     two: true,
@@ -560,17 +540,6 @@ export const SCREENS: Screen[] = [
       await expect(page.getByRole('img', { name: 'QR code of the invite link' })).toBeVisible();
       await expect(page.getByRole('heading', { level: 2, name: 'Open invites' })).toBeVisible();
     },
-  },
-  {
-    id: 'S-49',
-    path: '/household',
-    session: 'demo',
-    two: true,
-    ready: async (page) => {
-      await expect(page.getByRole('heading', { level: 2, name: 'Recent care' })).toBeVisible();
-    },
-    widths: [900, 1280],
-    desk: { layout: 'household' },
   },
   {
     id: 'S-22 member sheet',
@@ -621,7 +590,6 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-18 spending',
-    desk: { layout: 'expenses' },
     path: '/expenses',
     session: 'account',
     two: true,

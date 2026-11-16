@@ -55,13 +55,10 @@ test('a fresh account sees the empty copy of expenses, contacts and invites', as
   await noEmptyLists(page);
 
   // Spending in another month leaves this month empty.
-  await page.getByRole('button', { name: 'Add expense' }).click();
+  await page.getByRole('button', { name: 'Add an expense' }).click();
   await page.getByLabel('Date').fill('2020-01-15');
   await page.getByLabel('Amount').fill('5');
-  await page
-    .getByRole('dialog', { name: 'Add expense' })
-    .getByRole('button', { name: 'Add expense' })
-    .click();
+  await page.getByRole('button', { name: 'Add expense' }).click();
   await expect(page.locator('.empty').getByText('Nothing spent in this period.')).toBeVisible();
   await noEmptyLists(page);
 
