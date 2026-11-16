@@ -3,6 +3,8 @@ import type { Preferences, QuantityUnit } from '@petcare/domain';
 import { toStored } from '../lib/format';
 import { buildActivity } from './activity';
 import type { ActivityEntry } from './activity';
+import { buildHouseholdActivity } from './household-activity';
+import type { HouseholdActivityEntry } from './household-activity';
 import type { DocumentService } from './document-service';
 import type { ExpenseService } from './expense-service';
 import { addDays } from './health-logic';
@@ -77,8 +79,8 @@ export class LogService {
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.id.localeCompare(a.id));
   }
 
-  /** Recent activity (care logs, completions, notes) of one pet, newest first. */
-  async activity(householdId: string, petId: string): Promise<ActivityEntry[]> {
+  /** The live records that make up activity: logs, completions, notes and what they refer to. */
+  private async activityRecords(householdId: string): Promise<StoredRecord[]> {
     const types = [
       'careLog',
       'symptomEntry',
@@ -89,10 +91,20 @@ export class LogService {
       'medicationDose',
       'medication',
     ] as const;
-    const all = (
-      await Promise.all(types.map((type) => this.records.list(type, householdId)))
-    ).flat();
-    return buildActivity(all, petId);
+    return (await Promise.all(types.map((type) => this.records.list(type, householdId)))).flat();
+  }
+
+  /** Recent activity (care logs, completions, notes) of one pet, newest first. */
+  async activity(householdId: string, petId: string): Promise<ActivityEntry[]> {
+    return buildActivity(await this.activityRecords(householdId), petId);
+  }
+
+  /** What everyone did for the given pets, newest first and bounded (Home "Recent care"). */
+  async householdActivity(
+    householdId: string,
+    petIds: readonly string[],
+  ): Promise<HouseholdActivityEntry[]> {
+    return buildHouseholdActivity(await this.activityRecords(householdId), petIds);
   }
 
   removePreset(id: string): Promise<void> {

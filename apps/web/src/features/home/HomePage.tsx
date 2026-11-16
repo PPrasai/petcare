@@ -1,31 +1,22 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
-import { VACCINE_SOON_DAYS, rankPets, summarize } from '../../application/ranking';
+import { rankPets, summarize } from '../../application/ranking';
 import type { HomeSummary, RankedItem } from '../../application/ranking';
 import type { StoredRecord } from '../../application/ports/record-store';
 import type { TodayView } from '../../application/today';
 import { t } from '../../i18n/t';
-import { useSessionStore } from '../../state/session';
 import { Disclosure, EmptyState, Icon } from '../../ui';
 import { PetProfile } from '../pets/PetProfile';
 import type { StripPet } from '../pets/PetProfile';
 import type { ProfileTab } from '../pets/profile-tabs';
-import { useCan, useHouseholdId } from '../shared/permissions';
+import { useCan } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { useNow } from '../shared/use-now';
 import { useWideScreen } from '../shared/use-wide-screen';
+import { HomeDashboard } from './HomeDashboard';
 import { PetRow } from './PetRow';
-
-export interface HomePet {
-  id: string;
-  name: string;
-  archived: boolean;
-  record: StoredRecord;
-}
-
-const NOTHING: TodayView = { overdue: [], today: [], upcoming: [], snoozed: [], done: [] };
+import { NOTHING, useHomeData } from './use-home-data';
 
 const hourIn = (now: Date, tz: string) =>
   Number(now.toLocaleString('en-GB', { timeZone: tz, hour: 'numeric', hour12: false })) % 24;
@@ -73,10 +64,8 @@ interface Hold {
  * the profile sits beside the list, with the most urgent pet selected until another is chosen.
  */
 export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
-  const { pets, today } = useServices();
-  const householdId = useHouseholdId();
-  const tz = useSessionStore((s) => s.preferences.timeZone);
-  const user = useSessionStore((s) => s.user);
+  const { today } = useServices();
+  const { householdId, tz, user, list, view, homePets } = useHomeData();
   const canAdd = useCan('create', 'pet');
   const now = useNow();
   const wide = useWideScreen();
@@ -88,34 +77,6 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
   const toastOpen = useToastStore((s) => s.message !== null);
   const toastSerial = useToastStore((s) => s.serial);
 
-  const list = useQuery({
-    queryKey: ['pet', householdId],
-    queryFn: () => pets.list(householdId),
-    enabled: householdId !== '',
-  });
-  const view = useQuery({
-    queryKey: ['today', householdId, { home: true }],
-    queryFn: () =>
-      today.view(householdId, {
-        now: new Date(),
-        tz,
-        userId: user?.id ?? '',
-        petId: null,
-        horizonDays: VACCINE_SOON_DAYS,
-      }),
-    enabled: householdId !== '',
-  });
-
-  const homePets = useMemo<HomePet[]>(
-    () =>
-      (list.data ?? []).map((record) => ({
-        id: record.id,
-        name: String(record.data.name),
-        archived: Boolean(record.data.archivedAt),
-        record,
-      })),
-    [list.data],
-  );
   // The order is held while the toast that offers Undo is the one on screen.
   const holding = hold !== null && toastOpen && toastSerial === hold.toast;
   const active = holding ? hold : null;
@@ -156,7 +117,7 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
   const firstRun = list.isSuccess && homePets.length === 0;
   const summary = useMemo(() => summarize(ranked), [ranked]);
 
-  const selectedId = petId ?? (wide ? ranked[0]?.pet.id : undefined);
+  const selectedId = petId;
   const activeTab = petId ? (tab ?? 'overview') : localTab;
   const onTab = (next: ProfileTab) => {
     if (petId) {
@@ -190,6 +151,25 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
     month: 'long',
   });
   const Greeting = petId ? 'h2' : 'h1';
+
+  if (wide && !petId) {
+    return (
+      <HomeDashboard
+        ranked={ranked}
+        view={shown}
+        pets={homePets}
+        householdId={householdId}
+        now={now}
+        tz={tz}
+        label={dateLabel}
+        greeting={greeting}
+        lede={firstRun ? t('home.firstRun.lede') : <Lede summary={summary} />}
+        firstRun={firstRun}
+        held={new Set(holding ? hold.done.keys() : [])}
+        onCheck={(item, petName, already) => void check(item, petName, already)}
+      />
+    );
+  }
 
   return (
     <div className={`split ${petId ? 'open' : ''}`}>

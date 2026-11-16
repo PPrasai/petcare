@@ -25,7 +25,7 @@ test('sign-in page', async ({ page }) => {
 
 test('add pet, health, care, files, emergency, more and the log sheet', async ({ page }) => {
   await signUp(page, 'a11y');
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
   await expectAccessible(page, 'add pet, step 1');
   await page.getByLabel('Name', { exact: true }).fill('Momo');

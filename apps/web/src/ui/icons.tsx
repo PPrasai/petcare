@@ -35,6 +35,8 @@ const PATHS = {
   pill: '<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 9.5l5 5"/>',
   groom:
     '<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 002.5 2.5"/>',
+  side: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
+  book: '<path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/><path d="M10 8h5"/>',
   walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="M9 21l2-6-2.5-2.5L10 8l4 1.5 2 3.5M11 15l3 2 1 4M10 8l-3 3"/>',
 } as const;
 

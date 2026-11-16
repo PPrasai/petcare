@@ -110,7 +110,7 @@ test('a new account sees the first-run invitation, and the wizard is the way in'
 
 test('a pet made through the wizard shows the empty copy of Health and Files', async ({ page }) => {
   await signUp(page, 'empty-new-pet');
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Momo');
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();

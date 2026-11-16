@@ -7,14 +7,20 @@ import type { Screen, Session } from './screens';
 /** The widths and themes every screen state is checked at (SPEC-petcare-003 §6.2). */
 export const WIDTHS = [
   { w: 390, h: 844, touch: true },
-  { w: 1280, h: 800, touch: false },
+  { w: 900, h: 720, touch: false },
+  { w: 1280, h: 720, touch: false },
 ] as const;
 export const THEMES = ['light', 'dark'] as const;
 
+export interface Size {
+  w: number;
+  h: number;
+  touch: boolean;
+}
 export type Width = (typeof WIDTHS)[number];
 export type Theme = (typeof THEMES)[number];
 export interface Cell {
-  width: Width;
+  width: Size;
   theme: Theme;
   /** For example `390/dark`. */
   label: string;
@@ -36,9 +42,18 @@ export function forEachCell(title: string, fn: (cell: Cell, browser: Browser) =>
   }
 }
 
+/** Options for a walk that is not one of the QA-39/40 matrix cells (QA-45 uses them). */
+export interface WalkOptions {
+  /** Which states to visit; the default is the states that exist at the cell's width. */
+  include?: (screen: Screen) => boolean;
+  /** Freezes the page clock and time zone, so data that depends on the time of day is stable. */
+  fixedTime?: string;
+}
+
 async function open(
   browser: Browser,
   cell: Cell,
+  options: WalkOptions = {},
 ): Promise<{ context: BrowserContext; page: Page }> {
   const context = await browser.newContext({
     viewport: { width: cell.width.w, height: cell.width.h },
@@ -46,7 +61,9 @@ async function open(
     colorScheme: cell.theme,
     reducedMotion: 'reduce',
     baseURL: 'http://localhost:4173',
+    ...(options.fixedTime ? { timezoneId: 'UTC', locale: 'en-US' } : {}),
   });
+  if (options.fixedTime) await context.clock.setFixedTime(new Date(options.fixedTime));
   await context.addInitScript(() => {
     try {
       localStorage.setItem('petcare-theme', 'system');
@@ -73,6 +90,9 @@ async function startSession(page: Page, session: Session) {
 
 /** Puts the page into the state a screen entry describes. */
 async function enter(page: Page, screen: Screen, browser: Browser) {
+  // A state may leave the connection off or the sidebar choice stored; the next one starts clean.
+  await page.context().setOffline(false);
+  await page.evaluate(() => localStorage.removeItem('pc:sidebar')).catch(() => undefined);
   const path = typeof screen.path === 'function' ? await screen.path(browser) : screen.path;
   // A full load keeps the session (the demo and the account both survive a reload). A change of
   // the hash alone would not load the page again, so leave it first.
@@ -92,14 +112,19 @@ export async function walkScreens(
   cell: Cell,
   browser: Browser,
   check: (page: Page, screen: Screen) => Promise<string[]>,
+  options: WalkOptions = {},
 ) {
   const problems: string[] = [];
   for (const session of ['none', 'demo', 'account'] as const) {
     const screens = SCREENS.filter(
-      (s) => s.session === session && (s.widths ?? [390, 1280]).includes(cell.width.w),
+      (s) =>
+        s.session === session &&
+        (options.include
+          ? options.include(s)
+          : (s.widths ?? [390, 900, 1280]).includes(cell.width.w)),
     );
     if (screens.length === 0) continue;
-    const { context, page } = await open(browser, cell);
+    const { context, page } = await open(browser, cell, options);
     try {
       await startSession(page, session);
       for (const screen of screens) {

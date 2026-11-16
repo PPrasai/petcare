@@ -1,3 +1,4 @@
+import { expectedTracks } from './support/desktop-layouts';
 import { forEachCell, walkScreens } from './support/matrix';
 
 // QA-40: every screen state is built from the Pebble kit and fits its width. The six rules are
@@ -28,11 +29,19 @@ const BLOCKS = [
   '.ph',
 ];
 
+/** The expected track count by (rounded) content width, for every width the shell can give main. */
+function tracksTable(layout: string | undefined): Record<number, number> {
+  const table: Record<number, number> = {};
+  if (!layout) return table;
+  for (let w = 300; w <= 2000; w++) table[w] = expectedTracks(layout, w);
+  return table;
+}
+
 forEachCell('layout', (cell, browser) =>
   walkScreens(cell, browser, async (page, screen) => {
     const overlay = screen.kind === 'overlay';
     return page.evaluate(
-      ({ blocks, overlay, two, narrow }) => {
+      ({ blocks, overlay, two, narrow, desk, fine, tracksFor }) => {
         const problems: string[] = [];
         const visible = (el: Element) => {
           const r = el.getBoundingClientRect();
@@ -70,8 +79,29 @@ forEachCell('layout', (cell, browser) =>
             }
           }
 
-          // 4. two-column screens
-          if (two) {
+          // 4. two-column screens; from 860 px a panel grid has the tracks of its tier (SPEC-petcare-004 5.5)
+          if (desk && !narrow) {
+            const main = document.querySelector('main');
+            const grid = document.querySelector('main .two[data-layout]');
+            const box = main ? getComputedStyle(main) : null;
+            const content = box
+              ? (main as HTMLElement).clientWidth -
+                parseFloat(box.paddingLeft) -
+                parseFloat(box.paddingRight)
+              : 0;
+            const tracks = grid
+              ? getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length
+              : 0;
+            const expected = tracksFor[Math.round(content)] ?? 1;
+            if (grid?.getAttribute('data-layout') !== desk)
+              problems.push(
+                `the panel grid is ${grid?.getAttribute('data-layout')}, expected ${desk}`,
+              );
+            else if (tracks !== expected)
+              problems.push(
+                `.two[data-layout=${desk}] has ${tracks} columns in a ${Math.round(content)} px column, expected ${expected}`,
+              );
+          } else if (two) {
             const grid = document.querySelector('.two');
             const tracks = grid
               ? getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length
@@ -82,13 +112,14 @@ forEachCell('layout', (cell, browser) =>
           }
         }
 
-        // 5. 44 px hit areas in .sech, .line and .tog
+        // 5. hit areas in .sech, .line and .tog: 44 px, or 32 px from 860 px with a fine pointer
+        const min = fine ? 31.5 : 43.5;
         const controls = 'a, button, input:not([type=hidden]), select, textarea, summary';
         for (const holder of document.querySelectorAll('.sech, .line, .tog')) {
           for (const el of holder.querySelectorAll(controls)) {
             if (!visible(el)) continue;
             const r = el.getBoundingClientRect();
-            if (r.width < 43.5 || r.height < 43.5) {
+            if (r.width < min || r.height < min) {
               problems.push(
                 `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 24)}" is ${Math.round(r.width)}x${Math.round(r.height)}`,
               );
@@ -109,7 +140,16 @@ forEachCell('layout', (cell, browser) =>
         }
         return problems;
       },
-      { blocks: BLOCKS, overlay, two: screen.two === true, narrow: cell.width.w < 860 },
+      {
+        blocks: BLOCKS,
+        overlay,
+        two: screen.two === true,
+        narrow: cell.width.w < 860,
+        desk: screen.desk?.layout ?? '',
+        fine: cell.width.w >= 860 && !cell.width.touch,
+        // The tracks a layout has at each content width this page could have: filled below.
+        tracksFor: tracksTable(screen.desk?.layout),
+      },
     );
   }),
 );

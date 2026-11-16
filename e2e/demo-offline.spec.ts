@@ -38,7 +38,7 @@ for (const [label, viewport] of [
     await page.setViewportSize(viewport);
     const { errors, apiCalls } = await openDemo(page);
 
-    await page.getByRole('link', { name: 'Add a pet' }).click();
+    await page.getByRole('link', { name: 'Add a pet' }).first().click();
     await page.getByLabel('Name', { exact: true }).fill('Pixel');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('button', { name: 'Continue' }).click();

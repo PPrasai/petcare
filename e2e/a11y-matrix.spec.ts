@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { forEachCell, walkScreens } from './support/matrix';
 
 // QA-39 (and the per-screen part of QA-09): axe on every screen state in support/screens.ts, at
-// 390 and 1280 px, in light and dark. A failure names its cell, for example `S-18@390/dark`.
+// 390, 900 and 1280 px, in light and dark. A failure names its cell, for example `S-18@390/dark`.
 // The routed page, open sheets and dialogs, the account pages and the app chrome.
 const SCOPE = [
   'main',
@@ -12,6 +12,7 @@ const SCOPE = [
   '.demo',
   '.nav',
   '.topbar',
+  '.side',
   '.toast',
 ];
 

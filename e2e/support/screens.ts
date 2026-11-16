@@ -20,12 +20,14 @@ export interface Screen {
   ready: (page: Page) => Promise<void>;
   /** Opens a sheet or dialog, or reaches a state, after the page loaded. */
   open?: (page: Page, browser: Browser) => Promise<void>;
-  /** The widths it exists at (More is a phone page). Both when left out. */
-  widths?: (390 | 1280)[];
+  /** The widths it exists at (More is a phone page). All three when left out. */
+  widths?: (390 | 900 | 1280)[];
   /** `overlay` is a sheet or dialog: QA-40 checks overflow, fonts and hit areas only. */
   kind?: 'page' | 'overlay';
   /** A two-column screen: its `.two` has two tracks at 1280 and one at 390. */
   two?: boolean;
+  /** From 860 px: the `data-layout` of its panel grid (SPEC-petcare-004 5.5). */
+  desk?: { layout: string };
 }
 
 const heading =
@@ -37,7 +39,8 @@ const heading =
 /** A pet's profile: a row opens it on a phone; from 860 px it already sits beside the list. */
 const profile = async (page: Page) => {
   const tabs = page.getByRole('tablist');
-  if (!(await tabs.isVisible())) await page.getByTestId('pet-row').first().click();
+  if (!(await tabs.isVisible()))
+    await page.getByTestId('pet-row').filter({ hasText: 'Momo' }).click();
   await expect(tabs).toBeVisible();
 };
 
@@ -166,6 +169,9 @@ const profileOpener =
     await page.getByRole('button', { name: button }).click();
     await expect(dialogNamed(dialog)(page)).toBeVisible();
   };
+const sidebarReady = async (page: Page) => {
+  await expect(page.getByRole('complementary', { name: 'Sidebar' })).toBeVisible();
+};
 const mainReady = async (page: Page) => {
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
 };
@@ -244,6 +250,56 @@ export const SCREENS: Screen[] = [
     path: '/no-such-page',
     session: 'demo',
     ready: heading('Page not found'),
+    desk: { layout: 'single' },
+  },
+
+  // SPEC-petcare-004 D1: Home's first run (before the account has a pet), then the shell states.
+  {
+    id: 'S-10 first run',
+    path: '/',
+    session: 'account',
+    ready: async (page) => {
+      await expect(page.locator('.empty').getByText(/^Add your first pet/)).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Add a pet' }).first()).toBeVisible();
+    },
+    desk: { layout: 'single' },
+  },
+  ...(['expanded', 'collapsed'] as const).map((state): Screen => ({
+    id: `S-06 ${state}`,
+    path: '/',
+    session: 'account',
+    widths: [900, 1280],
+    ready: sidebarReady,
+    open: async (page) => {
+      await page.evaluate((value) => localStorage.setItem('pc:sidebar', value), state);
+      await page.reload();
+      await sidebarReady(page);
+      await expect(page.locator('.app')).toHaveAttribute('data-sidebar', state);
+    },
+    desk: { layout: 'single' },
+  })),
+  {
+    id: 'S-06 offline',
+    path: '/',
+    session: 'account',
+    widths: [900, 1280],
+    ready: sidebarReady,
+    open: async (page) => {
+      await page.context().setOffline(true);
+      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+      await expect(page.getByTestId('connectivity')).toHaveText('Offline');
+    },
+    desk: { layout: 'single' },
+  },
+  {
+    id: 'S-07',
+    path: '/',
+    session: 'demo',
+    ready: async (page) => {
+      await expect(page.getByRole('region', { name: 'Demo mode' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Reset demo' })).toBeVisible();
+    },
+    desk: { layout: 'home' },
   },
 
   // Already Pebble (P1, P2): shell, demo banner, toast, Log sheet, Home, profile header, More
@@ -255,18 +311,7 @@ export const SCREENS: Screen[] = [
       await expect(page.getByRole('region', { name: 'Demo mode' })).toBeVisible();
       await expect(page.getByTestId('pet-row').first()).toBeVisible();
     },
-  },
-  {
-    id: 'S-08',
-    path: '/',
-    session: 'demo',
-    ready: async (page) => {
-      await expect(page.getByTestId('pet-row').first()).toBeVisible();
-    },
-    open: async (page) => {
-      await page.getByTestId('task-check').first().click();
-      await expect(page.locator('.toast')).toBeVisible();
-    },
+    desk: { layout: 'home' },
   },
   {
     id: 'S-09 chooser',
@@ -380,15 +425,6 @@ export const SCREENS: Screen[] = [
     two: true,
     ready: async (page) => {
       await expect(page.locator('.empty').getByText(/^No expenses yet\./)).toBeVisible();
-    },
-  },
-  {
-    id: 'S-10 first run',
-    path: '/',
-    session: 'account',
-    ready: async (page) => {
-      await expect(page.locator('.empty').getByText(/^Add your first pet/)).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Add a pet' })).toBeVisible();
     },
   },
   {
@@ -941,5 +977,37 @@ export const SCREENS: Screen[] = [
       await newPetTab('Care')(page);
       await expect(page.locator('.empty').getByText(/^No reminders yet./)).toBeVisible();
     },
+  },
+
+  // Last: it makes the account's first pet, and the states above need an account without one.
+  {
+    id: 'S-06 sync pending',
+    path: '/',
+    session: 'account',
+    widths: [900, 1280],
+    ready: sidebarReady,
+    open: async (page) => {
+      await page.context().setOffline(true);
+      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+      // A change made while offline is what makes the count non-zero, so this one is always made.
+      await addPet(page, 'Pending');
+      await page.getByRole('link', { name: 'Home', exact: true }).first().click();
+      await expect(page.getByTestId('pending-count')).not.toHaveAttribute('data-count', '0');
+    },
+    desk: { layout: 'home' },
+  },
+  // Last in the demo: ticking a task changes the order of the pets for the states after it.
+  {
+    id: 'S-08',
+    path: '/',
+    session: 'demo',
+    ready: async (page) => {
+      await expect(page.getByTestId('pet-row').first()).toBeVisible();
+    },
+    open: async (page) => {
+      await page.getByTestId('task-check').first().click();
+      await expect(page.locator('.toast')).toBeVisible();
+    },
+    desk: { layout: 'home' },
   },
 ];

@@ -24,7 +24,8 @@ const toast = (page: Page, text: string) => page.locator('.toast').filter({ hasT
 // QA-27: one Log control and one sheet, nine kinds, and the sheet behaves as a modal dialog.
 for (const [label, viewport] of [
   ['phone', { width: 390, height: 844 }],
-  ['desktop', { width: 1280, height: 800 }],
+  ['tablet', { width: 900, height: 720 }],
+  ['desktop', { width: 1280, height: 720 }],
 ] as const) {
   test(`${label}: exactly one visible Log control that opens the sheet, which traps focus`, async ({
     page,

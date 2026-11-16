@@ -27,7 +27,7 @@ test('a name alone saves a pet in three interactions and sets up nothing else', 
 }) => {
   await signUp(page, 'wiz-min');
   let interactions = 0;
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   interactions++;
   await page.getByLabel('Name', { exact: true }).fill('Momo');
   interactions++;
@@ -48,9 +48,11 @@ test('the wizard has no navigation, shows its progress and keeps what was typed'
   page,
 }) => {
   await signUp(page, 'wiz-steps');
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await expect(page).toHaveURL(/\/pets\/new/);
-  await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
+  // The phone shows the wizard alone. From 860 px the sidebar stays (SPEC-petcare-004).
+  const wide = (page.viewportSize()?.width ?? 0) >= 860;
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ visible: wide });
   const progress = page.getByRole('progressbar', { name: 'Progress' });
   await expect(progress).toHaveAttribute('aria-valuenow', '1');
   await expect(page.getByText('Step 1 of 3')).toBeVisible();
@@ -85,7 +87,7 @@ test('the wizard has no navigation, shows its progress and keeps what was typed'
   // Cancel leaves without saving.
   await page.getByRole('button', { name: 'Cancel adding a pet' }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('link', { name: 'Add a pet' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Add a pet' }).first()).toBeVisible();
   await expect(page.getByTestId('pet-row')).toHaveCount(0);
 });
 
@@ -102,7 +104,7 @@ test('the suggestions start unticked and only the ticked ones become reminders',
   page,
 }) => {
   await signUp(page, 'wiz-full');
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Biralo');
   await page.getByRole('button', { name: 'Cat', exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -163,7 +165,7 @@ test('the suggestions start unticked and only the ticked ones become reminders',
 
 test('the annual check-up is a yearly reminder that starts in twelve months', async ({ page }) => {
   await signUp(page, 'wiz-yearly');
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Momo');
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -184,7 +186,7 @@ test('Skip leaves out the details, and a photo chosen in the wizard becomes the 
   page,
 }) => {
   await signUp(page, 'wiz-skip');
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Momo');
   await page.getByTestId('wizard-photo-input').setInputFiles({
     name: 'momo.png',

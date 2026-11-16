@@ -1679,83 +1679,17 @@
 }
 
 @container app (min-width: 860px) {
-  .main {
-    padding: 32px 40px 44px;
-    gap: 26px;
-    max-width: 1180px;
-    width: 100%;
-    margin-inline: auto;
-  }
-  .chrome {
-    order: -1;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 40px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--line);
-  }
-  .topbar {
-    display: contents;
-  }
-  .brand {
-    margin-right: 14px;
-  }
-  .nav {
-    order: 1;
-    position: static;
-    padding: 0;
-    border: 0;
-    background: none;
-    align-items: center;
-  }
-  .nav .links {
-    flex: none;
-    gap: 2px;
-    align-items: center;
-  }
-  .foot {
-    order: 2;
-    margin-left: auto;
-  }
-  .lnk {
-    flex: none;
-    flex-direction: row;
-    gap: 8px;
-    font-size: 14px;
-    padding: 9px 14px;
-    min-height: 44px;
-  }
-  .lnk[aria-current='page'] {
-    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  }
-  .lnk.w {
-    display: flex;
-  }
-  .foot .w {
-    display: inline-flex;
-  }
-  .lnk.n,
-  .foot .n {
-    display: none;
-  }
-  .two {
+  .two:not([data-layout]) {
     grid-template-columns: 1fr 1fr;
   }
   .facts {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .greet h1,
-  .greet h2 {
-    font-size: 36px;
-  }
+  /* The sidebar lists the pets, so the profile has the whole content column (SPEC-petcare-004 S-11). */
   .split {
-    grid-template-columns: 360px minmax(0, 1fr);
-    gap: 36px;
+    grid-template-columns: minmax(0, 1fr);
   }
+  .split .listcol,
   .split .back,
   .strip {
     display: none;
@@ -1960,5 +1894,484 @@
   .noNav .nav,
   .noNav .foot {
     display: none;
+  }
+}
+
+/* desktop ≥860, fluid (SPEC-petcare-004) */
+@media (min-width: 860px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+@media print {
+  html,
+  body,
+  #root {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+/* The frame: only present when the page is rendered with the sidebar (from 860 px). */
+.app[data-sidebar] {
+  display: grid;
+  grid-template-columns: var(--sbw) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 0;
+  font-size: 14px;
+  transition: grid-template-columns 0.18s ease;
+}
+.app[data-sidebar='collapsed'] {
+  --sbw: 68px;
+}
+.app[data-sidebar] .shell {
+  display: contents;
+}
+.app[data-sidebar] .side {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+.app[data-sidebar] .demo {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 32px;
+  padding: 4px 22px;
+  font-size: 12.5px;
+}
+.app[data-sidebar] .main {
+  grid-column: 2;
+  grid-row: 2;
+  container: content / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 22px 20px;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  overflow: auto;
+}
+.app[data-sidebar] .toast {
+  left: calc(var(--sbw) + (100vw - var(--sbw)) / 2);
+  bottom: 22px;
+}
+.app[data-sidebar] * {
+  scrollbar-width: thin;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app[data-sidebar] {
+    transition: none;
+  }
+}
+
+/* The sidebar */
+.side {
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  padding: 14px 12px 12px;
+  gap: 12px;
+  overflow: hidden;
+}
+.sbtop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+}
+.side .brand {
+  margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+.iconbtn {
+  border: 0;
+  background: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  flex: none;
+  padding: 0;
+  text-decoration: none;
+}
+.iconbtn:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+.iconbtn.sm {
+  width: 28px;
+  height: 28px;
+}
+.logbtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 0;
+  border-radius: var(--r);
+  height: 40px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex: none;
+}
+.navl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+}
+.side .lnk {
+  flex: none;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  padding: 0 10px;
+  min-height: 38px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.side .lnk:hover {
+  background: var(--sunk);
+}
+.side .lnk[aria-current='page'] {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.side .lnk .cnt {
+  margin-left: auto;
+  min-width: 20px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 12%, var(--surface));
+}
+.sbsec {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 2px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sbpets {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.spet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  width: 100%;
+  white-space: nowrap;
+  text-decoration: none;
+  color: inherit;
+}
+.spet:hover {
+  background: var(--sunk);
+}
+.spet[aria-current='page'] {
+  background: color-mix(in srgb, var(--accent) 13%, var(--surface));
+}
+.spet .tx,
+.me .tx {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.spet .tx b {
+  font-weight: 700;
+}
+.spet .tx span {
+  font-size: 12px;
+  color: var(--c, var(--muted));
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sbfoot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: none;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.sbfoot .sync {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+.me {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.me .tx span {
+  font-size: 12px;
+  color: var(--muted);
+}
+/* The rail keeps every name as visually hidden text, never display:none. */
+.app[data-sidebar='collapsed'] .side {
+  padding-inline: 10px;
+}
+.app[data-sidebar='collapsed'] .side .lbl,
+.app[data-sidebar='collapsed'] .side .tx,
+.app[data-sidebar='collapsed'] .side .sync > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.app[data-sidebar='collapsed'] .sbtop {
+  flex-direction: column;
+  gap: 10px;
+}
+.app[data-sidebar='collapsed'] .side .lnk,
+.app[data-sidebar='collapsed'] .spet,
+.app[data-sidebar='collapsed'] .logbtn,
+.app[data-sidebar='collapsed'] .me {
+  justify-content: center;
+  padding-inline: 0;
+}
+.app[data-sidebar='collapsed'] .side .lnk {
+  position: relative;
+}
+.app[data-sidebar='collapsed'] .side .lnk .cnt {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 10px;
+}
+.app[data-sidebar='collapsed'] .sbsec {
+  justify-content: center;
+  padding: 4px 0;
+}
+.app[data-sidebar='collapsed'] .sbfoot .sync {
+  justify-content: center;
+  padding: 6px 0;
+}
+
+/* Page header, panels and the templates (SPEC-petcare-004 5.5) */
+@container app (min-width: 860px) {
+  .greet {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    row-gap: 2px;
+    align-items: end;
+    flex: none;
+  }
+  .greet > * {
+    grid-column: 1;
+  }
+  .greet .acts {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    margin: 0;
+  }
+  .greet h1,
+  .greet h2 {
+    font-size: 28px;
+  }
+  .greet .lede {
+    font-size: 14px;
+  }
+  .label {
+    font-size: 11.5px;
+  }
+  .sech h2 {
+    font-size: 17px;
+  }
+  .stack:not([data-area]) {
+    display: contents;
+  }
+  .two[data-layout] {
+    flex: none;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    align-items: stretch;
+  }
+  .two[data-layout] > [data-area] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 0 16px 12px;
+    min-height: 152px;
+    max-height: max(320px, 60vh);
+  }
+  .two[data-layout] > [data-area] > * {
+    flex: none;
+  }
+  .two[data-layout] .sech {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface);
+    margin: 0 -16px 4px;
+    padding: 12px 16px 6px;
+  }
+  .two .plain,
+  .two .plist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .grp {
+    margin-top: 6px;
+  }
+  .grp h3 {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--fb);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--c, var(--muted));
+    padding: 8px 0 2px;
+  }
+  .task .tt span.overdue,
+  .task .tt span.today,
+  .task .tt span.soon,
+  .task .tt span.ok {
+    color: var(--c);
+  }
+  .task.checked .tt b {
+    text-decoration: line-through;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .task .chk,
+  .task .done-ic {
+    margin-left: auto;
+  }
+  .line .lead {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+    flex: 1;
+  }
+  .two[data-layout='home'] .prow {
+    padding: 6px 10px 6px 6px;
+  }
+  .two[data-layout='home'] .plist > li + li {
+    margin-top: 8px;
+  }
+  .two[data-layout] .line {
+    padding: 7px 0;
+  }
+  .two[data-layout='home'] .prow .nm > b {
+    font-size: 17px;
+  }
+}
+@container content (min-width: 960px) {
+  .two[data-layout='home'] {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 0.95fr);
+    grid-template-areas: 'pets today week' 'pets today recent';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+}
+@container content (min-width: 600px) and (max-width: 959.98px) {
+  .two[data-layout='home'] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'pets today' 'week recent';
+    grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+}
+@container content (min-width: 600px) {
+  .two[data-layout] {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .two[data-layout] > [data-area] {
+    max-height: none;
+  }
+  .two[data-layout='home'] > [data-area='pets'] {
+    grid-area: pets;
+  }
+  .two[data-layout='home'] > [data-area='today'] {
+    grid-area: today;
+  }
+  .two[data-layout='home'] > [data-area='week'] {
+    grid-area: week;
+  }
+  .two[data-layout='home'] > [data-area='recent'] {
+    grid-area: recent;
+  }
+}
+/* The short-window fallback comes last so it wins over the tiers: rows by content, main scrolls. */
+@media (min-width: 860px) and (max-height: 639px) {
+  .two[data-layout][data-layout] {
+    flex: none;
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+  }
+  .two[data-layout] > [data-area] {
+    max-height: max(320px, 60vh);
+  }
+}
+
+/* Density for a fine pointer from 860 px */
+@container app (min-width: 860px) {
+  @media (pointer: fine) {
+    .btn {
+      min-height: 36px;
+    }
+    input,
+    select,
+    textarea {
+      min-height: 38px;
+    }
+    .chk,
+    .iconbtn,
+    .linkbtn,
+    .toast button {
+      min-height: 32px;
+    }
   }
 }

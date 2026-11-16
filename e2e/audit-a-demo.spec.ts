@@ -71,7 +71,7 @@ test('/sync in the demo says the data stays on the device and has no Sync now', 
 
 test('the add-pet wizard makes exactly one pet', async ({ page }) => {
   await openDemo(page);
-  await page.getByRole('link', { name: 'Add a pet' }).click();
+  await page.getByRole('link', { name: 'Add a pet' }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Twin');
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Twin' })).toBeVisible();
