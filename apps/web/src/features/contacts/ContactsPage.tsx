@@ -148,66 +148,63 @@ function ContactDetail({
 }) {
   const show = useToastStore((s) => s.show);
   const name = String(c.data.name);
-  const site = field(c, 'website');
-  const rows: [string, string, ReactNode?][] = [
-    [
-      t('contacts.phone'),
-      field(c, 'phone'),
-      <a
-        href={`tel:${field(c, 'phone')}`}
-        className="linkbtn"
-        aria-label={t('contacts.call', { name })}
-      >
-        {t('contacts.callShort')}
-      </a>,
-    ],
-    [t('contacts.email'), field(c, 'email')],
-    [
-      t('contacts.websiteShort'),
-      site,
-      site ? (
-        <a href={site} target="_blank" rel="noreferrer noopener" className="linkbtn">
-          {t('contacts.openLink')}
-        </a>
-      ) : null,
-    ],
-    [t('contacts.address'), field(c, 'address')],
-  ];
+  const row = (label: string, key: string, link?: ReactNode) =>
+    field(c, key) ? (
+      <Line
+        key={key}
+        title={label}
+        sub={field(c, key)}
+        actions={
+          <>
+            {link}
+            <CopyButton
+              variant="link"
+              value={field(c, key)}
+              label={t('contacts.copy')}
+              copiedToast={t('contacts.copied')}
+              onNotify={show}
+            />
+          </>
+        }
+      />
+    ) : null;
   return (
     <Card data-area="detail">
       <div className="sech">
-        <div className="l">
-          <h2>{name}</h2>
-          <span className="muted">{roleText(c)}</span>
-        </div>
+        <h2>{name}</h2>
+        <span className="muted">{roleText(c)}</span>
         {canDelete ? (
           <Button variant="danger" aria-label={t('form.deleteLabel', { name })} onClick={onDelete}>
             {t('form.delete')}
           </Button>
         ) : null}
       </div>
-      <ul aria-label={name}>
-        {rows
-          .filter(([, value]) => value !== '')
-          .map(([label, value, extra]) => (
-            <Line
-              key={label}
-              title={label}
-              sub={value}
-              actions={
-                <span className="acts">
-                  {extra}
-                  <CopyButton
-                    variant="link"
-                    value={value}
-                    label={t('contacts.copy')}
-                    copiedToast={t('contacts.copied')}
-                    onNotify={show}
-                  />
-                </span>
-              }
-            />
-          ))}
+      <ul>
+        {row(
+          t('contacts.phone'),
+          'phone',
+          <a
+            href={`tel:${field(c, 'phone')}`}
+            className="linkbtn"
+            aria-label={t('contacts.call', { name })}
+          >
+            {t('contacts.callShort')}
+          </a>,
+        )}
+        {row(t('contacts.email'), 'email')}
+        {row(
+          t('contacts.websiteShort'),
+          'website',
+          <a
+            href={field(c, 'website')}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="linkbtn"
+          >
+            {t('contacts.openLink')}
+          </a>,
+        )}
+        {row(t('contacts.address'), 'address')}
       </ul>
       {field(c, 'note') ? <Banner>{field(c, 'note')}</Banner> : null}
     </Card>
@@ -267,7 +264,7 @@ function ContactsDesktop({
             <SectionHeader title={t('contacts.list')} />
             <input
               type="search"
-              className="csearch"
+
               aria-label={t('contacts.search')}
               placeholder={t('contacts.search')}
               value={query}

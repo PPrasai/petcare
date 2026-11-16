@@ -19,7 +19,7 @@ import {
   TextField,
 } from '../../ui';
 import { RecentCare } from '../home/RecentCare';
-import { useHomeData } from '../home/use-home-data';
+import type { HomePet } from '../home/use-home-data';
 import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
@@ -115,8 +115,6 @@ export function HouseholdPage() {
   const setActive = useSessionStore((s) => s.setActiveHousehold);
   const demo = useDemo();
   const wide = useWideScreen();
-  const { homePets } = useHomeData();
-  const petMap = new Map(homePets.map((p) => [p.id, p]));
   const now = useNow();
   const tz = useSessionStore((s) => s.preferences.timeZone);
   const [renaming, setRenaming] = useState(false);
@@ -136,6 +134,13 @@ export function HouseholdPage() {
     queryFn: () => pets.list(householdId),
     enabled: householdId !== '',
   });
+
+  const petMap = new Map<string, HomePet>(
+    (petList.data ?? []).map((record) => [
+      record.id,
+      { id: record.id, name: String(record.data.name), archived: !!record.data.archivedAt, record },
+    ]),
+  );
 
   if (!current) return null;
   const isOwner = current.role === 'owner' && !demo;
