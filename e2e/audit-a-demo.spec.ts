@@ -115,15 +115,20 @@ test('a browser that cannot store files still saves the expense, and says so', a
   await expect(page.getByText('9.99').first()).toBeVisible();
 });
 
-test('a screen that fails to load shows the friendly screen with Reload and Home', async ({
-  page,
-}) => {
-  await openDemo(page);
-  await page.route('**/assets/ContactsPage*.js', (route) => route.abort());
-  await page.goto('/contacts');
-  await expect(page.getByTestId('crash-screen')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Reload' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Go to Home' })).toBeVisible();
+// With the service worker active (as on CI) it answers the chunk from its precache and page.route never
+// sees the request, so the aborted chunk must be tested with workers blocked.
+test.describe('lazy chunk failure', () => {
+  test.use({ serviceWorkers: 'block' });
+  test('a screen that fails to load shows the friendly screen with Reload and Home', async ({
+    page,
+  }) => {
+    await openDemo(page);
+    await page.route('**/assets/ContactsPage*.js', (route) => route.abort());
+    await page.goto('/contacts');
+    await expect(page.getByTestId('crash-screen')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reload' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Go to Home' })).toBeVisible();
+  });
 });
 
 test('start-up with a server that answers 500 shows sign-in with a message, not a white page', async ({
