@@ -110,20 +110,14 @@ test('demo: reminders, vaccines, medications, expenses, contacts and preferences
 
   // An expense and a contact.
   await page.getByRole('link', { name: 'Expenses', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Add expense' }).click();
+  await page.getByRole('button', { name: 'Add an expense' }).click();
   await page.getByLabel('Amount').fill('12.50');
-  await page
-    .getByRole('dialog', { name: 'Add expense' })
-    .getByRole('button', { name: 'Add expense' })
-    .click();
+  await page.getByRole('button', { name: 'Add expense' }).click();
   await expect(page.locator('.toast').filter({ hasText: 'Added' })).toBeVisible();
   await page.goto('/contacts');
-  await page.getByRole('button', { name: 'Add contact' }).click();
+  await page.getByRole('button', { name: 'Add a contact' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Dr. Demo');
-  await page
-    .getByRole('dialog', { name: 'Add contact' })
-    .getByRole('button', { name: 'Add contact' })
-    .click();
+  await page.getByRole('button', { name: 'Add contact' }).click();
   await expect(page.getByText('Dr. Demo', { exact: true })).toBeVisible();
 
   // Preferences save in the demo database.
