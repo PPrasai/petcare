@@ -4,6 +4,7 @@ import { t } from '../../i18n/t';
 import { formatDate, toDisplay } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Card } from '../../ui';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { useLogSheet } from '../log/log-sheet';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
@@ -17,6 +18,7 @@ export function WeightCard({ petId }: { petId: string }) {
   const prefs = useSessionStore((s) => s.preferences);
   const canLog = useCan('create', 'measurement');
   const logSheet = useLogSheet();
+  const wide = useWideScreen();
   const list = useQuery({
     queryKey: ['measurement', householdId, { petId }],
     queryFn: () => measurements.list(householdId, petId),
@@ -29,9 +31,10 @@ export function WeightCard({ petId }: { petId: string }) {
       value: Math.round(toDisplay('weight', Number(m.data.value), prefs) * 100) / 100,
     }));
   const last = weights.at(-1);
+  const change = Math.round(((last?.value ?? 0) - (weights[0]?.value ?? 0)) * 100) / 100;
 
   return (
-    <Card>
+    <Card data-area="weight">
       <div className="sech">
         <h2>{t('weight.title')}</h2>
         {canLog ? (
@@ -48,18 +51,36 @@ export function WeightCard({ petId }: { petId: string }) {
         {t('weight.unit', { unit: prefs.weightUnit })}
       </p>
       {weights.length >= 2 ? (
-        <div
-          role="img"
-          aria-label={t('measure.chartSummary', {
-            from: weights[0]?.date ?? '',
-            to: last?.date ?? '',
-            count: weights.length,
-          })}
-        >
-          <Suspense fallback={null}>
-            <WeightChart points={weights} unit={prefs.weightUnit} />
-          </Suspense>
-        </div>
+        <>
+          <div
+            role="img"
+            aria-label={t('measure.chartSummary', {
+              from: weights[0]?.date ?? '',
+              to: last?.date ?? '',
+              count: weights.length,
+            })}
+          >
+            <Suspense fallback={null}>
+              <WeightChart points={weights} unit={prefs.weightUnit} height={wide ? '100%' : 240} />
+            </Suspense>
+          </div>
+          {wide ? (
+            <div className="facts">
+              <div>
+                <span className="label">{t('weight.now')}</span>
+                <b>{`${last?.value ?? ''} ${prefs.weightUnit}`}</b>
+              </div>
+              <div>
+                <span className="label">{t('weight.change')}</span>
+                <b>{`${change > 0 ? '+' : ''}${change} ${prefs.weightUnit}`}</b>
+              </div>
+              <div>
+                <span className="label">{t('weight.lastWeighed')}</span>
+                <b>{last?.date}</b>
+              </div>
+            </div>
+          ) : null}
+        </>
       ) : (
         <p className="empty">
           {last

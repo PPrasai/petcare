@@ -14,9 +14,18 @@ export interface WeightPoint {
 }
 
 /** Weight over time. The data is also listed in the measurements table below the chart. */
-export default function WeightChart({ points, unit }: { points: WeightPoint[]; unit: string }) {
+export default function WeightChart({
+  points,
+  unit,
+  height = 240,
+}: {
+  points: WeightPoint[];
+  unit: string;
+  /** A number of px, or '100%' to fill a panel (160 px at least). */
+  height?: number | '100%';
+}) {
   return (
-    <div style={{ width: '100%', height: 240 }}>
+    <div style={{ width: '100%', height, minHeight: height === '100%' ? 160 : 0 }}>
       <ResponsiveContainer>
         <LineChart data={points} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
