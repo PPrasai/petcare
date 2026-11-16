@@ -65,7 +65,10 @@ const openLog = async (page: Page) => {
 const logKind = (index: number) => async (page: Page) => {
   await openLog(page);
   await logSheet(page).locator('.types button').nth(index).click();
-  await expect(logSheet(page).getByRole('heading', { level: 2 })).not.toHaveText('Log something');
+  // From 860 px the dialog keeps its own title above the form's, so the form's is the last one.
+  await expect(logSheet(page).getByRole('heading', { level: 2 }).last()).not.toHaveText(
+    'Log something',
+  );
 };
 
 const dialogNamed = (name: string | RegExp) => (page: Page) => page.getByRole('dialog', { name });
