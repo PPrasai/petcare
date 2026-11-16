@@ -156,7 +156,7 @@ export function OpenInvitesCard({ householdId }: { householdId: string }) {
   });
   const rows = invites.data ?? [];
   return (
-    <Card>
+    <Card data-area="invites">
       <SectionHeader title={t('household.openInvites')} />
       {error ? <Banner tone="warn">{error}</Banner> : null}
       {invites.isSuccess && rows.length === 0 ? (

@@ -97,14 +97,17 @@ test('a browser that cannot store files still saves the expense, and says so', a
   });
   await openDemo(page);
   await page.getByRole('link', { name: 'Expenses', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Add an expense' }).click();
+  await page.getByRole('button', { name: 'Add expense' }).click();
   await page.getByLabel('Amount').fill('9.99');
   await page.getByLabel(/Receipt|File/).setInputFiles({
     name: 'receipt.png',
     mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgo=', 'base64'),
   });
-  await page.getByRole('button', { name: 'Add expense' }).click();
+  await page
+    .getByRole('dialog', { name: 'Add expense' })
+    .getByRole('button', { name: 'Add expense' })
+    .click();
   await expect(toast(page)).toContainText("files can't be saved in this browser mode");
   await expect(page.getByText('9.99').first()).toBeVisible();
 });

@@ -109,13 +109,16 @@ test('expenses are totalled per pet and per currency', async ({ page }) => {
   await page.getByRole('link', { name: 'Expenses' }).click();
 
   const add = async (amount: string, currency: string, category: string, receipt?: boolean) => {
-    await page.getByRole('button', { name: 'Add an expense' }).click();
+    await page.getByRole('button', { name: 'Add expense' }).click();
     await page.getByLabel('Pet', { exact: true }).selectOption({ label: 'Momo' });
     await page.getByLabel('Category').selectOption({ label: category });
     await page.getByLabel('Amount').fill(amount);
     await page.getByLabel('Currency').fill(currency);
     if (receipt) await page.getByLabel('Receipt (optional)').setInputFiles(png('receipt.png'));
-    await page.getByRole('button', { name: 'Add expense' }).click();
+    await page
+      .getByRole('dialog', { name: 'Add expense' })
+      .getByRole('button', { name: 'Add expense' })
+      .click();
     // The sheet closes and a toast confirms what was added.
     await expect(page.getByRole('dialog', { name: 'Add expense' })).toBeHidden();
     await expect(page.locator('.toast')).toContainText(/Added .* for Momo/);
@@ -133,7 +136,7 @@ test('expenses are totalled per pet and per currency', async ({ page }) => {
   await expect(summary.getByText(/Also spent:/)).toBeVisible();
   await expect(summary.getByTestId('expense-total')).toHaveCount(2);
 
-  await page.locator('summary').filter({ hasText: 'By pet' }).click();
+  await openDisclosure(page, 'By pet');
   await expect(page.getByRole('row', { name: /Momo.*\$19\.75/ })).toBeVisible();
   await expect(page.getByRole('row', { name: /Momo.*1,500\.00/ })).toBeVisible();
 
@@ -155,10 +158,13 @@ test('a contact can be added and linked to a vet visit', async ({ page }) => {
   await addPet(page, 'Momo');
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('link', { name: 'Contacts' }).first().click();
-  await page.getByRole('button', { name: 'Add a contact' }).click();
+  await page.getByRole('button', { name: 'Add contact' }).click();
   await page.getByLabel('Name').fill('Dr. Rai');
   await page.getByLabel('Phone').fill('+977 1 555 0100');
-  await page.getByRole('button', { name: 'Add contact' }).click();
+  await page
+    .getByRole('dialog', { name: 'Add contact' })
+    .getByRole('button', { name: 'Add contact' })
+    .click();
   await expect(page.getByTestId('contact-row').filter({ hasText: 'Dr. Rai' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Call Dr. Rai' })).toHaveAttribute(
     'href',
