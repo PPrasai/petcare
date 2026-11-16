@@ -13,7 +13,6 @@ import {
   CopyButton,
   EmptyState,
   Icon,
-  Initials,
   Line,
   PageHeader,
   SectionHeader,
@@ -162,17 +161,7 @@ function ContactDetail({
         {t('contacts.callShort')}
       </a>,
     ],
-    [
-      t('contacts.email'),
-      field(c, 'email'),
-      <a
-        href={`mailto:${field(c, 'email')}`}
-        className="linkbtn"
-        aria-label={t('contacts.emailTo', { name })}
-      >
-        {t('contacts.email')}
-      </a>,
-    ],
+    [t('contacts.email'), field(c, 'email')],
     [
       t('contacts.websiteShort'),
       site,
@@ -267,13 +256,9 @@ function ContactsDesktop({
       {empty || loading ? (
         <div className="two" data-layout="single">
           <Card data-area="empty">
-            {empty ? (
-              <EmptyState icon="vet" action={canCreate ? add : undefined}>
-                {t('empty.contacts')}
-              </EmptyState>
-            ) : (
-              <EmptyState busy>{t('ui.loading')}</EmptyState>
-            )}
+            <EmptyState icon="vet" busy={loading} action={canCreate && !loading ? add : undefined}>
+              {loading ? t('ui.loading') : t('empty.contacts')}
+            </EmptyState>
           </Card>
         </div>
       ) : (
@@ -297,18 +282,15 @@ function ContactsDesktop({
                   <li key={c.id}>
                     <button
                       type="button"
-                      className="crow"
+                      className="prow"
                       data-testid="contact-row"
                       aria-current={c.id === current?.id ? 'true' : undefined}
                       onClick={() => setPicked(c.id)}
                     >
-                      <Initials name={name} seed={c.id} />
-                      <span className="l">
+                      <span className="nm">
                         <b>{name}</b>
                         <span>{[roleText(c), phone].filter(Boolean).join(' · ')}</span>
                       </span>
-                      {phone ? <Icon name="phone" /> : null}
-                      {field(c, 'email') ? <Icon name="mail" /> : null}
                     </button>
                   </li>
                 );
@@ -322,11 +304,7 @@ function ContactsDesktop({
               canDelete={canDelete(current.createdBy)}
               onDelete={() => onRemove(current, String(current.data.name))}
             />
-          ) : (
-            <Card data-area="detail">
-              <SectionHeader title={t('contacts.title')} />
-            </Card>
-          )}
+          ) : null}
         </div>
       )}
     </>

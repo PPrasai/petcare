@@ -179,9 +179,7 @@ export function ExpensesPage() {
                     </th>
                     <th scope="col">{t('expenses.pet')}</th>
                     <th scope="col">{t('expenses.amount')}</th>
-                    <th scope="col">
-                      <span className="sr-only">{t('expenses.actions')}</span>
-                    </th>
+                    <td />
                   </tr>
                 </thead>
                 <tbody>{rows.map(rowOf)}</tbody>

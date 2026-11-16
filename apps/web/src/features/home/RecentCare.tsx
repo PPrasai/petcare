@@ -15,25 +15,20 @@ export function RecentCareList({
   who,
   tz,
   now,
-  seeAll = true,
 }: {
   entries: readonly HouseholdActivityEntry[];
   pets: ReadonlyMap<string, HomePet>;
   who: (userId: string) => string;
   tz: string;
   now: Date;
-  /** The "See all" link to the household page (off on that page itself). */
-  seeAll?: boolean;
 }) {
   return (
     <div className="card" data-area="recent">
       <div className="sech">
         <h2>{t('home.recentCare')}</h2>
-        {seeAll ? (
-          <Link to="/household" className="linkbtn">
-            {t('home.seeAll')}
-          </Link>
-        ) : null}
+        <Link to="/household" className="linkbtn">
+          {t('home.seeAll')}
+        </Link>
       </div>
       {entries.length === 0 ? (
         <p className="muted">{t('home.recentEmpty')}</p>
@@ -71,13 +66,11 @@ export function RecentCare({
   pets,
   tz,
   now,
-  seeAll,
 }: {
   householdId: string;
   pets: ReadonlyMap<string, HomePet>;
   tz: string;
   now: Date;
-  seeAll?: boolean;
 }) {
   const { log, households } = useServices();
   const me = useSessionStore((s) => s.user?.id ?? '');
@@ -97,14 +90,5 @@ export function RecentCare({
     id === me
       ? t('activity.you')
       : (members.data?.find((m) => m.userId === id)?.name ?? t('activity.someone'));
-  return (
-    <RecentCareList
-      entries={entries.data ?? []}
-      pets={pets}
-      who={who}
-      tz={tz}
-      now={now}
-      {...(seeAll === undefined ? {} : { seeAll })}
-    />
-  );
+  return <RecentCareList entries={entries.data ?? []} pets={pets} who={who} tz={tz} now={now} />;
 }

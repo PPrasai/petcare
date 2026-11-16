@@ -59,7 +59,6 @@ export function SpendSummary({ expenses, pets, today, period, currency, loading 
   const [before, after] = t('expenses.otherCurrencies', { list: '\u0000' }).split('\u0000');
   const petOf = (id: string | null) => pets.find((p) => p.id === id);
   const wide = useWideScreen();
-  const totalOf = (code: string) => totals.find((g) => g.currency === code)?.totalMinor || 1;
   const byPetTable = (
     <table className="ltable">
       <caption className="sr-only">{t('expenses.byPetCaption')}</caption>
@@ -75,20 +74,6 @@ export function SpendSummary({ expenses, pets, today, period, currency, loading 
                 </span>
               </th>
               <td className="amt">{formatMoney(r.totalMinor, r.currency)}</td>
-              {wide ? (
-                <td className="shr" aria-hidden="true">
-                  <span className="bar">
-                    <i
-                      style={
-                        {
-                          '--c': 'var(--accent)',
-                          width: `${(r.totalMinor / totalOf(r.currency)) * 100}%`,
-                        } as CSSProperties
-                      }
-                    />
-                  </span>
-                </td>
-              ) : null}
             </tr>
           );
         })}

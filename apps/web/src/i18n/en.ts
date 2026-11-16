@@ -505,7 +505,6 @@ export const en = {
   'contacts.websiteShort': 'Website',
   'contacts.openLink': 'Open link',
   'expenses.what': 'What',
-  'expenses.actions': 'Actions',
   'contacts.role.vet': 'Vet',
   'contacts.role.clinic': 'Clinic',
   'contacts.role.emergencyClinic': 'Emergency clinic',
