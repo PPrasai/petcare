@@ -1,7 +1,8 @@
 import { getEntity } from '@petcare/domain';
 import { changedFields, formToPetData, petToForm, withoutEmpty } from './pet-form';
 import type { ArchiveReason, PetFormValues } from './pet-form';
-import type { RecordStore, StoredRecord } from './ports/record-store';
+import type { IdGenerator } from './ports/runtime';
+import type { NewRecord, RecordStore, StoredRecord } from './ports/record-store';
 
 export class InvalidInput extends Error {
   constructor(readonly path: string) {
@@ -12,7 +13,10 @@ export class InvalidInput extends Error {
 
 /** Pet use cases. */
 export class PetService {
-  constructor(private readonly records: RecordStore) {}
+  constructor(
+    private readonly records: RecordStore,
+    private readonly ids: IdGenerator = { next: () => crypto.randomUUID() },
+  ) {}
 
   /** Pets of the household; archived pets are listed after the active ones. */
   async list(householdId: string): Promise<StoredRecord[]> {
@@ -37,6 +41,31 @@ export class PetService {
     const data = withoutEmpty(formToPetData(values));
     this.check(data);
     return this.records.create('pet', householdId, data);
+  }
+
+  /**
+   * Creates a pet and its first reminders in one local transaction (the add-pet wizard): either
+   * all of them are written or none, so a failure never leaves a pet without its reminders and a
+   * retry cannot make a second pet. `reminders` gets the new pet's id.
+   */
+  async createWithReminders(
+    householdId: string,
+    values: PetFormValues,
+    reminders: (petId: string) => Record<string, unknown>[],
+  ): Promise<StoredRecord> {
+    const data = withoutEmpty(formToPetData(values));
+    this.check(data);
+    const petId = this.ids.next();
+    const items: NewRecord[] = [{ id: petId, type: 'pet', data }];
+    for (const reminder of reminders(petId)) {
+      const parsed = getEntity('reminder').schema.safeParse(reminder);
+      if (!parsed.success) throw new InvalidInput(parsed.error.issues[0]?.path.join('.') ?? '');
+      items.push({ type: 'reminder', data: reminder });
+    }
+    const written = await this.records.createMany(householdId, items);
+    const pet = written[0];
+    if (!pet) throw new Error('pet was not written');
+    return pet;
   }
 
   /** Saves only the fields that changed. Returns the pet unchanged when nothing did. */

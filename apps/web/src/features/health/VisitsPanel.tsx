@@ -7,6 +7,8 @@ import { useSessionStore } from '../../state/session';
 import { Button, Disclosure, EmptyState, Icon, Line } from '../../ui';
 import { useContactName, useContactOptions } from '../contacts/hooks';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { errorsFor, useHealthList, useToday } from './hooks';
@@ -38,6 +40,7 @@ function AddVisit({ petId, onClose }: { petId: string; onClose: () => void }) {
     ...FIELDS.slice(2),
   ];
 
+  const failure = useSaveFailure();
   const submit = async () => {
     const { cost, ...rest } = values;
     const amount = cost ? Number(cost) : undefined;
@@ -45,6 +48,7 @@ function AddVisit({ petId, onClose }: { petId: string; onClose: () => void }) {
       setErrors({ cost: t('form.invalid') });
       return;
     }
+    failure.clear();
     try {
       await health.add('vetVisit', householdId, {
         petId,
@@ -58,7 +62,10 @@ function AddVisit({ petId, onClose }: { petId: string; onClose: () => void }) {
       );
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors(errorsFor(e.path, t('form.invalid')));
     }
   };
@@ -72,15 +79,17 @@ function AddVisit({ petId, onClose }: { petId: string; onClose: () => void }) {
       onChange={setValues}
       onSubmit={() => void submit()}
       submitLabel={t('visit.add')}
-    />
+    >
+      {failure.view}
+    </RecordForm>
   );
 }
 
 function VisitList({ petId }: { petId: string }) {
-  const { health } = useServices();
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'vetVisit');
   const canDelete = useCanDelete('vetVisit');
+  const removeRecord = useRemoval();
   const list = useHealthList('vetVisit', petId);
   const [adding, setAdding] = useState(false);
   const rows = [...(list.data ?? [])].sort((a, b) =>
@@ -131,7 +140,7 @@ function VisitList({ petId }: { petId: string }) {
                     <Button
                       variant="secondary"
                       aria-label={t('form.deleteLabel', { name: date })}
-                      onClick={() => void health.remove('vetVisit', v.id)}
+                      onClick={() => void removeRecord(v, date)}
                     >
                       {t('form.delete')}
                     </Button>

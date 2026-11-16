@@ -9,6 +9,8 @@ import { Button, Card, Chip, EmptyState, Line, Pill, SectionHeader } from '../..
 import type { Tone } from '../../ui';
 import { useContactName, useContactOptions } from '../contacts/hooks';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { errorsFor, useHealthList, useToday } from './hooks';
@@ -58,13 +60,18 @@ function AddVaccination({
       nextDueOn: addDays(v.givenOn || today, intervalDays),
     }));
 
+  const failure = useSaveFailure();
   const submit = async () => {
+    failure.clear();
     try {
       await health.add('vaccination', householdId, { petId, ...values });
       show(t('form.added', { name: values.vaccineName ?? '' }));
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors(errorsFor(e.path, t('form.invalid')));
     }
   };
@@ -95,17 +102,19 @@ function AddVaccination({
         onChange={setValues}
         onSubmit={() => void submit()}
         submitLabel={t('vaccine.add')}
-      />
+      >
+        {failure.view}
+      </RecordForm>
     </>
   );
 }
 
 /** Vaccinations of one pet: a status pill per record, and an add sheet with species suggestions. */
 export function VaccinationsPanel({ petId, species }: { petId: string; species: string }) {
-  const { health } = useServices();
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'vaccination');
   const canDelete = useCanDelete('vaccination');
+  const removeRecord = useRemoval();
   const today = useToday();
   const list = useHealthList('vaccination', petId);
   const [adding, setAdding] = useState(false);
@@ -163,7 +172,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
                     <Button
                       variant="secondary"
                       aria-label={t('form.deleteLabel', { name })}
-                      onClick={() => void health.remove('vaccination', v.id)}
+                      onClick={() => void removeRecord(v, name)}
                     >
                       {t('form.delete')}
                     </Button>

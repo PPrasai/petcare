@@ -95,6 +95,9 @@ export function openUserData(
       return present(await store.update(type, id, fields));
     },
     remove: (type, id) => store.remove(type, id),
+    async restore(record) {
+      return present(await store.restore(record.type, record.id, record.householdId, record.data));
+    },
   };
 
   const sync: SyncControl = {

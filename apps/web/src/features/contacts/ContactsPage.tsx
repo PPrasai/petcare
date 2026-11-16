@@ -19,6 +19,8 @@ import {
 } from '../../ui';
 import { LoadError } from '../shared/LoadError';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
@@ -55,13 +57,18 @@ function AddContactForm({ onClose }: { onClose: () => void }) {
   const set = (name: keyof ContactForm) => (e: { target: { value: string } }) =>
     setValues({ ...values, [name]: e.target.value });
 
+  const failure = useSaveFailure();
   const submit = async () => {
+    failure.clear();
     try {
       await contacts.add(householdId, values);
       showToast(t('contacts.added', { name: values.name.trim() }));
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors({ [e.path]: t('form.invalid') });
     }
   };
@@ -114,6 +121,7 @@ function AddContactForm({ onClose }: { onClose: () => void }) {
           onChange={set('website')}
         />
         <TextField label={t('contacts.note')} value={values.note} onChange={set('note')} />
+        {failure.view}
         <Button type="submit">{t('contacts.add')}</Button>
       </form>
     </>
@@ -126,6 +134,7 @@ export function ContactsPage() {
   const householdId = useHouseholdId();
   const canCreate = useCan('create', 'contact');
   const canDelete = useCanDelete('contact');
+  const removeRecord = useRemoval();
   const [adding, setAdding] = useState(false);
   const list = useQuery({
     queryKey: ['contact', householdId],
@@ -214,7 +223,7 @@ export function ContactsPage() {
                           type="button"
                           className="xbtn"
                           aria-label={t('form.deleteLabel', { name })}
-                          onClick={() => void contacts.remove(c.id)}
+                          onClick={() => void removeRecord(c, name)}
                         >
                           <Icon name="x" />
                         </button>

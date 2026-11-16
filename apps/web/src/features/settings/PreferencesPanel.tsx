@@ -15,6 +15,7 @@ const opts = (pairs: [string, string][]) => pairs.map(([value, label]) => ({ val
 export function PreferencesPanel() {
   const { account } = useServices();
   const saved = useSessionStore((s) => s.preferences);
+  const waiting = useSessionStore((s) => s.preferencesPending);
   const [draft, setDraft] = useState<Preferences>(saved);
   const [note, setNote] = useState<{ tone: 'info' | 'warn'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -167,6 +168,7 @@ export function PreferencesPanel() {
           {t('settings.prefs.save')}
         </Button>
         {note ? <Banner tone={note.tone}>{note.text}</Banner> : null}
+        {waiting ? <p className="muted">{t('settings.prefs.pending')}</p> : null}
       </form>
     </Card>
   );

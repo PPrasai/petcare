@@ -3,7 +3,9 @@ import { careSuggestions } from '@petcare/domain';
 import type { CareSuggestion } from '@petcare/domain';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { FileStorageUnavailable } from '../../application/ports/file-gateway';
 import { PhotoUnusable } from '../../application/ports/image-reducer';
+import type { StoredRecord } from '../../application/ports/record-store';
 import {
   WIZARD_SLICE,
   WIZARD_SPECIES,
@@ -118,7 +120,7 @@ function SuggestionRow({
 export function AddPetWizard() {
   const search = useSearch({ strict: false }) as { step?: number };
   const step: WizardStep = search.step === 2 || search.step === 3 ? search.step : 1;
-  const { pets, photos, health } = useServices();
+  const { pets, photos } = useServices();
   const householdId = useHouseholdId();
   const tz = useSessionStore((s) => s.preferences.timeZone);
   const navigate = useNavigate();
@@ -131,6 +133,7 @@ export function AddPetWizard() {
   const [nameError, setNameError] = useState('');
   const [failed, setFailed] = useState('');
   const [saving, setSaving] = useState(false);
+  const created = useRef<StoredRecord | null>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
@@ -198,30 +201,42 @@ export function AddPetWizard() {
     setFailed('');
     try {
       const now = new Date();
-      const pet = await pets.create(householdId, wizardToPetForm(values, today));
-      if (withReminders) {
-        for (const s of list) {
-          const choice = shown[s.id];
-          if (!choice?.on) continue;
-          await health.add(
-            'reminder',
-            householdId,
-            reminderFromSuggestion(
-              s,
-              t(`wizard.sug.${s.id}` as MessageKey),
-              choice,
-              pet.id,
-              tz,
-              now,
-            ),
-          );
-        }
-      }
+      // The pet and its reminders go in together; once written, a retry reuses that pet.
+      created.current ??= await pets.createWithReminders(
+        householdId,
+        wizardToPetForm(values, today),
+        (petId) =>
+          withReminders
+            ? list.flatMap((s) => {
+                const choice = shown[s.id];
+                if (!choice?.on) return [];
+                return [
+                  reminderFromSuggestion(
+                    s,
+                    t(`wizard.sug.${s.id}` as MessageKey),
+                    choice,
+                    petId,
+                    tz,
+                    now,
+                  ),
+                ];
+              })
+            : [],
+      );
+      const pet = created.current;
       if (photo) {
         try {
           await photos.set(householdId, pet.id, photo);
         } catch (e) {
-          showToast(t(e instanceof PhotoUnusable ? 'photo.unusable' : 'photo.failed'));
+          showToast(
+            t(
+              e instanceof PhotoUnusable
+                ? 'photo.unusable'
+                : e instanceof FileStorageUnavailable
+                  ? 'files.storageUnavailable'
+                  : 'photo.failed',
+            ),
+          );
         }
       }
       showToast(t('wizard.saved', { name }));

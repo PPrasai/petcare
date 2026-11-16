@@ -2,7 +2,7 @@ import { entities } from '@petcare/domain';
 import type { RecordType } from '@petcare/domain';
 import type { Clock, IdGenerator } from '../../application/ports/runtime';
 import type { LocalDb, LocalRecord } from '../local/local-db';
-import { enqueue } from './outbox';
+import { enqueue, entriesFor } from './outbox';
 
 export interface LocalStoreDeps {
   db: LocalDb;
@@ -68,12 +68,12 @@ export class LocalStore {
   /** Several creates in one local transaction: all are written, or none (CON-003 2.5.2). */
   async createMany(
     householdId: string,
-    items: { type: RecordType; data: Record<string, unknown> }[],
+    items: { id?: string; type: RecordType; data: Record<string, unknown> }[],
   ): Promise<LocalRecord[]> {
     const { db, clock, actorId } = this.deps;
     const now = clock.now().toISOString();
-    const records: LocalRecord[] = items.map(({ type, data }) => ({
-      id: this.deps.ids.next(),
+    const records: LocalRecord[] = items.map(({ id, type, data }) => ({
+      id: id ?? this.deps.ids.next(),
       type,
       householdId,
       version: 0,
@@ -179,6 +179,46 @@ export class LocalStore {
       }
     });
     this.deps.onWrite?.(touched);
+  }
+
+  /**
+   * Takes a delete back (the Undo toast). While the delete is still waiting in the outbox it is
+   * simply withdrawn; if the create was never sent the record is written again under its own id;
+   * once the server has the delete (or is receiving it) the data comes back as a new record, so
+   * nothing the outbox holds is ever rewritten. Returns the live record.
+   */
+  async restore(
+    type: RecordType,
+    id: string,
+    householdId: string,
+    data: Record<string, unknown>,
+  ): Promise<LocalRecord> {
+    const { db, clock, actorId } = this.deps;
+    const now = clock.now().toISOString();
+    const outcome = await db.transaction('rw', [db.records(type), db.outbox], async () => {
+      const current = await db.records(type).get(id);
+      if (!current) return { kind: 'create' as const, id };
+      const entries = await entriesFor(db, type, id);
+      const last = entries.at(-1);
+      if (current.deletedAt !== null && last?.op === 'delete' && last.sending !== true) {
+        if (last.seq !== undefined) await db.outbox.delete(last.seq);
+        const live: LocalRecord = {
+          ...current,
+          deletedAt: null,
+          updatedAt: now,
+          updatedBy: actorId,
+          _pending: entries.length > 1,
+        };
+        await db.records(type).put(live);
+        return { kind: 'live' as const, record: live };
+      }
+      return { kind: 'create' as const, id: this.deps.ids.next() };
+    });
+    if (outcome.kind === 'live') {
+      this.deps.onWrite?.([type]);
+      return outcome.record;
+    }
+    return this.create(type, householdId, data, outcome.id);
   }
 
   private async dropWithPet(row: LocalRecord, petNeverSent: boolean, now: string): Promise<void> {

@@ -33,6 +33,10 @@ interface SessionState {
   /** The household being shown; null means the first one. */
   activeHouseholdId: string | null;
   preferences: Preferences;
+  /** True while saved preferences wait on this device to be sent to the server. */
+  preferencesPending: boolean;
+  /** True when start-up could not get a usable answer from the server and nothing is stored here. */
+  startupProblem: boolean;
   /** Sign-in options from /api/config; null until loaded (or when offline). */
   config: PublicConfig | null;
   setSignedIn: (
@@ -46,6 +50,8 @@ interface SessionState {
   setActiveHousehold: (id: string) => void;
   setConfig: (config: PublicConfig | null) => void;
   setPreferences: (preferences: Preferences) => void;
+  setPreferencesPending: (pending: boolean) => void;
+  setStartupProblem: (problem: boolean) => void;
 }
 
 const ACTIVE_KEY = 'petcare-active-household';
@@ -65,6 +71,8 @@ export const useSessionStore = create<SessionState>()((set) => ({
   households: [],
   activeHouseholdId: null,
   preferences: DEFAULT_PREFERENCES,
+  preferencesPending: false,
+  startupProblem: false,
   config: null,
   setSignedIn: (user, households, preferences, demo = false) =>
     set({
@@ -74,6 +82,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
       households,
       activeHouseholdId: demo ? null : remembered(),
       preferences,
+      preferencesPending: false,
     }),
   setSignedOut: () =>
     set({
@@ -83,6 +92,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
       households: [],
       activeHouseholdId: null,
       preferences: DEFAULT_PREFERENCES,
+      preferencesPending: false,
     }),
   setHouseholds: (households) => set({ households }),
   setActiveHousehold: (id) => {
@@ -95,6 +105,8 @@ export const useSessionStore = create<SessionState>()((set) => ({
   },
   setConfig: (config) => set({ config }),
   setPreferences: (preferences) => set({ preferences }),
+  setPreferencesPending: (preferencesPending) => set({ preferencesPending }),
+  setStartupProblem: (startupProblem) => set({ startupProblem }),
 }));
 
 /** The household the app is showing: the chosen one if the user still belongs to it, else the first. */

@@ -68,6 +68,13 @@ describe('PUT /api/me/preferences', () => {
     expect(body.errors.length).toBeGreaterThan(0);
   });
 
+  it('rejects a time zone that is not an IANA name', async () => {
+    const c = await signedIn();
+    const bad = await c.put('/api/me/preferences', { ...changed, timeZone: 'Mars/Olympus' });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().code).toBe('invalid');
+  });
+
   it('requires a session', async () => {
     const res = await new ApiClient(api).put('/api/me/preferences', changed);
     expect(res.statusCode).toBe(401);

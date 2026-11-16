@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { LOG_EXPENSE_CATEGORIES, LOG_EXPENSE_MORE } from '../../application/log-service';
 import type { LogKind } from '../../application/log-service';
 import { InvalidInput } from '../../application/pet-service';
+import { FileStorageUnavailable } from '../../application/ports/file-gateway';
 import { PhotoUnusable } from '../../application/ports/image-reducer';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
@@ -14,6 +15,7 @@ import type { IconName } from '../../ui';
 import { isAllowedFile } from '../files/FilePicker';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useHouseholdId } from '../shared/permissions';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { GroomingForm, MealForm, MedicationForm, WalkForm } from './CareForms';
@@ -59,14 +61,21 @@ function WeightForm({ petId, petName, done }: FormProps) {
     value ?? round1(toDisplay('weight', latest ? Number(latest.data.value) : DEFAULT_KG, prefs));
   const unit = unitLabel('weight', prefs);
 
+  const failure = useSaveFailure();
   const save = async () => {
-    await log.weight(householdId, petId, shown, prefs, new Date());
-    done(
-      t('log.weight.toast', {
-        name: petName,
-        value: formatMeasurement('weight', toStored('weight', shown, prefs), prefs),
-      }),
-    );
+    failure.clear();
+    try {
+      const written = await log.weight(householdId, petId, shown, prefs, new Date());
+      done(
+        t('log.weight.toast', {
+          name: petName,
+          value: formatMeasurement('weight', toStored('weight', shown, prefs), prefs),
+        }),
+        () => void log.undo(written),
+      );
+    } catch (e) {
+      failure.fail(e);
+    }
   };
 
   return (
@@ -79,6 +88,7 @@ function WeightForm({ petId, petName, done }: FormProps) {
         onLower={() => setValue(Math.max(STEP, round1(shown - STEP)))}
         onRaise={() => setValue(round1(shown + STEP))}
       />
+      {failure.view}
       <Button onClick={() => void save()}>{t('log.weight.save')}</Button>
     </>
   );
@@ -91,13 +101,18 @@ function NoteForm({ petId, petName, done }: FormProps) {
   const [error, setError] = useState('');
   const id = useId();
 
+  const failure = useSaveFailure();
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    failure.clear();
     try {
-      await log.note(householdId, petId, text, new Date());
-      done(t('log.note.toast', { name: petName }));
+      const written = await log.note(householdId, petId, text, new Date());
+      done(t('log.note.toast', { name: petName }), () => void log.undo(written));
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setError(t('log.note.error'));
     }
   };
@@ -135,6 +150,7 @@ function NoteForm({ petId, petName, done }: FormProps) {
           {error}
         </p>
       ) : null}
+      {failure.view}
       <Button type="submit">{t('log.note.save')}</Button>
     </form>
   );
@@ -151,19 +167,25 @@ function ExpenseForm({ petId, petName, done }: FormProps) {
   const moreId = useId();
   const showMore = more || (LOG_EXPENSE_MORE as readonly string[]).includes(category);
 
+  const failure = useSaveFailure();
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    failure.clear();
     try {
-      await log.expense(householdId, petId, amount, category, prefs, new Date());
+      const written = await log.expense(householdId, petId, amount, category, prefs, new Date());
       done(
         t('log.expense.toast', {
           amount: amount.trim(),
           category: t(`expenses.category.${category}` as MessageKey).toLowerCase(),
           name: petName,
         }),
+        () => void log.undo(written),
       );
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setError(t('log.expense.error'));
     }
   };
@@ -206,6 +228,7 @@ function ExpenseForm({ petId, petName, done }: FormProps) {
           ))}
         </div>
       ) : null}
+      {failure.view}
       <Button type="submit">{t('log.expense.save')}</Button>
     </form>
   );
@@ -219,13 +242,18 @@ function VetForm({ petId, petName, done }: FormProps) {
   const [cost, setCost] = useState('');
   const [error, setError] = useState<{ field: 'reason' | 'cost'; message: string } | null>(null);
 
+  const failure = useSaveFailure();
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    failure.clear();
     try {
-      await log.vetVisit(householdId, petId, reason, cost, prefs, new Date());
-      done(t('log.vet.toast', { name: petName }));
+      const written = await log.vetVisit(householdId, petId, reason, cost, prefs, new Date());
+      done(t('log.vet.toast', { name: petName }), () => void log.undo(written));
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setError(
         e.path === 'cost'
           ? { field: 'cost', message: t('form.invalid') }
@@ -255,6 +283,7 @@ function VetForm({ petId, petName, done }: FormProps) {
         onChange={(e) => setCost(e.target.value)}
         error={error?.field === 'cost' ? error.message : undefined}
       />
+      {failure.view}
       <Button type="submit">{t('log.vet.save')}</Button>
     </form>
   );
@@ -278,13 +307,19 @@ function PhotoForm({ petId, petName, done }: FormProps) {
       return;
     }
     try {
-      await log.photo(householdId, petId, file);
+      const written = await log.photo(householdId, petId, file);
+      done(t('log.photo.toast', { name: petName }), () => void log.undo(written));
     } catch (e) {
-      if (!(e instanceof PhotoUnusable)) throw e;
-      setError(t('photo.unusable'));
-      return;
+      setError(
+        t(
+          e instanceof PhotoUnusable
+            ? 'photo.unusable'
+            : e instanceof FileStorageUnavailable
+              ? 'files.storageUnavailable'
+              : 'form.saveFailed',
+        ),
+      );
     }
-    done(t('log.photo.toast', { name: petName }));
   };
 
   return (

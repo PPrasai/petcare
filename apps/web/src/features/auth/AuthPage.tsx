@@ -27,6 +27,7 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
   const navigate = useNavigate();
   const [demoBusy, setDemoBusy] = useState(false);
   const providers = useSessionStore((s) => s.config?.providers.join(',') ?? '');
+  const startupProblem = useSessionStore((s) => s.startupProblem);
   const [problem, setProblem] = useState<MessageKey | null>(null);
   const signUp = mode === 'signUp';
   const problemRef = useRef<HTMLDivElement>(null);
@@ -130,6 +131,8 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
             <Banner tone="warn" ref={problemRef} tabIndex={-1}>
               {t(problem)}
             </Banner>
+          ) : startupProblem ? (
+            <Banner tone="warn">{t('auth.error.startup')}</Banner>
           ) : null}
           <form.Subscribe selector={(s) => s.isSubmitting}>
             {(submitting) => (

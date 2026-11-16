@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { ChangeEvent } from 'react';
+import { FileStorageUnavailable } from '../../application/ports/file-gateway';
 import { PhotoUnusable } from '../../application/ports/image-reducer';
 import type { StoredRecord } from '../../application/ports/record-store';
 import { t } from '../../i18n/t';
@@ -32,7 +33,15 @@ export function usePetPhoto(pet: StoredRecord | undefined) {
       await photos.set(householdId, pet.id, file);
       show(t('photo.saved', { name }));
     } catch (error) {
-      show(t(error instanceof PhotoUnusable ? 'photo.unusable' : 'photo.failed'));
+      show(
+        t(
+          error instanceof PhotoUnusable
+            ? 'photo.unusable'
+            : error instanceof FileStorageUnavailable
+              ? 'files.storageUnavailable'
+              : 'photo.failed',
+        ),
+      );
     }
   };
   const remove = async () => {

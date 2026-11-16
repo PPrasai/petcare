@@ -15,6 +15,8 @@ export interface StoredRecord {
 
 /** One record to create with `createMany`. */
 export interface NewRecord {
+  /** The id to give it, when other records in the same write refer to it; else one is made. */
+  id?: string;
   type: RecordType;
   data: Record<string, unknown>;
 }
@@ -35,4 +37,9 @@ export interface RecordStore {
   createMany(householdId: string, items: NewRecord[]): Promise<StoredRecord[]>;
   update(type: RecordType, id: string, fields: Record<string, unknown>): Promise<StoredRecord>;
   remove(type: RecordType, id: string): Promise<void>;
+  /**
+   * Takes a delete back (Undo): the record is live again, whether its delete is still queued or
+   * already sent (then its data comes back as a new record). Returns the live record.
+   */
+  restore(record: StoredRecord): Promise<StoredRecord>;
 }

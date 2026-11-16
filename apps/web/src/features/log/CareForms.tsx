@@ -18,6 +18,7 @@ import { useSessionStore } from '../../state/session';
 import { Button, Chip, SelectField, TextField } from '../../ui';
 import { useHealthList, useToday } from '../health/hooks';
 import { useHouseholdId } from '../shared/permissions';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { amountText, rememberUnit, rememberedUnit, unitName } from './quantity';
 
@@ -72,6 +73,7 @@ export function MealForm({ petId, petName, done }: CareFormProps) {
   const [time, setTime] = useState('');
   const [savePreset, setSavePreset] = useState(true);
   const [error, setError] = useState<{ field: 'food' | 'quantity'; message: string } | null>(null);
+  const failure = useSaveFailure();
   const presets = useQuery({
     queryKey: ['mealPreset', householdId, { petId }],
     queryFn: () => log.presets(householdId, petId),
@@ -83,16 +85,22 @@ export function MealForm({ petId, petName, done }: CareFormProps) {
     done(message, () => void log.undo(written));
 
   const tap = async (preset: StoredRecord) => {
-    const written = await log.mealFromPreset(householdId, preset, new Date());
-    const amount = amountText(Number(preset.data.quantity), String(preset.data.quantityUnit));
-    finish(
-      t('log.meal.presetToast', { food: String(preset.data.foodName), amount, name: petName }),
-      written,
-    );
+    failure.clear();
+    try {
+      const written = await log.mealFromPreset(householdId, preset, new Date());
+      const amount = amountText(Number(preset.data.quantity), String(preset.data.quantityUnit));
+      finish(
+        t('log.meal.presetToast', { food: String(preset.data.foodName), amount, name: petName }),
+        written,
+      );
+    } catch (e) {
+      failure.fail(e);
+    }
   };
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    failure.clear();
     try {
       const written = await log.meal(
         householdId,
@@ -103,7 +111,10 @@ export function MealForm({ petId, petName, done }: CareFormProps) {
       rememberUnit(userId, unit);
       finish(t('log.meal.toast', { name: petName }), written);
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setError(
         e.path === 'quantity'
           ? { field: 'quantity', message: t('log.meal.quantityError') }
@@ -176,6 +187,7 @@ export function MealForm({ petId, petName, done }: CareFormProps) {
       >
         {t('log.meal.savePreset')}
       </Chip>
+      {failure.view}
       <Button type="submit">{t('log.meal.save')}</Button>
     </form>
   );
@@ -184,13 +196,20 @@ export function MealForm({ petId, petName, done }: CareFormProps) {
 export function WalkForm({ petId, petName, done }: CareFormProps) {
   const { log } = useServices();
   const householdId = useHouseholdId();
+  const failure = useSaveFailure();
   const save = async (minutes: number) => {
-    const written = await log.walk(householdId, petId, minutes, new Date());
-    done(t('log.walk.toast', { count: minutes, name: petName }), () => void log.undo(written));
+    failure.clear();
+    try {
+      const written = await log.walk(householdId, petId, minutes, new Date());
+      done(t('log.walk.toast', { count: minutes, name: petName }), () => void log.undo(written));
+    } catch (e) {
+      failure.fail(e);
+    }
   };
   return (
     <>
       <p className="muted">{t('log.walk.help')}</p>
+      {failure.view}
       <div className="tags">
         {WALK_MINUTES.map((m) => (
           <Chip
@@ -219,9 +238,11 @@ export function GroomingForm({ petId, petName, done }: CareFormProps) {
   const toggle = (task: GroomingTask) =>
     setTasks((now) => (now.includes(task) ? now.filter((x) => x !== task) : [...now, task]));
 
+  const failure = useSaveFailure();
   const save = async (event: FormEvent) => {
     event.preventDefault();
     const now = new Date();
+    failure.clear();
     try {
       const written = await log.grooming(
         householdId,
@@ -243,7 +264,10 @@ export function GroomingForm({ petId, petName, done }: CareFormProps) {
         () => void log.undo(written),
       );
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setError(t('log.groom.error'));
     }
   };
@@ -270,6 +294,7 @@ export function GroomingForm({ petId, petName, done }: CareFormProps) {
           {error}
         </p>
       ) : null}
+      {failure.view}
       <Button type="submit">{t('log.groom.save')}</Button>
     </form>
   );
@@ -291,10 +316,12 @@ export function MedicationForm({ petId, petName, done }: CareFormProps) {
   const today = useToday();
   const current = (meds.data ?? []).filter((m) => !courseEnded(m, today));
 
+  const failure = useSaveFailure();
   const save = async (event: FormEvent) => {
     event.preventDefault();
     const now = new Date();
     const days = againDays(again);
+    failure.clear();
     try {
       const { records, matched } = await log.medication(
         householdId,
@@ -319,7 +346,10 @@ export function MedicationForm({ petId, petName, done }: CareFormProps) {
         () => void log.undo(records),
       );
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setError(t('log.med.error'));
     }
   };
@@ -375,6 +405,7 @@ export function MedicationForm({ petId, petName, done }: CareFormProps) {
         />
       </div>
       <AgainField value={again} onChange={setAgain} />
+      {failure.view}
       <Button type="submit">{t('log.med.save')}</Button>
     </form>
   );

@@ -6,6 +6,8 @@ import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Button, Card, EmptyState, Line, SectionHeader } from '../../ui';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { errorsFor, useHealthList, useToday } from './hooks';
@@ -54,13 +56,18 @@ function AddCondition({ petId, onClose }: { petId: string; onClose: () => void }
   const show = useToastStore((s) => s.show);
   const [values, setValues] = useState<Record<string, string>>({ kind: 'allergy' });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const failure = useSaveFailure();
   const submit = async () => {
+    failure.clear();
     try {
       await health.add('condition', householdId, { petId, ...values });
       show(t('form.added', { name: values.name ?? '' }));
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors(errorsFor(e.path, t('form.invalid')));
     }
   };
@@ -73,7 +80,9 @@ function AddCondition({ petId, onClose }: { petId: string; onClose: () => void }
       onChange={setValues}
       onSubmit={() => void submit()}
       submitLabel={t('condition.add')}
-    />
+    >
+      {failure.view}
+    </RecordForm>
   );
 }
 
@@ -83,7 +92,9 @@ function AddSymptom({ petId, onClose }: { petId: string; onClose: () => void }) 
   const show = useToastStore((s) => s.show);
   const [values, setValues] = useState<Record<string, string>>({ observedAt: nowLocal() });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const failure = useSaveFailure();
   const submit = async () => {
+    failure.clear();
     try {
       await health.add('symptomEntry', householdId, {
         petId,
@@ -93,7 +104,10 @@ function AddSymptom({ petId, onClose }: { petId: string; onClose: () => void }) 
       show(t('form.added', { name: values.description ?? '' }));
       onClose();
     } catch (e) {
-      if (!(e instanceof InvalidInput)) throw e;
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
       setErrors(errorsFor(e.path, t('form.invalid')));
     }
   };
@@ -106,7 +120,9 @@ function AddSymptom({ petId, onClose }: { petId: string; onClose: () => void }) 
       onChange={setValues}
       onSubmit={() => void submit()}
       submitLabel={t('symptom.add')}
-    />
+    >
+      {failure.view}
+    </RecordForm>
   );
 }
 
@@ -117,6 +133,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
   const canCreate = useCan('create', 'condition');
   const canResolve = useCan('update', 'condition');
   const canDelete = useCanDelete('condition');
+  const removeRecord = useRemoval();
   const today = useToday();
   const conditions = useHealthList('condition', petId);
   const [adding, setAdding] = useState(false);
@@ -174,7 +191,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
                       <Button
                         variant="secondary"
                         aria-label={t('form.deleteLabel', { name })}
-                        onClick={() => void health.remove('condition', c.id)}
+                        onClick={() => void removeRecord(c, name)}
                       >
                         {t('form.delete')}
                       </Button>
@@ -195,10 +212,10 @@ export function ConditionsPanel({ petId }: { petId: string }) {
 
 /** The symptoms journal of one pet, newest first. */
 export function SymptomsPanel({ petId }: { petId: string }) {
-  const { health } = useServices();
   const prefs = useSessionStore((s) => s.preferences);
   const canLog = useCan('create', 'symptomEntry');
   const canDelete = useCanDelete('symptomEntry');
+  const removeRecord = useRemoval();
   const symptoms = useHealthList('symptomEntry', petId);
   const [adding, setAdding] = useState(false);
   const rows = [...(symptoms.data ?? [])].sort((a, b) =>
@@ -239,7 +256,7 @@ export function SymptomsPanel({ petId }: { petId: string }) {
                     <Button
                       variant="secondary"
                       aria-label={t('form.deleteLabel', { name: date })}
-                      onClick={() => void health.remove('symptomEntry', s.id)}
+                      onClick={() => void removeRecord(s, date)}
                     >
                       {t('form.delete')}
                     </Button>

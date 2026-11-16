@@ -20,6 +20,7 @@ import {
   TextField,
 } from '../../ui';
 import { useCan, useHouseholdId } from '../shared/permissions';
+import { useRemoval } from '../shared/removal';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
@@ -130,6 +131,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
   const canCreate = useCan('create', 'measurement');
   const role = useSessionStore((s) => activeHousehold(s)?.role);
   const userId = useSessionStore((s) => s.user?.id ?? '');
+  const removeRecord = useRemoval();
   const canDelete = (createdBy: string) =>
     role !== undefined && can(role, 'delete', 'measurement', { actorId: userId, createdBy });
   const [adding, setAdding] = useState(false);
@@ -233,7 +235,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
                           <Button
                             variant="secondary"
                             aria-label={t('measure.deleteLabel', { kind: kindLabel(kind), date })}
-                            onClick={() => void measurements.remove(m.id)}
+                            onClick={() => void removeRecord(m, kindLabel(kind))}
                           >
                             {t('measure.delete')}
                           </Button>
