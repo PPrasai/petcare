@@ -6,13 +6,15 @@ import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatMeasurement } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
-import { EmptyState, Icon, Tabs, panelId, tabId } from '../../ui';
+import { EmptyState, Icon, Pill, Tabs, panelId, tabId } from '../../ui';
 import type { TabItem } from '../../ui';
 import { useHealthList } from '../health/hooks';
 import { PetAvatar } from '../shared/PetAvatar';
-import { useHouseholdId } from '../shared/permissions';
+import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { FilesPane, HealthPane } from './lazy-panes';
+import { PetEditSheet } from './PetOverview';
 import { CarePane, OverviewPane } from './ProfilePanes';
 import { PROFILE_TABS } from './profile-tabs';
 import type { ProfileTab } from './profile-tabs';
@@ -56,6 +58,9 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
     enabled: householdId !== '',
   });
   const conditions = useHealthList('condition', petId);
+  const wide = useWideScreen();
+  const canEdit = useCan('update', 'pet');
+  const [editing, setEditing] = useState(false);
   const header = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const loaded = pet.data !== undefined && pet.data !== null;
@@ -113,6 +118,8 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
   ].filter(Boolean);
   const active = (conditions.data ?? []).filter((c) => typeof c.data.resolvedOn !== 'string');
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
+  const dot = strip.find((p) => p.id === petId)?.dot;
+  const title = <Heading>{name}</Heading>;
 
   return (
     <div className="detail" data-collapsed={collapsed}>
@@ -136,9 +143,20 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         </nav>
       ) : null}
       <div className="ph" ref={header}>
-        <PetAvatar pet={record} size={96} badge={photo.badge} />
+        <PetAvatar pet={record} size={wide ? 64 : 96} badge={photo.badge} />
         <div className="meta">
-          <Heading>{name}</Heading>
+          {wide ? (
+            <div className="hrow">
+              {title}
+              {dot === 'overdue' || dot === 'today' ? (
+                <Pill tone={dot}>
+                  {t(dot === 'overdue' ? 'task.tag.overdue' : 'task.tag.today')}
+                </Pill>
+              ) : null}
+            </div>
+          ) : (
+            title
+          )}
           <p className="muted">{facts.join(' · ')}</p>
           {active.length > 0 ? (
             <div className="tags">
@@ -157,6 +175,11 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         <Link to="/emergency" search={{ pet: petId }} className="btn">
           <Icon name="shield" /> {t('profile.emergencyCard')}
         </Link>
+        {wide && canEdit ? (
+          <button type="button" className="btn" onClick={() => setEditing(true)}>
+            {t('pet.editDetails')}
+          </button>
+        ) : null}
       </div>
       <Tabs tabs={tabs} value={tab} label={t('pets.tabs')} onChange={onTab} caption={name} />
       <div
@@ -167,13 +190,14 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {tab === 'overview' ? <OverviewPane pet={record} /> : null}
+        {tab === 'overview' ? <OverviewPane pet={record} onEdit={() => setEditing(true)} /> : null}
         <Suspense fallback={<EmptyState busy>{t('ui.loading')}</EmptyState>}>
           {tab === 'health' ? <HealthPane pet={record} /> : null}
           {tab === 'files' ? <FilesPane pet={record} /> : null}
         </Suspense>
         {tab === 'care' ? <CarePane pet={record} /> : null}
       </div>
+      {wide ? <PetEditSheet pet={record} open={editing} onClose={() => setEditing(false)} /> : null}
     </div>
   );
 }

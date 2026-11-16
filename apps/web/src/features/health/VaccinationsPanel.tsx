@@ -121,7 +121,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
   const rows = list.data ?? [];
 
   return (
-    <Card>
+    <Card data-area="vax">
       <SectionHeader
         title={t('vaccine.title')}
         {...(canCreate

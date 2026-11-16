@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { addPet, addReminder, createInvite, pushRoutine, signUp, waitSynced } from './support/app';
+import {
+  addPet,
+  addReminder,
+  createInvite,
+  openDisclosure,
+  pushRoutine,
+  signUp,
+  waitSynced,
+} from './support/app';
 
 // P4/P6 (QA-30): CAP-07 (create, edit, delete; type, yearly, second time, audience) and CAP-10 on
 // the Care tab.
@@ -133,10 +141,11 @@ test('a routine from an older version can be edited and paused, and a meal stays
   );
   await expect(rowOf(page, 'Evening walk')).toBeVisible();
   await expect(page.locator('.task').filter({ hasText: 'Breakfast' })).toHaveCount(0);
-  await expect(rowOf(page, 'Breakfast')).toHaveCount(0);
+  // (Not in the Reminders list; from 860 px the Feeding panel is open and lists it.)
+  await expect(page.getByRole('list', { name: 'Reminders' }).getByText('Breakfast')).toHaveCount(0);
 
-  // The meal sits in the Feeding disclosure.
-  await page.locator('summary').filter({ hasText: 'Feeding' }).click();
+  // The meal sits in the Feeding disclosure (a panel from 860 px).
+  await openDisclosure(page, 'Feeding');
   await expect(rowOf(page, 'Breakfast')).toBeVisible();
 
   // Edit the walk: title and schedule.

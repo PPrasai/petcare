@@ -25,7 +25,7 @@ const include = (screen: { id: string; session: string; kind?: string }) =>
 
 /** What may scroll inside the locked page (SPEC-petcare-004 5.8, QA-42 c). */
 const MAY_SCROLL =
-  '.two[data-layout] .card, .two[data-layout] [data-scroll], .sbpets, dialog[open] *';
+  '.two[data-layout] [data-area], .two[data-layout] [data-scroll], .sbpets, dialog[open] *';
 
 async function measure(page: Page, panelRule: boolean, fallback: boolean): Promise<string[]> {
   return page.evaluate(
@@ -57,7 +57,7 @@ async function measure(page: Page, panelRule: boolean, fallback: boolean): Promi
       }
 
       // A panel keeps its header and at least 96 px of body, whatever the window.
-      for (const card of document.querySelectorAll('.two[data-layout] > .card')) {
+      for (const card of document.querySelectorAll('.two[data-layout] .card')) {
         const r = card.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) continue;
         const sech = card.querySelector('.sech');

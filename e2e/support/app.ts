@@ -152,9 +152,18 @@ export async function userId(page: Page): Promise<string> {
   return (await res.json()).user.id as string;
 }
 
-/** Opens a disclosure by its title (for example "Vet visits" on the Health tab). */
+/**
+ * Opens a disclosure by its title (for example "All measurements" on the Health tab). From 860 px
+ * some disclosures are panels that are always open (Details, Vet visits, Feeding): then there is
+ * nothing to click.
+ */
 export async function openDisclosure(page: Page, title: string) {
-  await page.locator('summary').filter({ hasText: title }).click();
+  const summary = page.locator('summary').filter({ hasText: title });
+  const panel = page
+    .locator('.card')
+    .filter({ has: page.getByRole('heading', { level: 2, name: title, exact: true }) });
+  await summary.or(panel).first().waitFor();
+  if ((await summary.count()) > 0) await summary.click();
 }
 
 /** Opens the "Details" disclosure on a pet's Overview tab. */

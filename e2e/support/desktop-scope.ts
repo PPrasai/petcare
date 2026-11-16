@@ -10,6 +10,21 @@ export const DESKTOP_SCOPE: string[] = [
   'S-07',
   'S-08',
   'S-10',
+  // D2: pet profile and the Health dashboard
+  'S-11',
+  'S-12',
+  'S-13',
+  'S-14',
+  'S-15',
+  'S-37',
+  'S-39',
+  'S-40',
+  'S-41',
+  'S-42',
+  'S-43',
+  'S-44',
+  'S-45',
+  'S-48',
 ];
 
 /** The S-id of a state id such as `S-06 collapsed`. */

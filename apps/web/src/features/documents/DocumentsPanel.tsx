@@ -26,6 +26,7 @@ import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
 
@@ -223,6 +224,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
   const canDelete = useCanDelete('document');
   const removeRecord = useRemoval();
   const max = useMaxFileBytes();
+  const wide = useWideScreen();
   const list = useQuery({
     queryKey: ['document', householdId, { petId }],
     queryFn: () => documents.list(householdId, petId),
@@ -247,7 +249,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
   };
 
   return (
-    <div className="two">
+    <div className="two" data-layout={wide && rows.length === 0 ? 'single' : 'files'}>
       <div className="stack">
         {canCreate ? (
           <>
@@ -256,6 +258,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
               hint={t('files.drop.hint')}
               buttonLabel={t('files.drop.choose')}
               accept={FILE_ACCEPT}
+              area="drop"
               onFile={onFile}
             />
             {dropError ? (
@@ -266,10 +269,16 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
           </>
         ) : null}
         {rows.length === 0 && list.isSuccess ? (
-          <EmptyState>{t('empty.files', { name: petName })}</EmptyState>
+          wide ? (
+            <Card data-area="empty">
+              <EmptyState>{t('empty.files', { name: petName })}</EmptyState>
+            </Card>
+          ) : (
+            <EmptyState>{t('empty.files', { name: petName })}</EmptyState>
+          )
         ) : null}
         {photos.length > 0 ? (
-          <Card>
+          <Card data-area="photos">
             <SectionHeader title={t('files.photos')} />
             <div className="photos">
               {photos.map((d) => (
@@ -280,7 +289,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
         ) : null}
       </div>
       {rows.length > 0 ? (
-        <Card>
+        <Card data-area="records">
           <SectionHeader
             title={t('files.records')}
             {...(canCreate

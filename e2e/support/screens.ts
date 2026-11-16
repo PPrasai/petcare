@@ -1,6 +1,14 @@
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { addPet, addReminder, createInvite, shareEmergencyCard, signUp, waitSynced } from './app';
+import {
+  addPet,
+  addReminder,
+  createInvite,
+  openDisclosure,
+  shareEmergencyCard,
+  signUp,
+  waitSynced,
+} from './app';
 
 /**
  * The table of screen states that QA-39 (axe), QA-40 (layout) and QA-32 walk. One entry per
@@ -154,7 +162,7 @@ const profileTab = (tab: string) => async (page: Page) => {
 };
 const profileDetails = async (page: Page) => {
   await profile(page);
-  await page.locator('summary').filter({ hasText: 'Details' }).click();
+  await openDisclosure(page, 'Details');
 };
 /** A pet's profile in a fresh account, on one tab. */
 const newPetTab = (tab: string) => async (page: Page) => {
@@ -165,7 +173,7 @@ const newPetTab = (tab: string) => async (page: Page) => {
 const profileOpener =
   (tab: string, button: string, dialog: string, disclosure?: string) => async (page: Page) => {
     await profileTab(tab)(page);
-    if (disclosure) await page.locator('summary').filter({ hasText: disclosure }).click();
+    if (disclosure) await openDisclosure(page, disclosure);
     await page.getByRole('button', { name: button }).click();
     await expect(dialogNamed(dialog)(page)).toBeVisible();
   };
@@ -343,7 +351,53 @@ export const SCREENS: Screen[] = [
     },
     open: logKind(index as number),
   })),
-  { id: 'S-11 overview', path: '/', session: 'demo', ready: profile },
+  {
+    id: 'S-11 overview',
+    path: '/',
+    session: 'demo',
+    two: true,
+    desk: { layout: 'overview' },
+    ready: profile,
+  },
+  {
+    id: 'S-12 menu',
+    path: '/',
+    session: 'demo',
+    two: true,
+    desk: { layout: 'overview' },
+    ready: profile,
+    open: async (page) => {
+      await page
+        .getByLabel(/^More actions: /)
+        .first()
+        .click();
+      await expect(page.getByRole('button', { name: 'Snooze 1 hour' }).first()).toBeVisible();
+    },
+  },
+  {
+    id: 'S-13',
+    path: '/',
+    session: 'demo',
+    two: true,
+    desk: { layout: 'overview' },
+    ready: profile,
+    open: async (page) => {
+      await expect(page.getByRole('heading', { level: 2, name: 'Weight' })).toBeVisible();
+      await expect(page.getByRole('img', { name: /^Weight/ })).toBeVisible();
+    },
+  },
+  {
+    id: 'S-48',
+    path: '/',
+    session: 'demo',
+    two: true,
+    desk: { layout: 'health' },
+    ready: profile,
+    open: async (page) => {
+      await profileTab('Health')(page);
+      await expect(page.getByRole('heading', { level: 2, name: 'Recent activity' })).toBeVisible();
+    },
+  },
   {
     id: 'S-17',
     path: '/more',
@@ -738,10 +792,11 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'demo',
     two: true,
+    desk: { layout: 'overview' },
     ready: profile,
     open: async (page) => {
       await profileDetails(page);
-      await expect(page.getByRole('button', { name: 'Edit details' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Edit details' }).first()).toBeVisible();
     },
   },
   {
@@ -752,7 +807,7 @@ export const SCREENS: Screen[] = [
     ready: profile,
     open: async (page) => {
       await profileDetails(page);
-      await page.getByRole('button', { name: 'Edit details' }).click();
+      await page.getByRole('button', { name: 'Edit details' }).first().click();
       await expect(dialogNamed(/^Edit /)(page)).toBeVisible();
     },
   },
@@ -773,6 +828,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'demo',
     two: true,
+    desk: { layout: 'health' },
     ready: profile,
     open: async (page) => {
       await profileTab('Health')(page);
@@ -800,10 +856,11 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'demo',
     two: true,
+    desk: { layout: 'health' },
     ready: profile,
     open: async (page) => {
       await profileTab('Health')(page);
-      await page.locator('summary').filter({ hasText: 'Vet visits' }).click();
+      await openDisclosure(page, 'Vet visits');
       await expect(page.getByRole('button', { name: 'Add a visit' })).toBeVisible();
     },
   },
@@ -820,6 +877,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'demo',
     two: true,
+    desk: { layout: 'health' },
     ready: profile,
     open: async (page) => {
       await profileTab('Health')(page);
@@ -856,6 +914,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'demo',
     two: true,
+    desk: { layout: 'files' },
     ready: profile,
     open: async (page) => {
       await profileTab('Files')(page);
@@ -883,6 +942,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'account',
     two: true,
+    desk: { layout: 'health' },
     ready: mainReady,
     open: async (page) => {
       await newPetTab('Health')(page);
@@ -894,6 +954,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'account',
     two: true,
+    desk: { layout: 'single' },
     ready: mainReady,
     open: async (page) => {
       await newPetTab('Files')(page);
@@ -906,6 +967,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'demo',
     two: true,
+    desk: { layout: 'care' },
     ready: profile,
     open: async (page) => {
       await profileTab('Care')(page);
@@ -917,6 +979,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'demo',
     two: true,
+    desk: { layout: 'care' },
     ready: profile,
     open: async (page) => {
       await profileTab('Care')(page);
@@ -924,10 +987,10 @@ export const SCREENS: Screen[] = [
       await expect(
         page.getByTestId('reminder-row').filter({ hasText: 'Matrix walk' }),
       ).toBeVisible();
-      await page.locator('summary').filter({ hasText: 'Feeding' }).click();
+      await openDisclosure(page, 'Feeding');
       // Some demo pets have a feeding routine and some do not.
       await expect(
-        page.locator('details.disc[open]').filter({ hasText: 'Meals are never' }),
+        page.locator('details.disc[open], .card').filter({ hasText: 'Meals are never' }),
       ).toBeVisible();
     },
   },
@@ -972,6 +1035,7 @@ export const SCREENS: Screen[] = [
     path: '/',
     session: 'account',
     two: true,
+    desk: { layout: 'care' },
     ready: mainReady,
     open: async (page) => {
       await newPetTab('Care')(page);

@@ -67,7 +67,7 @@ test('every record type works offline, survives a reload, and syncs when back on
   // CAP-04: edit the pet.
   await openPet(page);
   await openDetails(page);
-  await page.getByRole('button', { name: 'Edit details' }).click();
+  await page.getByRole('button', { name: 'Edit details' }).first().click();
   await page.getByLabel('Colour').fill('Brindle');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Brindle')).toBeVisible();

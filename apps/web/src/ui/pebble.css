@@ -1695,7 +1695,7 @@
     display: none;
   }
   .photos {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   }
 }
 @container app (max-width: 859.98px) {
@@ -2233,7 +2233,7 @@
     grid-auto-rows: auto;
     align-items: stretch;
   }
-  .two[data-layout] > [data-area] {
+  .two[data-layout] [data-area] {
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -2242,8 +2242,9 @@
     padding: 0 16px 12px;
     min-height: 152px;
     max-height: max(320px, 60vh);
+    position: relative;
   }
-  .two[data-layout] > [data-area] > * {
+  .two[data-layout] [data-area] > * {
     flex: none;
   }
   .two[data-layout] .sech {
@@ -2308,8 +2309,89 @@
   .two[data-layout='home'] .prow .nm > b {
     font-size: 17px;
   }
+  /* The pet profile (S-11): the header row, the tabs, then the panel grid. */
+  .detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    gap: 10px 16px;
+    min-height: 0;
+  }
+  .detail > .acts {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+  .detail > .tabs,
+  .detail > .tabpane {
+    grid-column: 1 / -1;
+  }
+  .detail > .tabs {
+    overflow-y: hidden;
+  }
+  .detail > .tabs button {
+    min-height: 40px;
+  }
+  .detail > .tabpane {
+    min-height: 0;
+  }
+  .ph h1 {
+    font-size: 28px;
+  }
+  .ph .meta {
+    gap: 4px;
+  }
+  .hrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+  }
+  .two[data-layout='health'] [data-area] {
+    min-height: 160px;
+  }
+  .two[data-layout] .drop {
+    min-height: 0;
+    padding: 12px 16px;
+    justify-content: center;
+  }
+  [data-area='details'] .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-area='details'] > .acts {
+    margin-top: auto;
+    padding-top: 12px;
+  }
+  .two[data-layout] [data-area='weight'] > [role='img'] {
+    flex: 1 1 0;
+    min-height: 160px;
+  }
+  .two[data-layout] [data-area='weight'] .facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .two[data-layout] [data-area='meas'] > [role='img'] {
+    max-width: 340px;
+  }
 }
 @container content (min-width: 960px) {
+  .two[data-layout='overview'] {
+    grid-template-columns: 1fr 1.25fr 1fr;
+    grid-template-areas: 'upnext weight details';
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .two[data-layout='care'] {
+    grid-template-columns: 1fr 1.2fr 1fr;
+    grid-template-areas: 'today reminders feeding';
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .two[data-layout='health'] {
+    grid-template-columns: 1fr 1fr 1fr 1.1fr;
+    grid-template-areas: 'vax cond visits act' 'meds sym meas act';
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .two[data-layout='files'] {
+    grid-template-columns: 1.35fr 1fr;
+  }
   .two[data-layout='home'] {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 0.95fr);
     grid-template-areas: 'pets today week' 'pets today recent';
@@ -2317,6 +2399,26 @@
   }
 }
 @container content (min-width: 600px) and (max-width: 959.98px) {
+  .two[data-layout='overview'],
+  .two[data-layout='care'],
+  .two[data-layout='files'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .two[data-layout='overview'] {
+    grid-template-areas: 'upnext details' 'weight details';
+  }
+  .two[data-layout='care'] {
+    grid-template-areas: 'today reminders' 'feeding reminders';
+  }
+  .two[data-layout='health'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: 'vax meds act' 'cond sym act' 'visits meas act';
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+  [data-area='details'] .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .two[data-layout='home'] {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: 'pets today' 'week recent';
@@ -2324,11 +2426,80 @@
   }
 }
 @container content (min-width: 600px) {
+  .split {
+    flex: 1 1 0;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .detail {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .two[data-layout='files'] {
+    grid-template-areas: 'drop records' 'photos records';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
   .two[data-layout] {
     flex: 1 1 0;
     min-height: 0;
   }
-  .two[data-layout] > [data-area] {
+  [data-area='upnext'] {
+    grid-area: upnext;
+  }
+  [data-area='weight'] {
+    grid-area: weight;
+  }
+  [data-area='details'] {
+    grid-area: details;
+  }
+  [data-area='today'] {
+    grid-area: today;
+  }
+  [data-area='reminders'] {
+    grid-area: reminders;
+  }
+  [data-area='feeding'] {
+    grid-area: feeding;
+  }
+  [data-area='vax'] {
+    grid-area: vax;
+  }
+  [data-area='meds'] {
+    grid-area: meds;
+  }
+  [data-area='cond'] {
+    grid-area: cond;
+  }
+  [data-area='sym'] {
+    grid-area: sym;
+  }
+  [data-area='visits'] {
+    grid-area: visits;
+  }
+  [data-area='meas'] {
+    grid-area: meas;
+  }
+  [data-area='act'] {
+    grid-area: act;
+  }
+  [data-area='drop'] {
+    grid-area: drop;
+  }
+  [data-area='photos'] {
+    grid-area: photos;
+  }
+  [data-area='records'] {
+    grid-area: records;
+  }
+  .two[data-layout='single'] [data-area='drop'],
+  .two[data-layout='single'] [data-area='empty'] {
+    grid-area: auto;
+  }
+  .two[data-layout='single']:has([data-area='drop']) {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .two[data-layout] [data-area] {
     max-height: none;
   }
   .two[data-layout='home'] > [data-area='pets'] {
@@ -2346,12 +2517,17 @@
 }
 /* The short-window fallback comes last so it wins over the tiers: rows by content, main scrolls. */
 @media (min-width: 860px) and (max-height: 639px) {
+  .split,
+  .detail {
+    flex: none;
+    grid-template-rows: none;
+  }
   .two[data-layout][data-layout] {
     flex: none;
     grid-template-rows: none;
     grid-auto-rows: auto;
   }
-  .two[data-layout] > [data-area] {
+  .two[data-layout] [data-area] {
     max-height: max(320px, 60vh);
   }
 }

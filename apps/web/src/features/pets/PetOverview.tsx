@@ -22,8 +22,38 @@ function Fact({ label, children }: { label: string; children: string }) {
   );
 }
 
-/** Profile details with edit (a sheet) and archive (a dialog). */
-export function PetOverview({ pet }: { pet: StoredRecord }) {
+/** The edit sheet, shared by the details footer and, from 860 px, the profile header. */
+export function PetEditSheet({
+  pet,
+  open,
+  onClose,
+}: {
+  pet: StoredRecord;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { pets } = useServices();
+  const show = useToastStore((s) => s.show);
+  const name = String(pet.data.name);
+  return (
+    <Sheet open={open} label={t('pet.editTitle', { name })} onClose={onClose}>
+      <SheetHead title={t('pet.editTitle', { name })} onClose={onClose} />
+      <PetForm
+        initial={pets.formValues(pet)}
+        submitLabel={t('petForm.saveChanges')}
+        onCancel={onClose}
+        onSubmit={async (values) => {
+          await pets.update(pet.id, values);
+          show(t('pet.saved', { name: values.name.trim() || name }));
+          onClose();
+        }}
+      />
+    </Sheet>
+  );
+}
+
+/** Profile details with edit (a sheet) and archive (a dialog); `onEdit` hands the sheet to the profile. */
+export function PetOverview({ pet, onEdit }: { pet: StoredRecord; onEdit?: () => void }) {
   const { pets } = useServices();
   const prefs = useSessionStore((s) => s.preferences);
   const show = useToastStore((s) => s.show);
@@ -124,7 +154,7 @@ export function PetOverview({ pet }: { pet: StoredRecord }) {
       {canEdit || (canArchive && !archived) ? (
         <div className="acts">
           {canEdit ? (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
+            <Button variant="secondary" onClick={onEdit ?? (() => setEditing(true))}>
               {t('pet.editDetails')}
             </Button>
           ) : null}
@@ -135,19 +165,7 @@ export function PetOverview({ pet }: { pet: StoredRecord }) {
           ) : null}
         </div>
       ) : null}
-      <Sheet open={editing} label={t('pet.editTitle', { name })} onClose={() => setEditing(false)}>
-        <SheetHead title={t('pet.editTitle', { name })} onClose={() => setEditing(false)} />
-        <PetForm
-          initial={pets.formValues(pet)}
-          submitLabel={t('petForm.saveChanges')}
-          onCancel={() => setEditing(false)}
-          onSubmit={async (values) => {
-            await pets.update(pet.id, values);
-            show(t('pet.saved', { name: values.name.trim() || name }));
-            setEditing(false);
-          }}
-        />
-      </Sheet>
+      {onEdit ? null : <PetEditSheet pet={pet} open={editing} onClose={() => setEditing(false)} />}
       <Dialog
         open={archiving}
         title={t('pet.archiveTitle', { name })}

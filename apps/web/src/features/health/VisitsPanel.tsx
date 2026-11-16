@@ -4,12 +4,13 @@ import { InvalidInput } from '../../application/pet-service';
 import { t } from '../../i18n/t';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
-import { Button, Disclosure, EmptyState, Icon, Line } from '../../ui';
+import { Button, Card, Disclosure, EmptyState, Icon, Line, SectionHeader } from '../../ui';
 import { useContactName, useContactOptions } from '../contacts/hooks';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { useToastStore } from '../shared/toast';
 import { errorsFor, useHealthList, useToday } from './hooks';
 import { RecordForm, RecordSheet } from './RecordForm';
@@ -158,15 +159,21 @@ function VisitList({ petId }: { petId: string }) {
   );
 }
 
-/** Vet visits of one pet, in a disclosure with a count. */
+/** Vet visits of one pet: a disclosure with a count, and from 860 px a panel. */
 export function VisitsPanel({ petId }: { petId: string }) {
   const list = useHealthList('vetVisit', petId);
   const count = list.data?.length ?? 0;
+  const hint = count === 1 ? t('visit.count.one') : t('visit.count.many', { count });
+  if (useWideScreen()) {
+    return (
+      <Card data-area="visits">
+        <SectionHeader title={t('visit.title')} aside={<span className="muted">{hint}</span>} />
+        <VisitList petId={petId} />
+      </Card>
+    );
+  }
   return (
-    <Disclosure
-      title={t('visit.title')}
-      hint={count === 1 ? t('visit.count.one') : t('visit.count.many', { count })}
-    >
+    <Disclosure title={t('visit.title')} hint={hint}>
       <VisitList petId={petId} />
     </Disclosure>
   );
