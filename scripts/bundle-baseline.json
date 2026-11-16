@@ -74,6 +74,12 @@
       "commit": "ab8fae5",
       "precacheBytes": 1528009,
       "entryChunkGzipBytes": 161798
+    },
+    {
+      "slice": "headroom",
+      "commit": "c3ce901",
+      "precacheBytes": 1505927,
+      "entryChunkGzipBytes": 159329
     }
   ]
 }
