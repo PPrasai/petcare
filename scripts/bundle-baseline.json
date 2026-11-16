@@ -92,6 +92,12 @@
       "commit": "97bac62",
       "precacheBytes": 1520155,
       "entryChunkGzipBytes": 159651
+    },
+    {
+      "slice": "charts",
+      "commit": "7c23d82",
+      "precacheBytes": 1161599,
+      "entryChunkGzipBytes": 160480
     }
   ]
 }
