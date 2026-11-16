@@ -6,11 +6,12 @@ import type { SnoozeFor } from '../../application/today-service';
 import type { TodayItem } from '../../application/today';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
-import { Card, Disclosure, EmptyState } from '../../ui';
+import { Card, Disclosure, EmptyState, SectionHeader } from '../../ui';
 import { CareLists } from '../care/CareLists';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useNow } from '../shared/use-now';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { PetOverview } from './PetOverview';
 import { TaskRow } from './TaskRow';
 import type { TaskAction } from './TaskRow';
@@ -42,17 +43,18 @@ function usePetToday(petId: string) {
   return { view: view.data, now, tz, act };
 }
 
-export function OverviewPane({ pet }: { pet: StoredRecord }) {
+export function OverviewPane({ pet, onEdit }: { pet: StoredRecord; onEdit: () => void }) {
   const { view, now, tz, act } = usePetToday(pet.id);
+  const wide = useWideScreen();
   const open = useMemo(
     () =>
       view ? (rankPets([{ id: pet.id, name: '', archived: false }], view, now)[0]?.open ?? []) : [],
     [view, now, pet.id],
   );
   return (
-    <div className="two">
+    <div className="two" data-layout="overview">
       <div className="stack">
-        <Card>
+        <Card data-area="upnext">
           <div className="sech">
             <h2>{t('task.upNext')}</h2>
           </div>
@@ -68,9 +70,16 @@ export function OverviewPane({ pet }: { pet: StoredRecord }) {
           ))}
           {view && open.length === 0 ? <p className="empty">{t('task.upNextEmpty')}</p> : null}
         </Card>
-        <Disclosure title={t('pet.details')} hint={t('pet.detailsHint')}>
-          <PetOverview pet={pet} />
-        </Disclosure>
+        {wide ? (
+          <Card data-area="details">
+            <SectionHeader title={t('pet.details')} />
+            <PetOverview pet={pet} onEdit={onEdit} />
+          </Card>
+        ) : (
+          <Disclosure title={t('pet.details')} hint={t('pet.detailsHint')}>
+            <PetOverview pet={pet} />
+          </Disclosure>
+        )}
       </div>
       <WeightCard petId={pet.id} />
     </div>
@@ -90,8 +99,8 @@ export function CarePane({ pet }: { pet: StoredRecord }) {
   }, [view, now, pet.id]);
   const doneCount = view?.done.filter((i) => !isMeal(i)).length ?? 0;
   return (
-    <div className="two">
-      <Card>
+    <div className="two" data-layout="care">
+      <Card data-area="today">
         <div className="sech">
           <h2>{t('care.today')}</h2>
           <span className="muted">

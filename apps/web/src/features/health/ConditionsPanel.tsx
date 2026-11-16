@@ -142,7 +142,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
   const rows = [...all.filter((c) => !isResolved(c)), ...all.filter(isResolved)];
 
   return (
-    <Card>
+    <Card data-area="cond">
       <SectionHeader
         title={t('condition.title')}
         {...(canCreate
@@ -223,7 +223,7 @@ export function SymptomsPanel({ petId }: { petId: string }) {
   );
 
   return (
-    <Card>
+    <Card data-area="sym">
       <SectionHeader
         title={t('symptom.title')}
         {...(canLog

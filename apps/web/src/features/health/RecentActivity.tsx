@@ -40,7 +40,7 @@ export function RecentActivity({ petId }: { petId: string }) {
 
   const all = entries.data ?? [];
   return (
-    <Card>
+    <Card data-area="act">
       <SectionHeader title={t('activity.title')} />
       {entries.data && all.length === 0 ? <EmptyState>{t('activity.empty')}</EmptyState> : null}
       {all.length > 0 ? (

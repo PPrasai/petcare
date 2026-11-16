@@ -8,6 +8,7 @@ import { Card, Disclosure, EmptyState, Line, SectionHeader, Switch } from '../..
 import { useHealthList } from '../health/hooks';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { MealPresets } from './MealPresets';
 import { ReminderSheet } from './ReminderSheet';
 import { useAudienceLabel } from './audience';
@@ -79,6 +80,7 @@ function Rows({ rows, label, onEdit }: { rows: Row[]; label: string; onEdit: (ro
  */
 export function CareLists({ pet }: { pet: StoredRecord }) {
   const householdId = useHouseholdId();
+  const wide = useWideScreen();
   const { health } = useServices();
   const canCreate = useCan('create', 'reminder');
   const [target, setTarget] = useState<ReminderTarget | null>(null);
@@ -101,9 +103,19 @@ export function CareLists({ pet }: { pet: StoredRecord }) {
   const meals = routineRows.filter((r) => r.record.data.kind === 'feeding');
   const edit = (row: Row) => setTarget({ mode: 'edit', ...row });
 
+  const feeding = (
+    <>
+      <p className="muted">{t('feeding.body')}</p>
+      <MealPresets petId={pet.id} petName={petName} />
+      {meals.length > 0 ? (
+        <Rows rows={meals.sort(byTitle)} label={t('feeding.title')} onEdit={edit} />
+      ) : null}
+    </>
+  );
+
   return (
     <div className="stack">
-      <Card>
+      <Card data-area="reminders">
         <SectionHeader
           title={t('reminder.title')}
           {...(canCreate
@@ -122,13 +134,16 @@ export function CareLists({ pet }: { pet: StoredRecord }) {
           <EmptyState>{t('reminder.empty')}</EmptyState>
         ) : null}
       </Card>
-      <Disclosure title={t('feeding.title')} hint={t('feeding.hint')}>
-        <p className="muted">{t('feeding.body')}</p>
-        <MealPresets petId={pet.id} petName={petName} />
-        {meals.length > 0 ? (
-          <Rows rows={meals.sort(byTitle)} label={t('feeding.title')} onEdit={edit} />
-        ) : null}
-      </Disclosure>
+      {wide ? (
+        <Card data-area="feeding">
+          <SectionHeader title={t('feeding.title')} />
+          {feeding}
+        </Card>
+      ) : (
+        <Disclosure title={t('feeding.title')} hint={t('feeding.hint')}>
+          {feeding}
+        </Disclosure>
+      )}
       <ReminderSheet target={target} onClose={() => setTarget(null)} />
     </div>
   );

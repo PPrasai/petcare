@@ -104,7 +104,7 @@ export function MedicationsPanel({ petId }: { petId: string }) {
 
   const rows = meds.data ?? [];
   return (
-    <Card>
+    <Card data-area="meds">
       <SectionHeader
         title={t('med.title')}
         {...(canCreate

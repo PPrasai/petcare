@@ -2,8 +2,10 @@ import { completable, skippable } from '../../application/today';
 import type { TodayItem } from '../../application/today';
 import type { ItemStatus } from '../../application/ranking';
 import { t } from '../../i18n/t';
+import type { SyntheticEvent } from 'react';
 import { Icon, Pill } from '../../ui';
 import { useCan } from '../shared/permissions';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { timeText, whenText } from '../shared/when';
 
 export type TaskAction = 'done' | 'skip' | 'snoozeHour' | 'snoozeTomorrow';
@@ -20,6 +22,7 @@ interface TaskRowProps {
 /** One task with its "More actions" menu: Done, Skip, Snooze 1 hour, Snooze until tomorrow. */
 export function TaskRow({ item, status, now, tz, onAction }: TaskRowProps) {
   const canLog = useCan('create', 'careCompletion');
+  const wide = useWideScreen();
   const done = item.doneBy !== null;
   const pet = item.petName ? ` (${item.petName})` : '';
 
@@ -39,6 +42,18 @@ export function TaskRow({ item, status, now, tz, onAction }: TaskRowProps) {
     if (menu) menu.open = false;
   };
 
+  // From 860 px the menu is fixed to the viewport, below its button or above it when less than 200 px
+  // remain, so the panel it sits in does not clip it (SPEC-petcare-004 S-12).
+  const place = (event: SyntheticEvent<HTMLDetailsElement>) => {
+    const menu = event.currentTarget.querySelector<HTMLElement>('.menu');
+    const at = event.currentTarget.getBoundingClientRect();
+    if (!wide || !event.currentTarget.open || !menu) return;
+    const up = window.innerHeight - at.bottom < 200;
+    menu.style.cssText = `position:fixed;right:${window.innerWidth - at.right}px;${
+      up ? `top:auto;bottom:${window.innerHeight - at.top + 4}px` : `top:${at.bottom + 4}px`
+    }`;
+  };
+
   const tag =
     !done && status && status !== 'soon' ? (
       <Pill tone={status}>{t(status === 'overdue' ? 'task.tag.overdue' : 'task.tag.today')}</Pill>
@@ -52,7 +67,7 @@ export function TaskRow({ item, status, now, tz, onAction }: TaskRowProps) {
       </div>
       {tag}
       {!done && onAction ? (
-        <details className="moremenu">
+        <details className="moremenu" onToggle={place}>
           <summary aria-label={t('task.moreActions', { name: `${item.title}${pet}` })}>
             <Icon name="more" />
           </summary>

@@ -9,7 +9,7 @@ import { MeasurementsPanel } from './MeasurementsPanel';
 /** Health (mock 03): vaccinations, medications and conditions; then recent activity, visits, measurements, symptoms. */
 export function HealthPane({ pet }: { pet: StoredRecord }) {
   return (
-    <div className="two">
+    <div className="two" data-layout="health">
       <div className="stack">
         <VaccinationsPanel petId={pet.id} species={String(pet.data.species)} />
         <MedicationsPanel petId={pet.id} />

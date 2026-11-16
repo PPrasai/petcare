@@ -22,6 +22,7 @@ import {
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { useToastStore } from '../shared/toast';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
 
@@ -128,6 +129,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
   const { measurements } = useServices();
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
+  const wide = useWideScreen();
   const canCreate = useCan('create', 'measurement');
   const role = useSessionStore((s) => activeHousehold(s)?.role);
   const userId = useSessionStore((s) => s.user?.id ?? '');
@@ -155,7 +157,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
   });
 
   return (
-    <Card>
+    <Card data-area="meas">
       <SectionHeader
         title={t('measure.title')}
         {...(canCreate
@@ -181,7 +183,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
           })}
         >
           <Suspense fallback={null}>
-            <WeightChart points={weights} unit={prefs.weightUnit} />
+            <WeightChart points={weights} unit={prefs.weightUnit} height={wide ? 110 : 240} />
           </Suspense>
         </div>
       ) : null}
