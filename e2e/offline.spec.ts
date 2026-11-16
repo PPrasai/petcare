@@ -150,7 +150,9 @@ test('every record type works offline, survives a reload, and syncs when back on
     .getByRole('dialog', { name: 'Add expense' })
     .getByRole('button', { name: 'Add expense' })
     .click();
-  await expect(page.getByRole('list', { name: 'Expenses' }).getByRole('listitem')).toHaveCount(1);
+  await expect(
+    page.getByRole('table', { name: 'Expenses' }).getByTestId('expense-row'),
+  ).toHaveCount(1);
 
   await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
   await page.getByRole('link', { name: 'Contacts' }).first().click();

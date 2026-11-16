@@ -137,8 +137,16 @@ test('expenses are totalled per pet and per currency', async ({ page }) => {
   await expect(summary.getByTestId('expense-total')).toHaveCount(2);
 
   await openDisclosure(page, 'By pet');
-  await expect(page.getByRole('row', { name: /Momo.*\$19\.75/ })).toBeVisible();
-  await expect(page.getByRole('row', { name: /Momo.*1,500\.00/ })).toBeVisible();
+  await expect(
+    page
+      .getByRole('table', { name: 'Spending by pet' })
+      .getByRole('row', { name: /Momo.*\$19\.75/ }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('table', { name: 'Spending by pet' })
+      .getByRole('row', { name: /Momo.*1,500\.00/ }),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'View Receipt (optional)' }).click();
   await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();

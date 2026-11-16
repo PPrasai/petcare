@@ -485,7 +485,7 @@ export const SCREENS: Screen[] = [
   },
   {
     id: 'S-18 empty',
-    desk: { layout: 'single' },
+    desk: { layout: 'expenses' },
     path: '/expenses',
     session: 'account',
     two: true,

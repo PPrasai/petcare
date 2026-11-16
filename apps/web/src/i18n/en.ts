@@ -500,6 +500,7 @@ export const en = {
   'contacts.search': 'Search by name or role',
   'contacts.noMatch': 'No contact matches your search.',
   'contacts.copy': 'Copy',
+  'contacts.callShort': 'Call',
   'contacts.copied': 'Copied',
   'contacts.websiteShort': 'Website',
   'contacts.openLink': 'Open link',

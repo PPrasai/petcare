@@ -151,8 +151,28 @@ function ContactDetail({
   const name = String(c.data.name);
   const site = field(c, 'website');
   const rows: [string, string, ReactNode?][] = [
-    [t('contacts.phone'), field(c, 'phone')],
-    [t('contacts.email'), field(c, 'email')],
+    [
+      t('contacts.phone'),
+      field(c, 'phone'),
+      <a
+        href={`tel:${field(c, 'phone')}`}
+        className="linkbtn"
+        aria-label={t('contacts.call', { name })}
+      >
+        {t('contacts.callShort')}
+      </a>,
+    ],
+    [
+      t('contacts.email'),
+      field(c, 'email'),
+      <a
+        href={`mailto:${field(c, 'email')}`}
+        className="linkbtn"
+        aria-label={t('contacts.emailTo', { name })}
+      >
+        {t('contacts.email')}
+      </a>,
+    ],
     [
       t('contacts.websiteShort'),
       site,

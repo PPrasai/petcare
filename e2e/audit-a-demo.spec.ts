@@ -14,15 +14,18 @@ const toast = (page: Page) => page.locator('.toast');
 test('a delete is one tap with an Undo toast that brings the record back', async ({ page }) => {
   await openDemo(page);
   await page.goto('/contacts');
-  await expect(page.getByText('Dr. Rai')).toBeVisible();
-  await page.getByRole('button', { name: /^Delete Dr\. Rai/ }).click();
+  const row = page.getByTestId('contact-row').filter({ hasText: 'Dr. Rai' });
+  await expect(row).toBeVisible();
+  // From 860 px the selected contact carries Delete: pick the contact first.
+  await row.click();
+  await page.getByRole('button', { name: /^Delete Dr. Rai/ }).click();
   await expect(toast(page)).toContainText('Deleted Dr. Rai');
-  await expect(page.getByText('Dr. Rai', { exact: true })).toHaveCount(0);
+  await expect(row).toHaveCount(0);
   await toast(page).getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByText('Dr. Rai', { exact: true })).toBeVisible();
+  await expect(row).toBeVisible();
   // Still there after a reload: the undo is a real write, not just a redraw.
   await page.reload();
-  await expect(page.getByText('Dr. Rai', { exact: true })).toBeVisible();
+  await expect(row).toBeVisible();
 });
 
 test('every Log sheet kind offers Undo, and Undo removes what was logged', async ({ page }) => {
