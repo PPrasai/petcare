@@ -32,6 +32,8 @@ import { useCan, useHouseholdId } from '../shared/permissions';
 import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
+import { useWideScreen } from '../shared/use-wide-screen';
+import { FinderPreview } from './FinderPreview';
 
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -202,6 +204,7 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
   const { emergency, measurements } = useServices();
   const householdId = useHouseholdId();
   const demo = useDemo();
+  const wide = useWideScreen();
   const canEdit = useCan('update', 'emergencyCard');
   const prefs = useSessionStore((s) => s.preferences);
   const user = useSessionStore((s) => s.user);
@@ -265,6 +268,38 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
     </button>
   );
 
+  const revoke =
+    owner && data && !demo ? (
+      <Button
+        variant="secondary"
+        onClick={() =>
+          void run(async () => {
+            await emergency.revokeLink(data.id);
+            setLink(null);
+            setNotice(t('emergency.linkRevoked'));
+          })
+        }
+      >
+        {t('emergency.revokeLink')}
+      </Button>
+    ) : null;
+  const lostButton = lost ? (
+    <Button
+      variant="secondary"
+      onClick={() =>
+        void emergency
+          .markFound(householdId, petId)
+          .then(() => showToast(t('emergency.foundToast', { name: petName })))
+      }
+    >
+      {t('emergency.markFound')}
+    </Button>
+  ) : (
+    <Button variant="danger" onClick={() => setLosing(true)}>
+      {t('emergency.markLostNamed', { name: petName })}
+    </Button>
+  );
+
   if (card.isPending) {
     return (
       <Card>
@@ -285,11 +320,11 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
           </div>
         </div>
       ) : null}
-      <div className="two">
+      <div className="two" data-layout={wide ? 'emergency' : undefined}>
         <div className="stack">
-          <Card>
+          <Card data-area="card">
             <div className="emhero">
-              <PetAvatar pet={pet} size={96} />
+              <PetAvatar pet={pet} size={wide ? 88 : 96} />
               <div className="l">
                 <h2>{petName}</h2>
                 {breed ? <span className="muted">{breed}</span> : null}
@@ -340,6 +375,7 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
                     >
                       {link ? t('emergency.newLink') : t('emergency.createLink')}
                     </Button>
+                    {wide ? revoke : null}
                   </div>
                 ) : null}
                 <p className="muted">{t('emergency.linkHint')}</p>
@@ -355,7 +391,7 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
           </Card>
         </div>
         <div className="stack">
-          <Card>
+          <Card data-area="found">
             <SectionHeader
               title={t('emergency.ifFound')}
               {...(owner && data ? { aside: editButton('emergency.editCard') } : {})}
@@ -404,7 +440,7 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
               </>
             )}
           </Card>
-          <Card>
+          <Card data-area="medical">
             <SectionHeader title={t('emergency.medical')} />
             {tags.length > 0 ? (
               <div className="tags">
@@ -418,38 +454,37 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
               <EmptyState>{t('emergency.noMedical')}</EmptyState>
             )}
           </Card>
-          {owner ? (
+          {wide ? (
+            <>
+              <Card data-area="lost">
+                <SectionHeader title={t('emergency.lostMode')} />
+                <p className="muted">{t('emergency.lostAlertBody', { name: petName })}</p>
+                {owner ? <div className="acts">{lostButton}</div> : null}
+              </Card>
+              <Card data-area="preview">
+                <SectionHeader
+                  title={t('emergency.editTitle')}
+                  {...(link
+                    ? {
+                        aside: (
+                          <a className="linkbtn" href={link.url} target="_blank" rel="noreferrer">
+                            {t('emergency.openPublic')}
+                          </a>
+                        ),
+                      }
+                    : {})}
+                />
+                {data ? (
+                  <FinderPreview pet={pet} card={data.data} />
+                ) : (
+                  <EmptyState>{t('emergency.linkNeedsCard')}</EmptyState>
+                )}
+              </Card>
+            </>
+          ) : owner ? (
             <div className="acts">
-              {lost ? (
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    void emergency
-                      .markFound(householdId, petId)
-                      .then(() => showToast(t('emergency.foundToast', { name: petName })))
-                  }
-                >
-                  {t('emergency.markFound')}
-                </Button>
-              ) : (
-                <Button variant="danger" onClick={() => setLosing(true)}>
-                  {t('emergency.markLostNamed', { name: petName })}
-                </Button>
-              )}
-              {data && !demo ? (
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    void run(async () => {
-                      await emergency.revokeLink(data.id);
-                      setLink(null);
-                      setNotice(t('emergency.linkRevoked'));
-                    })
-                  }
-                >
-                  {t('emergency.revokeLink')}
-                </Button>
-              ) : null}
+              {lostButton}
+              {revoke}
             </div>
           ) : null}
         </div>

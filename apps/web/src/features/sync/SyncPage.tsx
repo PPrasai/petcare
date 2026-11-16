@@ -8,6 +8,7 @@ import { Banner, Card, Disclosure, EmptyState, Line, PageHeader, SectionHeader }
 import { useDemo } from '../shared/demo';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { LastSyncedLine } from './LastSyncedLine';
 
 const show = (value: unknown): string =>
@@ -86,6 +87,7 @@ export function SyncPage() {
   const open = (list.data ?? []).filter((c) => c.resolvedAt === null);
   const done = (list.data ?? []).filter((c) => c.resolvedAt !== null);
   const demo = useDemo();
+  const wide = useWideScreen();
   const lede = demo
     ? t('sync.demo.lede')
     : !online
@@ -96,16 +98,24 @@ export function SyncPage() {
           ? t('sync.pendingOne')
           : t('sync.pending', { count: pending });
 
+  const history = (
+    <ul>
+      {done.map((c) => (
+        <ConflictLine key={c.id} conflict={c} onDone={() => void refresh()} />
+      ))}
+    </ul>
+  );
+
   return (
     <>
       <PageHeader title={t('syncPage.title')} lede={lede} />
-      <div className="two">
+      <div className="two" data-layout={wide ? 'sync' : undefined}>
         <div className="stack">
-          <Card>
+          <Card data-area="status">
             <SectionHeader title={t('syncPage.status')} />
             <LastSyncedLine />
           </Card>
-          <Card>
+          <Card data-area="changes">
             <SectionHeader title={t('conflict.title')} />
             {list.isError ? (
               <Banner tone="warn">{t('ui.loadFailed')}</Banner>
@@ -121,18 +131,19 @@ export function SyncPage() {
           </Card>
         </div>
         <div className="stack">
-          {done.length > 0 ? (
+          {wide ? (
+            <Card data-area="reviewed">
+              <SectionHeader title={t('conflict.history', { count: String(done.length) })} />
+              {history}
+            </Card>
+          ) : done.length > 0 ? (
             <Card>
               <Disclosure title={t('conflict.history', { count: String(done.length) })}>
-                <ul>
-                  {done.map((c) => (
-                    <ConflictLine key={c.id} conflict={c} onDone={() => void refresh()} />
-                  ))}
-                </ul>
+                {history}
               </Disclosure>
             </Card>
           ) : null}
-          <Card>
+          <Card data-area="problems">
             <SectionHeader title={t('syncPage.problems')} />
             {problems.data?.length === 0 ? (
               <EmptyState>{t('syncPage.noProblems')}</EmptyState>

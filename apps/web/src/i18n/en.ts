@@ -1032,6 +1032,21 @@ export const en = {
   'documents.addLabel': 'Add a document',
   'files.added': 'File added',
   'empty.files': 'No files yet. Vet records, certificates and photos for {name} live here.',
+  // D4: Settings, Sync, Emergency, wizard and sign-in on desktop
+  'auth.side.b1t': 'Reminders that fit each pet',
+  'auth.side.b1': 'Walks, medication, vaccines and check-ups.',
+  'auth.side.b2t': 'Shared with your household',
+  'auth.side.b2': 'Everyone sees who fed, walked or gave a tablet.',
+  'auth.side.b3t': 'An emergency card for each pet',
+  'auth.side.b3': 'A finder scans the tag and can call you.',
+  'auth.side.offline': 'Works offline. Your changes sync when you reconnect.',
+  'emergency.lostMode': 'Lost mode',
+  'emergency.openPublic': 'Open public page',
+  'wizard.steps': 'Steps',
+  'wizard.preview': 'Preview',
+  'wizard.stepName1': 'Basics',
+  'wizard.stepName2': 'Details',
+  'wizard.stepName3': 'Reminders',
 } as const;
 
 export type MessageKey = keyof typeof en;
