@@ -163,6 +163,7 @@ test('every record type works offline, survives a reload, and syncs when back on
     .getByRole('button', { name: 'Add contact' })
     .click();
   await expect(page.getByTestId('contact-row').filter({ hasText: 'Dr Rao' })).toBeVisible();
+  await page.getByTestId('contact-row').filter({ hasText: 'Temp clinic' }).click();
   await page.getByRole('button', { name: 'Delete Temp clinic' }).click();
   await expect(page.getByTestId('contact-row').filter({ hasText: 'Temp clinic' })).toHaveCount(0);
 
