@@ -98,6 +98,12 @@
       "commit": "7c23d82",
       "precacheBytes": 1161599,
       "entryChunkGzipBytes": 160480
+    },
+    {
+      "slice": "D4",
+      "commit": "e506d05",
+      "precacheBytes": 1173015,
+      "entryChunkGzipBytes": 160822
     }
   ]
 }
