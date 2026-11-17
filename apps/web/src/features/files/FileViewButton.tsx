@@ -28,7 +28,12 @@ export function useFileViewer(fileId: string, label: string, extra?: ReactNode) 
 
   const isPdf = view?.mimeType === 'application/pdf';
   const dialog = (
-    <Dialog open={view !== null || missing} title={label} onClose={close}>
+    <Dialog
+      open={view !== null || missing}
+      title={label}
+      onClose={close}
+      {...(view && !isPdf ? { size: 'mid' as const } : {})}
+    >
       {view && !isPdf ? (
         <div className="imgview">
           <img src={view.url} alt={label} />

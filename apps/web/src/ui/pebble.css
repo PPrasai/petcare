@@ -1750,12 +1750,6 @@
   .checks.two-col {
     grid-template-columns: 1fr 1fr;
   }
-  .sheetdlg[open] {
-    align-items: center;
-  }
-  .sheet {
-    border-radius: 22px;
-  }
   .toast {
     bottom: 28px;
   }
@@ -2985,5 +2979,118 @@
     .toast button {
       min-height: 32px;
     }
+  }
+}
+
+/* Overlays from 860 px (SPEC-petcare-004 5.6): the variant places the one <dialog>. */
+@media (min-width: 860px) {
+  .sheetdlg[open] {
+    align-items: center;
+  }
+  .sheetdlg .sheet {
+    border-radius: 16px;
+    width: min(460px, 100vw - 48px);
+    max-width: none;
+    max-height: calc(100dvh - 48px);
+  }
+  .modal {
+    width: min(460px, 100vw - 48px);
+    max-height: calc(100dvh - 48px);
+    overflow: auto;
+  }
+  .modal[data-size='mid'] {
+    width: min(620px, 100vw - 48px);
+  }
+  .sheetdlg[data-variant='drawer'][open] {
+    justify-content: flex-end;
+    align-items: stretch;
+  }
+  .sheetdlg[data-variant='drawer'] .sheet h2 {
+    font-size: 20px;
+  }
+  .sheetdlg[data-variant='drawer'] .sheet {
+    width: min(460px, 100vw);
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    border-left: 1px solid var(--line);
+    box-shadow: -10px 0 30px color-mix(in srgb, var(--ink) 16%, transparent);
+    animation: drawer-in 0.18s ease-out;
+  }
+  /* The submit button is the sticky footer, at the right. */
+  .sheetdlg[data-variant='drawer'] .sheet > form {
+    flex: 1;
+  }
+  .sheetdlg[data-variant='drawer'] .sheet form > .btn.primary:last-child {
+    position: sticky;
+    bottom: -1px;
+    margin-top: auto;
+    align-self: flex-end;
+    box-shadow: 0 0 0 12px var(--surface);
+  }
+  .sheetdlg[data-variant='wide'] .sheet {
+    width: min(880px, 100vw - 48px);
+    height: min(600px, 100dvh - 48px);
+    padding: 0;
+    overflow: hidden;
+  }
+  .logwide {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
+  }
+  .kinds {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 10px;
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    overflow: auto;
+  }
+  .kinds button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    background: none;
+    border-radius: var(--r);
+    padding: 8px 10px;
+    min-height: 36px;
+    font-weight: 700;
+    text-align: left;
+    color: var(--ink);
+  }
+  .kinds button svg {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    color: var(--accent);
+  }
+  .kinds button[aria-current='true'] {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .kinds button[aria-current='true'] svg {
+    color: inherit;
+  }
+  .logmain {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    overflow: auto;
+    min-width: 0;
+  }
+  @keyframes drawer-in {
+    from {
+      transform: translateX(32px);
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheetdlg[data-variant] .sheet {
+    animation: none;
   }
 }

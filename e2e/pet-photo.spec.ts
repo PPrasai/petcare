@@ -250,7 +250,7 @@ test('a photo logged through the Log sheet is reduced and stripped of its locati
     await context.setOffline(true);
     await page.getByTestId('log-open').click();
     const sheet = page.getByRole('dialog', { name: 'Log something' });
-    await sheet.getByRole('button', { name: 'Photo', exact: true }).click();
+    await sheet.getByRole('button', { name: 'Photo', exact: true }).first().click();
     await sheet.getByLabel('Choose a photo').setInputFiles(source);
     await expect(page.locator('.toast').filter({ hasText: 'New photo for Momo' })).toBeVisible();
 
@@ -274,7 +274,7 @@ test('a file the Log sheet cannot decode is refused and nothing is saved', async
   await addPet(page, 'Momo');
   await page.getByTestId('log-open').click();
   const sheet = page.getByRole('dialog', { name: 'Log something' });
-  await sheet.getByRole('button', { name: 'Photo', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Photo', exact: true }).first().click();
   await sheet.getByLabel('Choose a photo').setInputFiles({
     name: 'broken.png',
     mimeType: 'image/png',

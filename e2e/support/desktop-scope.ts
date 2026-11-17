@@ -47,6 +47,15 @@ export const DESKTOP_SCOPE: string[] = [
   'S-31',
   'S-32',
   'S-33',
+  // D5: every overlay state (the sheets and dialogs of SPEC-petcare-004 5.6)
+  'S-09',
+  'S-19',
+  'S-22',
+  'S-34',
+  'S-35',
+  'S-38',
+  'S-46',
+  'S-47',
 ];
 
 /** The S-id of a state id such as `S-06 collapsed`. */

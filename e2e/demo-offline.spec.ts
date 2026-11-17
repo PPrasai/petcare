@@ -59,7 +59,7 @@ for (const [label, viewport] of [
       'aria-pressed',
       'true',
     );
-    await sheet.getByRole('button', { name: 'Weight', exact: true }).click();
+    await sheet.getByRole('button', { name: 'Weight', exact: true }).first().click();
     await sheet.getByRole('button', { name: /^Raise/ }).click();
     await sheet.getByRole('button', { name: /^Save weight/ }).click();
     await expect(page.locator('.toast').filter({ hasText: 'Pixel' })).toContainText('weight');
