@@ -96,7 +96,7 @@ export function SignInCard({ demoNoteId }: { demoNoteId: string }) {
   );
 
   return (
-    <Card>
+    <Card data-area="signin">
       <SectionHeader title={t('settings.signIn.title')} />
       {note ? <Banner tone="warn">{note}</Banner> : null}
       <ul>

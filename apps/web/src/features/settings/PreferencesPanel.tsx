@@ -41,7 +41,7 @@ export function PreferencesPanel() {
   };
 
   return (
-    <Card>
+    <Card data-area="prefs">
       <SectionHeader title={t('settings.prefs.title')} />
       <form
         className="fstack"

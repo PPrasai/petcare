@@ -24,6 +24,8 @@ import { useServices } from '../shared/services-context';
 import { useToday } from '../health/hooks';
 import { useFocusInvalid } from '../shared/use-focus-invalid';
 import { useToastStore } from '../shared/toast';
+import { useWideScreen } from '../shared/use-wide-screen';
+import { WizardSteps } from './WizardSteps';
 
 export type WizardStep = 1 | 2 | 3;
 
@@ -124,6 +126,7 @@ export function AddPetWizard() {
   const householdId = useHouseholdId();
   const tz = useSessionStore((s) => s.preferences.timeZone);
   const navigate = useNavigate();
+  const wide = useWideScreen();
   const showToast = useToastStore((s) => s.show);
   const [values, setValues] = useState<WizardValues>(emptyWizard);
   const [choices, setChoices] = useState<Record<string, SuggestionChoice>>({});
@@ -271,45 +274,8 @@ export function AddPetWizard() {
   };
   const [heading, lede] = headings[step];
 
-  return (
-    <form ref={formRef} className="wiz" onSubmit={next} noValidate>
-      <div className="wizhead">
-        <button
-          type="button"
-          className="xbtn"
-          aria-label={t('wizard.cancel')}
-          onClick={() => void navigate({ to: '/' })}
-        >
-          <Icon name="x" />
-        </button>
-        <span className="label">{t('wizard.stepOf', { n: step })}</span>
-        {step > 1 ? (
-          <button type="button" className="linkbtn" onClick={() => go((step - 1) as WizardStep)}>
-            {t('wizard.back')}
-          </button>
-        ) : (
-          <span className="wizgap" aria-hidden="true" />
-        )}
-      </div>
-      <div
-        className="prog"
-        role="progressbar"
-        aria-label={t('wizard.progressLabel')}
-        aria-valuemin={1}
-        aria-valuemax={3}
-        aria-valuenow={step}
-      >
-        {[1, 2, 3].map((i) => (
-          <i key={i} className={i <= step ? 'on' : ''} />
-        ))}
-      </div>
-      <div className="greet">
-        <h1 ref={title} tabIndex={-1}>
-          {heading}
-        </h1>
-        <p className="lede">{lede}</p>
-      </div>
-
+  const body = (
+    <>
       {step === 1 ? (
         <>
           <div className="npphoto">
@@ -483,13 +449,21 @@ export function AddPetWizard() {
           <p className="muted">{t('wizard.step3.note')}</p>
         </>
       ) : null}
-
+    </>
+  );
+  const foot = (
+    <>
       {failed ? (
         <p className="err" role="alert">
           {failed}
         </p>
       ) : null}
       <div className="wizbar">
+        {wide && step > 1 ? (
+          <Button variant="secondary" onClick={() => go((step - 1) as WizardStep)}>
+            {t('wizard.back')}
+          </Button>
+        ) : null}
         {step > 1 ? (
           <Button variant="secondary" onClick={skip} disabled={saving}>
             {t('wizard.skip')}
@@ -504,6 +478,96 @@ export function AddPetWizard() {
           {t(saving ? 'wizard.saving' : 'wizard.save')}
         </Button>
       </div>
+    </>
+  );
+  const meta = [
+    t(`pets.species.${values.species}` as MessageKey),
+    values.breed.trim(),
+    values.sex && t(`wizard.sex.${values.sex}` as MessageKey),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <form ref={formRef} className="wiz" onSubmit={next} noValidate>
+      {wide ? (
+        <>
+          <div className="greet">
+            <span className="label">{t('wizard.stepOf', { n: step })}</span>
+            <h1>{t('pets.add')}</h1>
+            <div className="acts">
+              <Button variant="secondary" onClick={() => void navigate({ to: '/' })}>
+                {t('ui.cancel')}
+              </Button>
+            </div>
+          </div>
+          <div className="two" data-layout="wizard">
+            <WizardSteps
+              step={step}
+              name={shownName}
+              species={values.species}
+              meta={meta}
+              photoUrl={preview}
+            />
+            <Card data-area="form">
+              <div>
+                <h2 ref={title} tabIndex={-1}>
+                  {heading}
+                </h2>
+                <p className="lede">{lede}</p>
+              </div>
+              {body}
+              {foot}
+            </Card>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="wizhead">
+            <button
+              type="button"
+              className="xbtn"
+              aria-label={t('wizard.cancel')}
+              onClick={() => void navigate({ to: '/' })}
+            >
+              <Icon name="x" />
+            </button>
+            <span className="label">{t('wizard.stepOf', { n: step })}</span>
+            {step > 1 ? (
+              <button
+                type="button"
+                className="linkbtn"
+                onClick={() => go((step - 1) as WizardStep)}
+              >
+                {t('wizard.back')}
+              </button>
+            ) : (
+              <span className="wizgap" aria-hidden="true" />
+            )}
+          </div>
+          <div
+            className="prog"
+            role="progressbar"
+            aria-label={t('wizard.progressLabel')}
+            aria-valuemin={1}
+            aria-valuemax={3}
+            aria-valuenow={step}
+          >
+            {[1, 2, 3].map((i) => (
+              <i key={i} className={i <= step ? 'on' : ''} />
+            ))}
+          </div>
+          <div className="greet">
+            <h1 ref={title} tabIndex={-1}>
+              {heading}
+            </h1>
+            <p className="lede">{lede}</p>
+          </div>
+
+          {body}
+          {foot}
+        </>
+      )}
     </form>
   );
 }

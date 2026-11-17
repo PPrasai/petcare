@@ -2399,6 +2399,10 @@
   }
 }
 @container content (min-width: 600px) and (max-width: 959.98px) {
+  .two[data-layout='settings'],
+  .two[data-layout='emergency'] {
+    grid-template-rows: minmax(150px, auto) minmax(150px, auto) minmax(150px, 1fr);
+  }
   .two[data-layout='overview'],
   .two[data-layout='care'],
   .two[data-layout='files'] {
@@ -2623,6 +2627,328 @@
 @container content (max-width: 959.98px) {
   .tx .cat {
     display: none;
+  }
+}
+/* Settings, Sync, Emergency, the wizard, sign-in and public pages (SPEC-petcare-004 D4). */
+@container app (min-width: 860px) {
+  .two[data-layout='settings'] [data-area='prefs'] form > button[type='submit'] {
+    position: sticky;
+    bottom: 0;
+  }
+  .two[data-layout='emergency'] [data-area='card'] .qr {
+    width: 150px;
+    height: 150px;
+    min-height: 0;
+  }
+  .preview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg);
+    font-size: 12.5px;
+  }
+  .preview .who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .preview .facts {
+    padding: 0;
+  }
+  .wiz {
+    max-width: none;
+    margin: 0;
+    flex: 1 1 0;
+    min-height: 0;
+    gap: 14px;
+  }
+  .wiz .two[data-layout] [data-area='form'] {
+    gap: 16px;
+  }
+  .wiz .wizbar {
+    margin-top: auto;
+    background: var(--surface);
+    padding: 12px 0 0;
+  }
+  .wiz .wizbar .btn.primary {
+    flex: none;
+    margin-left: auto;
+  }
+  .steps {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+  }
+  .steps li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .steps i {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border: 2px solid var(--line-strong);
+    border-radius: 50%;
+    font-size: 12px;
+    font-style: normal;
+  }
+  .steps .done i {
+    color: var(--ok);
+  }
+  .steps [aria-current] {
+    background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+    color: var(--ink);
+  }
+  .steps [aria-current] i {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .wprev {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+}
+@container content (min-width: 600px) {
+  .two[data-layout='settings'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'notif prefs' 'signin prefs' 'aux prefs';
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .two[data-layout='sync'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'status reviewed' 'changes problems';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .two[data-layout='emergency'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'card found' 'card lost' 'medical preview';
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .two[data-layout='wizard'] {
+    grid-template-areas: 'steps form';
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .two[data-layout='public'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'id found' 'id medical';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .two[data-layout='auth'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 100dvh;
+    gap: 0;
+  }
+  [data-area='notif'] {
+    grid-area: notif;
+  }
+  [data-area='signin'] {
+    grid-area: signin;
+  }
+  [data-area='prefs'] {
+    grid-area: prefs;
+  }
+  [data-area='aux'] {
+    grid-area: aux;
+  }
+  [data-area='status'] {
+    grid-area: status;
+  }
+  [data-area='changes'] {
+    grid-area: changes;
+  }
+  [data-area='reviewed'] {
+    grid-area: reviewed;
+  }
+  [data-area='problems'] {
+    grid-area: problems;
+  }
+  [data-area='card'] {
+    grid-area: card;
+  }
+  [data-area='found'] {
+    grid-area: found;
+  }
+  [data-area='medical'] {
+    grid-area: medical;
+  }
+  [data-area='lost'] {
+    grid-area: lost;
+  }
+  [data-area='preview'] {
+    grid-area: preview;
+  }
+  [data-area='steps'] {
+    grid-area: steps;
+  }
+  [data-area='form'] {
+    grid-area: form;
+  }
+  [data-area='id'] {
+    grid-area: id;
+  }
+  .two[data-layout='public'] .hero {
+    padding-top: 16px;
+  }
+  .public .alert .btn {
+    align-self: flex-start;
+    width: auto;
+    min-height: 48px;
+  }
+  .public h1 {
+    font-size: 40px;
+  }
+  .authside {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 36px 48px;
+    border-right: 1px solid var(--line);
+    background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+  }
+  .authside h2 {
+    max-width: 13ch;
+    font-size: 46px;
+    line-height: 1.05;
+  }
+  .authside .pets {
+    display: none;
+    gap: 14px;
+    margin: 22px 0;
+  }
+  .authside ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 44ch;
+  }
+  .authside li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .authside li > svg {
+    flex: none;
+    width: 28px;
+    height: 28px;
+  }
+  .authside li span span {
+    display: block;
+  }
+  .two[data-layout='auth'] > .stack {
+    justify-content: center;
+    align-items: center;
+    padding: 28px;
+  }
+  .stack > .authcard {
+    width: min(100%, 420px);
+  }
+}
+@container content (min-width: 960px) {
+  .two[data-layout='settings'] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-areas: 'notif prefs aux' 'signin prefs aux';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .two[data-layout='emergency'] {
+    grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'card found lost' 'card medical preview';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .two[data-layout='wizard'] {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+  .two[data-layout='public'] {
+    grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'id found medical';
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .two[data-layout='auth'] {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+  .authside .pets {
+    display: flex;
+  }
+  .public .facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container content (min-width: 600px) {
+  .two[data-layout='settings'] [data-area],
+  .two[data-layout='emergency'] [data-area] {
+    min-height: 0;
+    overflow: auto;
+  }
+  .two[data-layout='settings'] .card[data-area],
+  .two[data-layout='emergency'] .card[data-area] {
+    min-height: 150px;
+  }
+}
+@container content (min-width: 600px) and (max-width: 959.98px) {
+  .two[data-layout='wizard'] {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+  [data-area='prefs'] .row2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-area='card'] .qr {
+    width: 120px;
+    height: 120px;
+  }
+}
+@media (min-width: 860px) {
+  .authwrap,
+  .pubwrap > .public {
+    container: content / inline-size;
+    overflow: auto;
+  }
+  .authwrap {
+    height: 100dvh;
+    align-content: center;
+  }
+  .authwrap:has(> .two) {
+    display: block;
+    padding: 0;
+  }
+  .pubwrap {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
+  .pubtop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 28px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .pubwrap > .public {
+    flex: 1;
+    min-height: 0;
+    max-width: none;
+    margin: 0;
+    padding: 22px 28px;
+  }
+  .public > .empty:only-child {
+    margin: auto;
   }
 }
 /* The short-window fallback comes last so it wins over the tiers: rows by content, main scrolls. */

@@ -6,9 +6,10 @@ import { NetworkError } from '../../application/ports/remote-api';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { useSessionStore } from '../../state/session';
-import { Banner, Button, Icon, TextField } from '../../ui';
+import { Banner, Button, TextField } from '../../ui';
 import { useServices } from '../shared/services-context';
 import { zodField } from '../shared/validators';
+import { AuthFrame } from './AuthSide';
 
 const emailRule = z.email('Enter a valid email address.');
 const passwordRule = z.string().min(10, 'Use at least 10 characters.').max(128);
@@ -64,35 +65,41 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
 
   return (
     <main className="authwrap">
-      <div className="greet authbrand">
-        <span className="brand">
-          <span className="logo">
-            <Icon name="paw" />
-          </span>
-          {t('app.name')}
-        </span>
-        <p className="lede">{t('auth.tagline')}</p>
-      </div>
-      <div className="card pad authcard">
-        <h1>{signUp ? t('auth.signUp.title') : t('auth.signIn.title')}</h1>
-        {providerList.map((provider) => (
-          <Button key={provider} variant="secondary" onClick={() => void social(provider)}>
-            {t('auth.social', { provider: capitalize(provider) })}
-          </Button>
-        ))}
-        {providerList.length > 0 ? <div className="divider">{t('auth.or')}</div> : null}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          {signUp ? (
-            <form.Field name="name" validators={{ onBlur: zodField(nameRule) }}>
+      <AuthFrame tagline>
+        <div className="card pad authcard">
+          <h1>{signUp ? t('auth.signUp.title') : t('auth.signIn.title')}</h1>
+          {providerList.map((provider) => (
+            <Button key={provider} variant="secondary" onClick={() => void social(provider)}>
+              {t('auth.social', { provider: capitalize(provider) })}
+            </Button>
+          ))}
+          {providerList.length > 0 ? <div className="divider">{t('auth.or')}</div> : null}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void form.handleSubmit();
+            }}
+          >
+            {signUp ? (
+              <form.Field name="name" validators={{ onBlur: zodField(nameRule) }}>
+                {(field) => (
+                  <TextField
+                    label={t('auth.name')}
+                    autoComplete="name"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    error={field.state.meta.errors[0]}
+                  />
+                )}
+              </form.Field>
+            ) : null}
+            <form.Field name="email" validators={{ onBlur: zodField(emailRule) }}>
               {(field) => (
                 <TextField
-                  label={t('auth.name')}
-                  autoComplete="name"
+                  label={t('auth.email')}
+                  type="email"
+                  autoComplete="email"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -100,75 +107,62 @@ export function AuthPage({ mode }: { mode: 'signIn' | 'signUp' }) {
                 />
               )}
             </form.Field>
-          ) : null}
-          <form.Field name="email" validators={{ onBlur: zodField(emailRule) }}>
-            {(field) => (
-              <TextField
-                label={t('auth.email')}
-                type="email"
-                autoComplete="email"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors[0]}
-              />
-            )}
-          </form.Field>
-          <form.Field name="password" validators={{ onBlur: zodField(passwordRule) }}>
-            {(field) => (
-              <TextField
-                label={t('auth.password')}
-                type="password"
-                autoComplete={signUp ? 'new-password' : 'current-password'}
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors[0]}
-              />
-            )}
-          </form.Field>
-          {problem ? (
-            <Banner tone="warn" ref={problemRef} tabIndex={-1}>
-              {t(problem)}
-            </Banner>
-          ) : startupProblem ? (
-            <Banner tone="warn">{t('auth.error.startup')}</Banner>
-          ) : null}
-          <form.Subscribe selector={(s) => s.isSubmitting}>
-            {(submitting) => (
-              <Button type="submit" disabled={submitting} aria-busy={submitting}>
-                {signUp ? t('auth.signUp.submit') : t('auth.signIn.submit')}
-              </Button>
-            )}
-          </form.Subscribe>
-        </form>
-        <a
-          className="authlink"
-          href={signUp ? '/sign-in' : '/sign-up'}
-          onClick={(e) => {
-            e.preventDefault();
-            void navigate({ to: signUp ? '/sign-in' : '/sign-up' });
-          }}
-        >
-          {signUp ? t('auth.signUp.switch') : t('auth.signIn.switch')}
-        </a>
-      </div>
-      {signUp ? null : (
-        <div className="card pad authcard">
-          <h2>{t('auth.demoTitle')}</h2>
-          <p className="muted">{t('demo.tryHint')}</p>
-          <Button
-            variant="secondary"
-            disabled={demoBusy}
-            onClick={() => {
-              setDemoBusy(true);
-              void session.startDemo().then(() => navigate({ to: '/' }));
+            <form.Field name="password" validators={{ onBlur: zodField(passwordRule) }}>
+              {(field) => (
+                <TextField
+                  label={t('auth.password')}
+                  type="password"
+                  autoComplete={signUp ? 'new-password' : 'current-password'}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  error={field.state.meta.errors[0]}
+                />
+              )}
+            </form.Field>
+            {problem ? (
+              <Banner tone="warn" ref={problemRef} tabIndex={-1}>
+                {t(problem)}
+              </Banner>
+            ) : startupProblem ? (
+              <Banner tone="warn">{t('auth.error.startup')}</Banner>
+            ) : null}
+            <form.Subscribe selector={(s) => s.isSubmitting}>
+              {(submitting) => (
+                <Button type="submit" disabled={submitting} aria-busy={submitting}>
+                  {signUp ? t('auth.signUp.submit') : t('auth.signIn.submit')}
+                </Button>
+              )}
+            </form.Subscribe>
+          </form>
+          <a
+            className="authlink"
+            href={signUp ? '/sign-in' : '/sign-up'}
+            onClick={(e) => {
+              e.preventDefault();
+              void navigate({ to: signUp ? '/sign-in' : '/sign-up' });
             }}
           >
-            {t('demo.try')}
-          </Button>
+            {signUp ? t('auth.signUp.switch') : t('auth.signIn.switch')}
+          </a>
         </div>
-      )}
+        {signUp ? null : (
+          <div className="card pad authcard">
+            <h2>{t('auth.demoTitle')}</h2>
+            <p className="muted">{t('demo.tryHint')}</p>
+            <Button
+              variant="secondary"
+              disabled={demoBusy}
+              onClick={() => {
+                setDemoBusy(true);
+                void session.startDemo().then(() => navigate({ to: '/' }));
+              }}
+            >
+              {t('demo.try')}
+            </Button>
+          </div>
+        )}
+      </AuthFrame>
     </main>
   );
 }

@@ -4,6 +4,7 @@ import type { MessageKey } from '../../i18n/en';
 import { useSessionStore } from '../../state/session';
 import { Banner, Card, Icon, PageHeader, SectionHeader } from '../../ui';
 import { useDemo } from '../shared/demo';
+import { useWideScreen } from '../shared/use-wide-screen';
 import { SignOutButton } from '../sync/SignOutButton';
 import { SignInCard } from './AccountsPanel';
 import { CalendarRow } from './CalendarPanel';
@@ -27,6 +28,27 @@ const LINKS: {
 export function SettingsPage() {
   const user = useSessionStore((s) => s.user);
   const demo = useDemo();
+  const wide = useWideScreen();
+  const aux = (
+    <>
+      <DataCard demoNoteId={DEMO_NOTE} />
+      <Card>
+        <SectionHeader title={t('settings.more')} />
+        {LINKS.map((row) => (
+          <Link key={row.to} to={row.to} className="mrow">
+            <span className="l">
+              <b>{t(row.title)}</b>
+              <span>{t(row.hint)}</span>
+            </span>
+            <span className="muted">
+              <Icon name="next" />
+            </span>
+          </Link>
+        ))}
+      </Card>
+      {demo ? null : <SignOutButton />}
+    </>
+  );
   return (
     <>
       <PageHeader
@@ -34,9 +56,9 @@ export function SettingsPage() {
         {...(user ? { lede: t('settings.lede', { name: user.name, email: user.email }) } : {})}
       />
       {demo ? <Banner id={DEMO_NOTE}>{t('settings.demo')}</Banner> : null}
-      <div className="two">
+      <div className="two" data-layout={wide ? 'settings' : undefined}>
         <div className="stack">
-          <Card>
+          <Card data-area="notif">
             <PushRow demoNoteId={DEMO_NOTE} />
             <CalendarRow demoNoteId={DEMO_NOTE} />
           </Card>
@@ -44,22 +66,13 @@ export function SettingsPage() {
         </div>
         <div className="stack">
           <SignInCard demoNoteId={DEMO_NOTE} />
-          <DataCard demoNoteId={DEMO_NOTE} />
-          <Card>
-            <SectionHeader title={t('settings.more')} />
-            {LINKS.map((row) => (
-              <Link key={row.to} to={row.to} className="mrow">
-                <span className="l">
-                  <b>{t(row.title)}</b>
-                  <span>{t(row.hint)}</span>
-                </span>
-                <span className="muted">
-                  <Icon name="next" />
-                </span>
-              </Link>
-            ))}
-          </Card>
-          {demo ? null : <SignOutButton />}
+          {wide ? (
+            <div className="stack" data-area="aux" data-scroll>
+              {aux}
+            </div>
+          ) : (
+            aux
+          )}
         </div>
       </div>
     </>

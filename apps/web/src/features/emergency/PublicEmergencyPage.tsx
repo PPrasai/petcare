@@ -5,7 +5,9 @@ import { en } from '../../i18n/en';
 import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { Avatar, Banner, Button, EmptyState, Icon, Line } from '../../ui';
+import { Brand } from '../auth/AuthSide';
 import { useServices } from '../shared/services-context';
+import { useWideScreen } from '../shared/use-wide-screen';
 
 const FACTS = ['colour', 'markings', 'microchipId'] as const;
 const LISTS = ['allergies', 'conditions', 'medications'] as const;
@@ -25,7 +27,15 @@ function CallButton({ phone, className }: { phone: string; className?: string })
   );
 }
 
-function CardView({ card, token }: { card: PublicEmergencyCard; token: string }) {
+function CardView({
+  card,
+  token,
+  wide,
+}: {
+  card: PublicEmergencyCard;
+  token: string;
+  wide: boolean;
+}) {
   const own = { dateFormat: 'iso', timeZone: 'UTC' } as const;
   const subtitle = [card.breed, card.species ? species(card.species) : null]
     .filter(Boolean)
@@ -33,28 +43,28 @@ function CardView({ card, token }: { card: PublicEmergencyCard; token: string })
   const facts = FACTS.filter((key) => card[key]);
   const lists = LISTS.filter((key) => card[key]?.length);
   const hasContact = Boolean(card.ownerDisplayName || card.ownerPhone || card.notes);
-  return (
-    <main className="public">
-      {card.isLost ? (
-        <div role="alert" className="alert">
-          <b>{t('public.lost')}</b>
-          {card.lostSince ? (
-            <span>{t('public.lostSince', { date: formatDate(card.lostSince, own) })}</span>
-          ) : null}
-          {card.lostMessage ? (
-            <span>
-              <q>{card.lostMessage}</q>
-            </span>
-          ) : null}
-          {card.ownerPhone ? <CallButton phone={card.ownerPhone} /> : null}
-        </div>
+  const alert = card.isLost ? (
+    <div role="alert" className="alert">
+      <b>{t('public.lost')}</b>
+      {card.lostSince ? (
+        <span>{t('public.lostSince', { date: formatDate(card.lostSince, own) })}</span>
       ) : null}
-      <div className="card pad hero">
+      {card.lostMessage ? (
+        <span>
+          <q>{card.lostMessage}</q>
+        </span>
+      ) : null}
+      {card.ownerPhone ? <CallButton phone={card.ownerPhone} /> : null}
+    </div>
+  ) : null;
+  const panels = (
+    <>
+      <div className="card pad hero" data-area="id">
         <div className="who">
           <Avatar
             petId={token}
             species={card.species ?? 'other'}
-            size={96}
+            size={wide ? 120 : 96}
             photoUrl={card.hasPhoto ? `/api/public/emergency/${token}/photo` : null}
             photoAlt={t('public.photoAlt')}
           />
@@ -75,7 +85,7 @@ function CardView({ card, token }: { card: PublicEmergencyCard; token: string })
         ) : null}
       </div>
       {lists.length > 0 ? (
-        <div className="card pad">
+        <div className="card pad" data-area="medical">
           <div className="sech">
             <h2>{t('public.medical')}</h2>
           </div>
@@ -94,7 +104,7 @@ function CardView({ card, token }: { card: PublicEmergencyCard; token: string })
         </div>
       ) : null}
       {hasContact ? (
-        <div className="card pad">
+        <div className="card pad" data-area="found">
           <div className="sech">
             <h2>{t('public.ifFound')}</h2>
           </div>
@@ -112,6 +122,18 @@ function CardView({ card, token }: { card: PublicEmergencyCard; token: string })
           ) : null}
         </div>
       ) : null}
+    </>
+  );
+  return (
+    <main className="public">
+      {alert}
+      {wide ? (
+        <div className="two" data-layout="public">
+          {panels}
+        </div>
+      ) : (
+        panels
+      )}
       <footer className="stack">
         <p className="muted">{t('public.footer')}</p>
       </footer>
@@ -122,39 +144,45 @@ function CardView({ card, token }: { card: PublicEmergencyCard; token: string })
 /** The public page behind an emergency QR code: no account, only what the owner switched on. */
 export function PublicEmergencyPage({ token }: { token: string }) {
   const { emergency } = useServices();
+  const wide = useWideScreen();
   const card = useQuery({
     queryKey: ['publicEmergency', token],
     queryFn: () => emergency.publicCard(token),
     retry: false,
     gcTime: 0,
   });
-  if (card.isPending) {
-    return (
-      <main className="public">
-        <EmptyState busy>{t('public.loading')}</EmptyState>
-      </main>
-    );
-  }
-  if (card.isError) {
-    return (
-      <main className="public">
-        <Banner tone="warn">{t('ui.loadFailed')}</Banner>
-        <div className="acts">
-          <Button variant="secondary" onClick={() => void card.refetch()}>
-            {t('ui.retry')}
-          </Button>
-        </div>
-      </main>
-    );
-  }
-  if (!card.data) {
-    return (
-      <main className="public">
-        <EmptyState title={t('public.title')} headingLevel={1}>
-          {t('public.gone')}
-        </EmptyState>
-      </main>
-    );
-  }
-  return <CardView card={card.data} token={token} />;
+  const body = card.isPending ? (
+    <main className="public">
+      <EmptyState busy>{t('public.loading')}</EmptyState>
+    </main>
+  ) : card.isError ? (
+    <main className="public">
+      <Banner tone="warn">{t('ui.loadFailed')}</Banner>
+      <div className="acts">
+        <Button variant="secondary" onClick={() => void card.refetch()}>
+          {t('ui.retry')}
+        </Button>
+      </div>
+    </main>
+  ) : !card.data ? (
+    <main className="public">
+      <EmptyState title={t('public.title')} headingLevel={1}>
+        {t('public.gone')}
+      </EmptyState>
+    </main>
+  ) : (
+    <CardView card={card.data} token={token} wide={wide} />
+  );
+  // From 860 px a top bar sits above the page, which fills the window (S-04).
+  return wide ? (
+    <div className="pubwrap">
+      <div className="pubtop">
+        <Brand />
+        <span className="muted">{t('public.title')}</span>
+      </div>
+      {body}
+    </div>
+  ) : (
+    body
+  );
 }

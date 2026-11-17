@@ -53,26 +53,33 @@ test('the wizard has no navigation, shows its progress and keeps what was typed'
   // The phone shows the wizard alone. From 860 px the sidebar stays (SPEC-petcare-004).
   const wide = (page.viewportSize()?.width ?? 0) >= 860;
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ visible: wide });
-  const progress = page.getByRole('progressbar', { name: 'Progress' });
-  await expect(progress).toHaveAttribute('aria-valuenow', '1');
+  // The phone shows a progress bar; from 860 px the steps panel marks the current step.
+  const at = (n: number) =>
+    wide
+      ? expect(page.locator('.steps li').nth(n - 1)).toHaveAttribute('aria-current', 'step')
+      : expect(page.getByRole('progressbar', { name: 'Progress' })).toHaveAttribute(
+          'aria-valuenow',
+          String(n),
+        );
+  await at(1);
   await expect(page.getByText('Step 1 of 3')).toBeVisible();
 
   // The name is the only requirement, on every way forward.
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByText('Give your pet a name to continue')).toBeVisible();
   await expect(page.getByLabel('Name', { exact: true })).toBeFocused();
-  await expect(progress).toHaveAttribute('aria-valuenow', '1');
+  await at(1);
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByText('Give your pet a name to continue')).toBeVisible();
 
   await page.getByLabel('Name', { exact: true }).fill('Biralo');
   await page.getByRole('button', { name: 'Cat', exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'A few details' })).toBeVisible();
-  await expect(progress).toHaveAttribute('aria-valuenow', '2');
+  await expect(page.getByRole('heading', { name: 'A few details' })).toBeVisible();
+  await at(2);
   await page.getByLabel('Colour').fill('Grey');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Reminders for Biralo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reminders for Biralo' })).toBeVisible();
 
   // Back keeps the values; so does Back to the first step.
   await page.getByRole('button', { name: 'Back' }).click();
@@ -85,7 +92,9 @@ test('the wizard has no navigation, shows its progress and keeps what was typed'
   );
 
   // Cancel leaves without saving.
-  await page.getByRole('button', { name: 'Cancel adding a pet' }).click();
+  await page
+    .getByRole('button', { name: wide ? 'Cancel' : 'Cancel adding a pet', exact: true })
+    .click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('link', { name: 'Add a pet' }).first()).toBeVisible();
   await expect(page.getByTestId('pet-row')).toHaveCount(0);
@@ -94,9 +103,7 @@ test('the wizard has no navigation, shows its progress and keeps what was typed'
 test('a link to a later step without a name goes back to the first step', async ({ page }) => {
   await signUp(page, 'wiz-link');
   await page.goto('/pets/new?step=3');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Meet your newest family member' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Meet your newest family member' })).toBeVisible();
   await expect(page).toHaveURL(/step=1/);
 });
 
@@ -197,7 +204,7 @@ test('Skip leaves out the details, and a photo chosen in the wizard becomes the 
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByLabel('Colour').fill('Brindle');
   await page.getByRole('button', { name: 'Skip' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Reminders for Momo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reminders for Momo' })).toBeVisible();
   await page.getByRole('button', { name: 'Save pet' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Momo' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Photo of Momo' }).first()).toBeVisible();
