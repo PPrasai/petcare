@@ -97,7 +97,10 @@ forEachCell('layout', (cell, browser) =>
               problems.push(
                 `the panel grid is ${grid?.getAttribute('data-layout')}, expected ${desk}`,
               );
-            else if (tracks !== expected)
+            // A flowing grid has one track per column that has a panel, so fewer when a panel is absent.
+            else if (
+              grid.hasAttribute('data-flow') ? tracks < 1 || tracks > expected : tracks !== expected
+            )
               problems.push(
                 `.two[data-layout=${desk}] has ${tracks} columns in a ${Math.round(content)} px column, expected ${expected}`,
               );
