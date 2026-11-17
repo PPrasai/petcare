@@ -529,6 +529,16 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
           ) : null}
         </div>
       </Flow>
+      <Sheet open={editing} label={t('emergency.editTitle')} onClose={() => setEditing(false)}>
+        <CardSheet card={data} petId={petId} onClose={() => setEditing(false)} />
+      </Sheet>
+      <Sheet
+        open={losing}
+        label={t('emergency.markLostNamed', { name: petName })}
+        onClose={() => setLosing(false)}
+      >
+        <LostSheet petId={petId} petName={petName} onClose={() => setLosing(false)} />
+      </Sheet>
     </>
   );
 }
