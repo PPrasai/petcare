@@ -165,10 +165,13 @@ async function editAll(page: Page, n: number) {
   );
 
   await openDisclosure(page, 'All measurements');
-  await page
-    .getByRole('button', { name: /^Edit Weight/ })
-    .or(page.getByRole('cell', { name: /^Edit Weight/ }))
-    .click();
+  // A phone has no Edit button: the kind cell is the target.
+  const phone = (page.viewportSize()?.width ?? 0) < 860;
+  await (
+    phone
+      ? page.getByRole('cell', { name: /^Edit Weight/ })
+      : page.getByRole('button', { name: /^Edit Weight/ })
+  ).click();
   await page.getByLabel(/^Value/).fill(`1${n}.5`);
   await page.getByLabel('Note').fill(`note ${n}`);
   await sheet(page, 'Edit measurement').getByRole('button', { name: 'Save changes' }).click();
