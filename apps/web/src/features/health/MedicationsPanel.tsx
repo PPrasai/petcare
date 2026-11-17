@@ -1,12 +1,18 @@
 import { useState } from 'react';
+import { scheduleSchema } from '@petcare/domain';
 import { courseEnded, doseSlots } from '../../application/health-logic';
 import type { DoseSlot } from '../../application/health-logic';
 import { InvalidInput } from '../../application/pet-service';
 import type { StoredRecord } from '../../application/ports/record-store';
-import { emptyScheduleForm, scheduleFromForm } from '../../application/schedule-form';
+import {
+  emptyScheduleForm,
+  scheduleFromForm,
+  scheduleToForm,
+} from '../../application/schedule-form';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
 import { Button, Card, EmptyState, Icon, Line, Pill, SectionHeader } from '../../ui';
+import { EditButton } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -32,14 +38,31 @@ const FIELDS: FieldSpec[] = [
   { name: 'note', label: t('med.note') },
 ];
 
-function AddMedication({ petId, onClose }: { petId: string; onClose: () => void }) {
+const text = (v: unknown): string =>
+  typeof v === 'number' || typeof v === 'string' ? String(v) : '';
+
+/** The medication form: adds one, or with `record` changes that one. */
+function MedicationForm({
+  petId,
+  record,
+  onClose,
+}: {
+  petId: string;
+  record?: StoredRecord;
+  onClose: () => void;
+}) {
   const { health } = useServices();
   const householdId = useHouseholdId();
   const tz = useSessionStore((s) => s.preferences.timeZone);
   const show = useToastStore((s) => s.show);
   const today = useToday();
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [schedule, setSchedule] = useState(emptyScheduleForm(today));
+  const stored = record ? scheduleSchema.safeParse(record.data.schedule) : null;
+  const [values, setValues] = useState<Record<string, string>>(
+    record ? Object.fromEntries(FIELDS.map((f) => [f.name, text(record.data[f.name])])) : {},
+  );
+  const [schedule, setSchedule] = useState(
+    stored?.success ? scheduleToForm(stored.data) : emptyScheduleForm(today),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [scheduleError, setScheduleError] = useState<string | undefined>();
 
@@ -48,15 +71,20 @@ function AddMedication({ petId, onClose }: { petId: string; onClose: () => void 
     const dose = values.dose ? Number(values.dose) : undefined;
     failure.clear();
     try {
-      await health.add('medication', householdId, {
-        petId,
+      const input = {
         name: values.name?.trim(),
         dose,
         doseUnit: values.doseUnit,
         note: values.note,
-        schedule: scheduleFromForm(schedule, tz),
-      });
-      show(t('form.added', { name: values.name?.trim() ?? '' }));
+        schedule: scheduleFromForm(schedule, stored?.success ? stored.data.tz : tz),
+      };
+      if (record) {
+        await health.edit('medication', record.id, input);
+        show(t('form.saved', { name: values.name?.trim() ?? '' }));
+      } else {
+        await health.add('medication', householdId, { petId, ...input });
+        show(t('form.added', { name: values.name?.trim() ?? '' }));
+      }
       onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) {
@@ -71,13 +99,13 @@ function AddMedication({ petId, onClose }: { petId: string; onClose: () => void 
 
   return (
     <RecordForm
-      title={t('med.add')}
+      title={record ? t('med.edit') : t('med.add')}
       fields={FIELDS}
       values={values}
       errors={errors}
       onChange={setValues}
       onSubmit={() => void submit()}
-      submitLabel={t('med.add')}
+      submitLabel={record ? t('form.saveChanges') : t('med.add')}
     >
       <ScheduleFields values={schedule} onChange={setSchedule} error={scheduleError} />
       {failure.view}
@@ -97,7 +125,8 @@ export function MedicationsPanel({ petId }: { petId: string }) {
   const today = useToday();
   const meds = useHealthList('medication', petId);
   const doses = useHealthList('medicationDose', petId);
-  const [adding, setAdding] = useState(false);
+  const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
+  const canEdit = useCan('update', 'medication');
 
   const log = (med: StoredRecord, slot: DoseSlot, skipped: boolean) =>
     void health.logDose(householdId, med, slot.occurrenceAt, skipped, new Date());
@@ -112,7 +141,7 @@ export function MedicationsPanel({ petId }: { petId: string }) {
               action: {
                 label: t('ui.add'),
                 ariaLabel: t('med.addLabel'),
-                onClick: () => setAdding(true),
+                onClick: () => setSheet({}),
               },
             }
           : {})}
@@ -135,15 +164,20 @@ export function MedicationsPanel({ petId }: { petId: string }) {
                   {...(dose ? { sub: dose } : {})}
                   aside={ended ? <Pill tone="ok">{t('med.finished')}</Pill> : null}
                   actions={
-                    canDelete(m.createdBy) ? (
-                      <Button
-                        variant="secondary"
-                        aria-label={t('form.deleteLabel', { name })}
-                        onClick={() => void removeRecord(m, name)}
-                      >
-                        {t('form.delete')}
-                      </Button>
-                    ) : null
+                    <>
+                      {canEdit ? (
+                        <EditButton name={name} onClick={() => setSheet({ record: m })} />
+                      ) : null}
+                      {canDelete(m.createdBy) ? (
+                        <Button
+                          variant="secondary"
+                          aria-label={t('form.deleteLabel', { name })}
+                          onClick={() => void removeRecord(m, name)}
+                        >
+                          {t('form.delete')}
+                        </Button>
+                      ) : null}
+                    </>
                   }
                 />
                 {slots.length > 0 ? (
@@ -194,8 +228,16 @@ export function MedicationsPanel({ petId }: { petId: string }) {
           })}
         </ul>
       ) : null}
-      <RecordSheet open={adding} title={t('med.add')} onClose={() => setAdding(false)}>
-        <AddMedication petId={petId} onClose={() => setAdding(false)} />
+      <RecordSheet
+        open={sheet !== null}
+        title={sheet?.record ? t('med.edit') : t('med.add')}
+        onClose={() => setSheet(null)}
+      >
+        <MedicationForm
+          petId={petId}
+          {...(sheet?.record ? { record: sheet.record } : {})}
+          onClose={() => setSheet(null)}
+        />
       </RecordSheet>
     </Card>
   );

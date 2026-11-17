@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { formatMoney } from '@petcare/domain';
+import { formatMoney, fromMinor } from '@petcare/domain';
 import { InvalidInput } from '../../application/pet-service';
 import { FileStorageUnavailable } from '../../application/ports/file-gateway';
 import type { StoredRecord } from '../../application/ports/record-store';
@@ -32,22 +32,28 @@ interface Props {
   pets: StoredRecord[];
   /** Today's date (YYYY-MM-DD), the default for the date field. */
   today: string;
+  /** The expense being changed; without it the sheet adds a new one. */
+  record?: StoredRecord | undefined;
 }
 
-function ExpenseForm({ onClose, pets, today }: Omit<Props, 'open'>) {
+function ExpenseForm({ onClose, pets, today, record }: Omit<Props, 'open'>) {
   const { expenses, files } = useServices();
   const householdId = useHouseholdId();
   const currency = useSessionStore((s) => s.preferences.currency);
   const showToast = useToastStore((s) => s.show);
   const form = useRef<HTMLFormElement>(null);
-  const [values, setValues] = useState({
-    petId: '',
-    spentOn: today,
-    category: 'vet',
-    amount: '',
-    currency,
-    note: '',
-  });
+  const [values, setValues] = useState(() =>
+    record
+      ? {
+          petId: String(record.data.petId ?? ''),
+          spentOn: String(record.data.spentOn),
+          category: String(record.data.category),
+          amount: String(fromMinor(Number(record.data.amountMinor), String(record.data.currency))),
+          currency: String(record.data.currency),
+          note: String(record.data.note ?? ''),
+        }
+      : { petId: '', spentOn: today, category: 'vet', amount: '', currency, note: '' },
+  );
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useFocusInvalid(form, errors);
@@ -69,13 +75,15 @@ function ExpenseForm({ onClose, pets, today }: Omit<Props, 'open'>) {
           receiptSkipped = true;
         }
       }
-      const saved = await expenses.add(householdId, { ...values, fileId });
+      const saved = record
+        ? await expenses.update(record.id, { ...values, fileId })
+        : await expenses.add(householdId, { ...values, fileId });
       const pet = pets.find((p) => p.id === values.petId);
-      const added = t('expenses.added', {
+      const message = t(record ? 'expenses.saved' : 'expenses.added', {
         amount: formatMoney(Number(saved.data.amountMinor), String(saved.data.currency)),
         name: pet ? String(pet.data.name) : t('expenses.noPet'),
       });
-      showToast(receiptSkipped ? `${added} ${t('expenses.receiptSkipped')}` : added);
+      showToast(receiptSkipped ? `${message} ${t('expenses.receiptSkipped')}` : message);
       onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) {
@@ -88,10 +96,10 @@ function ExpenseForm({ onClose, pets, today }: Omit<Props, 'open'>) {
 
   return (
     <>
-      <SheetHead title={t('expenses.add')} onClose={onClose} />
+      <SheetHead title={record ? t('expenses.edit') : t('expenses.add')} onClose={onClose} />
       <form
         ref={form}
-        aria-label={t('expenses.add')}
+        aria-label={record ? t('expenses.edit') : t('expenses.add')}
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
@@ -145,17 +153,17 @@ function ExpenseForm({ onClose, pets, today }: Omit<Props, 'open'>) {
           onRefused={(message) => setErrors({ file: message })}
         />
         {failure.view}
-        <Button type="submit">{t('expenses.add')}</Button>
+        <Button type="submit">{record ? t('form.saveChanges') : t('expenses.add')}</Button>
       </form>
     </>
   );
 }
 
 /** The full expense form in a sheet: pet, date, amount, category, currency, note and a receipt (S-19). */
-export function AddExpenseSheet({ open, onClose, pets, today }: Props) {
+export function AddExpenseSheet({ open, onClose, pets, today, record }: Props) {
   return (
-    <Sheet open={open} label={t('expenses.add')} onClose={onClose}>
-      <ExpenseForm onClose={onClose} pets={pets} today={today} />
+    <Sheet open={open} label={record ? t('expenses.edit') : t('expenses.add')} onClose={onClose}>
+      <ExpenseForm onClose={onClose} pets={pets} today={today} record={record} />
     </Sheet>
   );
 }

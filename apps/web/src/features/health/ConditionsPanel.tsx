@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { InvalidInput } from '../../application/pet-service';
+import type { StoredRecord } from '../../application/ports/record-store';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Button, Card, EmptyState, Line, SectionHeader } from '../../ui';
+import { EditButton } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -50,18 +52,42 @@ const nowLocal = () => {
   return d.toISOString().slice(0, 16);
 };
 
-function AddCondition({ petId, onClose }: { petId: string; onClose: () => void }) {
+const text = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+/** The condition form: adds one, or with `record` changes that one. */
+function ConditionForm({
+  petId,
+  record,
+  onClose,
+}: {
+  petId: string;
+  record?: StoredRecord;
+  onClose: () => void;
+}) {
   const { health } = useServices();
   const householdId = useHouseholdId();
   const show = useToastStore((s) => s.show);
-  const [values, setValues] = useState<Record<string, string>>({ kind: 'allergy' });
+  const [values, setValues] = useState<Record<string, string>>(
+    record
+      ? Object.fromEntries(CONDITION_FIELDS.map((f) => [f.name, text(record.data[f.name])]))
+      : { kind: 'allergy' },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const failure = useSaveFailure();
   const submit = async () => {
     failure.clear();
     try {
-      await health.add('condition', householdId, { petId, ...values });
-      show(t('form.added', { name: values.name ?? '' }));
+      if (record) {
+        await health.edit('condition', record.id, {
+          ...values,
+          // Resolving is a separate action; an edit leaves it as it is.
+          resolvedOn: record.data.resolvedOn,
+        });
+        show(t('form.saved', { name: values.name ?? '' }));
+      } else {
+        await health.add('condition', householdId, { petId, ...values });
+        show(t('form.added', { name: values.name ?? '' }));
+      }
       onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) {
@@ -73,35 +99,65 @@ function AddCondition({ petId, onClose }: { petId: string; onClose: () => void }
   };
   return (
     <RecordForm
-      title={t('condition.add')}
+      title={record ? t('condition.edit') : t('condition.add')}
       fields={CONDITION_FIELDS}
       values={values}
       errors={errors}
       onChange={setValues}
       onSubmit={() => void submit()}
-      submitLabel={t('condition.add')}
+      submitLabel={record ? t('form.saveChanges') : t('condition.add')}
     >
       {failure.view}
     </RecordForm>
   );
 }
 
-function AddSymptom({ petId, onClose }: { petId: string; onClose: () => void }) {
+/** An instant as the value of a datetime-local field (the device's own time). */
+const localInstant = (iso: unknown): string => {
+  const d = new Date(String(iso));
+  if (Number.isNaN(d.getTime())) return '';
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+
+/** The symptom form: adds one, or with `record` changes that one. */
+function SymptomForm({
+  petId,
+  record,
+  onClose,
+}: {
+  petId: string;
+  record?: StoredRecord;
+  onClose: () => void;
+}) {
   const { health } = useServices();
   const householdId = useHouseholdId();
   const show = useToastStore((s) => s.show);
-  const [values, setValues] = useState<Record<string, string>>({ observedAt: nowLocal() });
+  const [values, setValues] = useState<Record<string, string>>(
+    record
+      ? {
+          observedAt: localInstant(record.data.observedAt),
+          description: text(record.data.description),
+          severity: text(record.data.severity),
+        }
+      : { observedAt: nowLocal() },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const failure = useSaveFailure();
   const submit = async () => {
     failure.clear();
     try {
-      await health.add('symptomEntry', householdId, {
-        petId,
+      const input = {
         ...values,
         observedAt: values.observedAt ? new Date(values.observedAt).toISOString() : '',
-      });
-      show(t('form.added', { name: values.description ?? '' }));
+      };
+      if (record) {
+        await health.edit('symptomEntry', record.id, input);
+        show(t('form.saved', { name: values.description ?? '' }));
+      } else {
+        await health.add('symptomEntry', householdId, { petId, ...input });
+        show(t('form.added', { name: values.description ?? '' }));
+      }
       onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) {
@@ -113,13 +169,13 @@ function AddSymptom({ petId, onClose }: { petId: string; onClose: () => void }) 
   };
   return (
     <RecordForm
-      title={t('symptom.add')}
+      title={record ? t('symptom.edit') : t('symptom.add')}
       fields={SYMPTOM_FIELDS}
       values={values}
       errors={errors}
       onChange={setValues}
       onSubmit={() => void submit()}
-      submitLabel={t('symptom.add')}
+      submitLabel={record ? t('form.saveChanges') : t('symptom.add')}
     >
       {failure.view}
     </RecordForm>
@@ -132,11 +188,12 @@ export function ConditionsPanel({ petId }: { petId: string }) {
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'condition');
   const canResolve = useCan('update', 'condition');
+  const canEdit = canResolve;
   const canDelete = useCanDelete('condition');
   const removeRecord = useRemoval();
   const today = useToday();
   const conditions = useHealthList('condition', petId);
-  const [adding, setAdding] = useState(false);
+  const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
   const all = conditions.data ?? [];
   const isResolved = (c: (typeof all)[number]) => typeof c.data.resolvedOn === 'string';
   const rows = [...all.filter((c) => !isResolved(c)), ...all.filter(isResolved)];
@@ -150,7 +207,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
               action: {
                 label: t('ui.add'),
                 ariaLabel: t('condition.addLabel'),
-                onClick: () => setAdding(true),
+                onClick: () => setSheet({}),
               },
             }
           : {})}
@@ -187,6 +244,9 @@ export function ConditionsPanel({ petId }: { petId: string }) {
                         {t('condition.resolve')}
                       </button>
                     ) : null}
+                    {canEdit ? (
+                      <EditButton name={name} onClick={() => setSheet({ record: c })} />
+                    ) : null}
                     {canDelete(c.createdBy) ? (
                       <Button
                         variant="secondary"
@@ -203,8 +263,16 @@ export function ConditionsPanel({ petId }: { petId: string }) {
           })}
         </ul>
       ) : null}
-      <RecordSheet open={adding} title={t('condition.add')} onClose={() => setAdding(false)}>
-        <AddCondition petId={petId} onClose={() => setAdding(false)} />
+      <RecordSheet
+        open={sheet !== null}
+        title={sheet?.record ? t('condition.edit') : t('condition.add')}
+        onClose={() => setSheet(null)}
+      >
+        <ConditionForm
+          petId={petId}
+          {...(sheet?.record ? { record: sheet.record } : {})}
+          onClose={() => setSheet(null)}
+        />
       </RecordSheet>
     </Card>
   );
@@ -214,10 +282,11 @@ export function ConditionsPanel({ petId }: { petId: string }) {
 export function SymptomsPanel({ petId }: { petId: string }) {
   const prefs = useSessionStore((s) => s.preferences);
   const canLog = useCan('create', 'symptomEntry');
+  const canEdit = useCan('update', 'symptomEntry');
   const canDelete = useCanDelete('symptomEntry');
   const removeRecord = useRemoval();
   const symptoms = useHealthList('symptomEntry', petId);
-  const [adding, setAdding] = useState(false);
+  const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
   const rows = [...(symptoms.data ?? [])].sort((a, b) =>
     String(b.data.observedAt).localeCompare(String(a.data.observedAt)),
   );
@@ -231,7 +300,7 @@ export function SymptomsPanel({ petId }: { petId: string }) {
               action: {
                 label: t('ui.add'),
                 ariaLabel: t('symptom.addLabel'),
-                onClick: () => setAdding(true),
+                onClick: () => setSheet({}),
               },
             }
           : {})}
@@ -252,23 +321,36 @@ export function SymptomsPanel({ petId }: { petId: string }) {
                     : '')
                 }
                 actions={
-                  canDelete(s.createdBy) ? (
-                    <Button
-                      variant="secondary"
-                      aria-label={t('form.deleteLabel', { name: date })}
-                      onClick={() => void removeRecord(s, date)}
-                    >
-                      {t('form.delete')}
-                    </Button>
-                  ) : null
+                  <>
+                    {canEdit ? (
+                      <EditButton name={date} onClick={() => setSheet({ record: s })} />
+                    ) : null}
+                    {canDelete(s.createdBy) ? (
+                      <Button
+                        variant="secondary"
+                        aria-label={t('form.deleteLabel', { name: date })}
+                        onClick={() => void removeRecord(s, date)}
+                      >
+                        {t('form.delete')}
+                      </Button>
+                    ) : null}
+                  </>
                 }
               />
             );
           })}
         </ul>
       ) : null}
-      <RecordSheet open={adding} title={t('symptom.add')} onClose={() => setAdding(false)}>
-        <AddSymptom petId={petId} onClose={() => setAdding(false)} />
+      <RecordSheet
+        open={sheet !== null}
+        title={sheet?.record ? t('symptom.edit') : t('symptom.add')}
+        onClose={() => setSheet(null)}
+      >
+        <SymptomForm
+          petId={petId}
+          {...(sheet?.record ? { record: sheet.record } : {})}
+          onClose={() => setSheet(null)}
+        />
       </RecordSheet>
     </Card>
   );

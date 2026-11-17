@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { formatMoney } from '@petcare/domain';
 import { inPeriod } from '../../application/expense-summary';
+import type { StoredRecord } from '../../application/ports/record-store';
 import type { Period } from '../../application/expense-summary';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
@@ -20,6 +21,7 @@ import {
 import { FileViewButton } from '../files/FileViewButton';
 import { useToday } from '../health/hooks';
 import { LoadError } from '../shared/LoadError';
+import { EditButton } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useServices } from '../shared/services-context';
@@ -33,11 +35,12 @@ export function ExpensesPage() {
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'expense');
+  const canEdit = useCan('update', 'expense');
   const canDelete = useCanDelete('expense');
   const removeRecord = useRemoval();
   const today = useToday();
   const [period, setPeriod] = useState<Period>('month');
-  const [adding, setAdding] = useState(false);
+  const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
   const wide = useWideScreen();
   const list = useQuery({
     queryKey: ['expense', householdId],
@@ -82,6 +85,7 @@ export function ExpensesPage() {
         {x.data.fileId ? (
           <FileViewButton fileId={String(x.data.fileId)} label={t('expenses.receipt')} />
         ) : null}
+        {canEdit ? <EditButton name={title} onClick={() => setSheet({ record: x })} /> : null}
         {canDelete(x.createdBy) ? (
           <button
             type="button"
@@ -128,7 +132,7 @@ export function ExpensesPage() {
             <>
               {seg}
               {canCreate ? (
-                <Button onClick={() => setAdding(true)}>
+                <Button onClick={() => setSheet({})}>
                   <Icon name="plus" /> {t('expenses.add')}
                 </Button>
               ) : null}
@@ -159,7 +163,7 @@ export function ExpensesPage() {
                     action: {
                       label: t('ui.add'),
                       ariaLabel: t('expenses.addLabel'),
-                      onClick: () => setAdding(true),
+                      onClick: () => setSheet({}),
                     },
                   }
                 : {})}
@@ -188,12 +192,13 @@ export function ExpensesPage() {
             {rows.length > 0 && !wide ? (
               <ul aria-label={t('expenses.list')}>{rows.map(rowOf)}</ul>
             ) : null}
-            {canCreate ? (
+            {canCreate || canEdit ? (
               <AddExpenseSheet
-                open={adding}
-                onClose={() => setAdding(false)}
+                open={sheet !== null}
+                onClose={() => setSheet(null)}
                 pets={petList.data ?? []}
                 today={today}
+                record={sheet?.record}
               />
             ) : null}
           </Card>

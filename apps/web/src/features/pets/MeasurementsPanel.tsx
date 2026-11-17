@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Suspense, lazy, useRef, useState } from 'react';
 import { can } from '@petcare/domain';
 import { MEASUREMENT_KINDS } from '../../application/measurement-service';
+import { InvalidInput } from '../../application/pet-service';
 import type { Kind } from '../../application/measurement-service';
+import type { StoredRecord } from '../../application/ports/record-store';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatDate, formatMeasurement, toDisplay, toStored, unitLabel } from '../../lib/format';
@@ -19,8 +21,10 @@ import {
   SheetHead,
   TextField,
 } from '../../ui';
+import { EditButton } from '../shared/EditButton';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
+import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
 import { useWideScreen } from '../shared/use-wide-screen';
 import { useToastStore } from '../shared/toast';
@@ -36,7 +40,24 @@ const nowLocal = () => {
 
 const kindLabel = (kind: string) => t(`measure.kind.${kind}` as MessageKey);
 
-function AddMeasurement({ petId, onClose }: { petId: string; onClose: () => void }) {
+/** An instant as the value of a datetime-local field (the device's own time). */
+const localInstant = (iso: unknown): string => {
+  const d = new Date(String(iso));
+  if (Number.isNaN(d.getTime())) return nowLocal();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+
+/** The measurement form: adds one, or with `record` changes that one. */
+function MeasurementForm({
+  petId,
+  record,
+  onClose,
+}: {
+  petId: string;
+  record?: StoredRecord;
+  onClose: () => void;
+}) {
   const { measurements } = useServices();
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
@@ -44,9 +65,18 @@ function AddMeasurement({ petId, onClose }: { petId: string; onClose: () => void
   const [invalid, setInvalid] = useState(false);
   const formEl = useRef<HTMLFormElement>(null);
   useFocusInvalid(formEl, invalid ? { value: true } : {});
+  const failure = useSaveFailure();
 
+  const kind0 = (record ? String(record.data.kind) : 'weight') as Kind;
   const form = useForm({
-    defaultValues: { kind: 'weight' as Kind, value: '', measuredAt: nowLocal(), note: '' },
+    defaultValues: {
+      kind: kind0,
+      value: record
+        ? String(Math.round(toDisplay(kind0, Number(record.data.value), prefs) * 100) / 100)
+        : '',
+      measuredAt: record ? localInstant(record.data.measuredAt) : nowLocal(),
+      note: record ? String(record.data.note ?? '') : '',
+    },
     onSubmit: async ({ value }) => {
       const shown = Number(value.value);
       if (!Number.isFinite(shown) || shown <= 0) {
@@ -54,22 +84,33 @@ function AddMeasurement({ petId, onClose }: { petId: string; onClose: () => void
         return;
       }
       setInvalid(false);
-      await measurements.add(householdId, {
-        petId,
-        kind: value.kind,
-        value: toStored(value.kind, shown, prefs),
-        measuredAt: new Date(value.measuredAt).toISOString(),
-        note: value.note,
-      });
-      show(t('form.added', { name: kindLabel(value.kind) }));
-      onClose();
+      failure.clear();
+      try {
+        const input = {
+          kind: value.kind,
+          value: toStored(value.kind, shown, prefs),
+          measuredAt: new Date(value.measuredAt).toISOString(),
+          note: value.note,
+        };
+        if (record) {
+          await measurements.update(record.id, input);
+          show(t('form.saved', { name: kindLabel(value.kind) }));
+        } else {
+          await measurements.add(householdId, { petId, ...input });
+          show(t('form.added', { name: kindLabel(value.kind) }));
+        }
+        onClose();
+      } catch (e) {
+        if (e instanceof InvalidInput) setInvalid(true);
+        else failure.fail(e);
+      }
     },
   });
 
   return (
     <form
       ref={formEl}
-      aria-label={t('measure.add')}
+      aria-label={record ? t('measure.edit') : t('measure.add')}
       onSubmit={(e) => {
         e.preventDefault();
         void form.handleSubmit();
@@ -119,7 +160,8 @@ function AddMeasurement({ petId, onClose }: { petId: string; onClose: () => void
           />
         )}
       </form.Field>
-      <Button type="submit">{t('measure.add')}</Button>
+      {failure.view}
+      <Button type="submit">{record ? t('form.saveChanges') : t('measure.add')}</Button>
     </form>
   );
 }
@@ -131,12 +173,13 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
   const prefs = useSessionStore((s) => s.preferences);
   const wide = useWideScreen();
   const canCreate = useCan('create', 'measurement');
+  const canEdit = useCan('update', 'measurement');
   const role = useSessionStore((s) => activeHousehold(s)?.role);
   const userId = useSessionStore((s) => s.user?.id ?? '');
   const removeRecord = useRemoval();
   const canDelete = (createdBy: string) =>
     role !== undefined && can(role, 'delete', 'measurement', { actorId: userId, createdBy });
-  const [adding, setAdding] = useState(false);
+  const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
 
   const list = useQuery({
     queryKey: ['measurement', householdId, { petId }],
@@ -165,7 +208,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
               action: {
                 label: t('ui.add'),
                 ariaLabel: t('measure.addLabel'),
-                onClick: () => setAdding(true),
+                onClick: () => setSheet({}),
               },
             }
           : {})}
@@ -218,7 +261,7 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
                   <th scope="col">{t('measure.col.value')}</th>
                   <th scope="col">{t('measure.col.note')}</th>
                   <th scope="col">
-                    <span className="vh">{t('measure.delete')}</span>
+                    <span className="vh">{t('measure.actions')}</span>
                   </th>
                 </tr>
               </thead>
@@ -233,6 +276,12 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
                       <td>{formatMeasurement(kind, Number(m.data.value), prefs)}</td>
                       <td>{String(m.data.note ?? '')}</td>
                       <td>
+                        {canEdit ? (
+                          <EditButton
+                            name={`${kindLabel(kind)} ${date}`}
+                            onClick={() => setSheet({ record: m })}
+                          />
+                        ) : null}
                         {canDelete(m.createdBy) ? (
                           <Button
                             variant="secondary"
@@ -252,9 +301,20 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
         </Disclosure>
       ) : null}
 
-      <Sheet open={adding} label={t('measure.add')} onClose={() => setAdding(false)}>
-        <SheetHead title={t('measure.add')} onClose={() => setAdding(false)} />
-        <AddMeasurement petId={petId} onClose={() => setAdding(false)} />
+      <Sheet
+        open={sheet !== null}
+        label={sheet?.record ? t('measure.edit') : t('measure.add')}
+        onClose={() => setSheet(null)}
+      >
+        <SheetHead
+          title={sheet?.record ? t('measure.edit') : t('measure.add')}
+          onClose={() => setSheet(null)}
+        />
+        <MeasurementForm
+          petId={petId}
+          {...(sheet?.record ? { record: sheet.record } : {})}
+          onClose={() => setSheet(null)}
+        />
       </Sheet>
     </Card>
   );
