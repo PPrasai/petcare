@@ -17,12 +17,15 @@ function contentWidth(): number {
 }
 
 function tierNow(): Tier {
-  if (!window.matchMedia(WIDE_QUERY).matches) return 'flat';
+  if (typeof window.matchMedia !== 'function' || !window.matchMedia(WIDE_QUERY).matches) {
+    return 'flat';
+  }
   const w = contentWidth();
   return w >= WIDE_FROM ? 'wide' : w >= MID_FROM ? 'mid' : 'flat';
 }
 
 function subscribe(notify: () => void) {
+  if (typeof window.matchMedia !== 'function') return () => undefined;
   const query = window.matchMedia(WIDE_QUERY);
   query.addEventListener('change', notify);
   const main = document.querySelector('.app[data-sidebar] .main');
