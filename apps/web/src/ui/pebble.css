@@ -2968,6 +2968,9 @@
   .two[data-flow] > .col > [data-area] {
     flex: 0 1 auto;
   }
+  .two[data-flow][data-layout='health'] [data-area] {
+    min-height: 140px;
+  }
   .two[data-flow] > .col > [data-area]:nth-last-child(1 of [data-area]) {
     flex: 1 6 auto;
   }
