@@ -652,7 +652,12 @@ export const en = {
   'demo.try': 'Try the demo',
   'demo.tryHint': 'No account needed. Sample data stays on this device.',
   'demo.householdDisabled':
-    'Inviting people and changing members needs an account, so it is turned off in the demo.',
+    'Inviting people and changing members works in the demo from a wider screen (860 px). With an account it works on every screen.',
+  'demo.householdLocal':
+    'People and invites in the demo stay on this device, so nobody can really join. Create an account to invite someone for real.',
+  'demo.inviteNote':
+    'Demo invite: the link and code only look real, and nobody can join with them.',
+  'demo.joinDisabled': 'Joining a household needs an account, so it is turned off in the demo.',
   'demo.pushDisabled':
     'Phone notifications need an account and a connection, so they are turned off in the demo.',
   'demo.emergencyDisabled':

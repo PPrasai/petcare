@@ -7,6 +7,7 @@ import { clearPendingInvite, pendingInvite, savePendingInvite } from '../../lib/
 import { useSessionStore } from '../../state/session';
 import { Banner, Button, Line, TextField } from '../../ui';
 import { AuthFrame } from '../auth/AuthSide';
+import { useDemo } from '../shared/demo';
 import { useServices } from '../shared/services-context';
 import { useHouseholdAction } from './useHouseholdAction';
 
@@ -26,6 +27,7 @@ function takeTokenFromLink(): string | null {
 export function JoinPage() {
   const { households } = useServices();
   const signedIn = useSessionStore((s) => s.status === 'signedIn');
+  const demo = useDemo();
   const setActive = useSessionStore((s) => s.setActiveHousehold);
   const navigate = useNavigate();
   const { run, error, busy } = useHouseholdAction();
@@ -61,6 +63,13 @@ export function JoinPage() {
               </Link>
               <Link to="/sign-up" className="btn">
                 {t('auth.signUp.title')}
+              </Link>
+            </>
+          ) : demo ? (
+            <>
+              <Banner>{t('demo.joinDisabled')}</Banner>
+              <Link to="/household" className="btn">
+                {t('household.title')}
               </Link>
             </>
           ) : (
