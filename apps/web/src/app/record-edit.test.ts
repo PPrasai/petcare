@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ContactService } from '../application/contact-service';
 import { DocumentService } from '../application/document-service';
 import { ExpenseService } from '../application/expense-service';
+import { changedFields } from '../application/record-checks';
 import { HealthService } from '../application/health-service';
 import { MeasurementService } from '../application/measurement-service';
 import { InvalidInput } from '../application/pet-service';
@@ -184,6 +185,12 @@ describe('editing other health records', () => {
     expect(edited[0]?.data.reason).toBe('Dental');
     expect(edited[1]?.data.kind).toBe('chronic');
     expect(edited[2]?.data).toMatchObject({ description: 'Limping less', severity: 'mild' });
+  });
+});
+
+describe('changedFields', () => {
+  it('leaves a stored list the form does not carry alone', () => {
+    expect(changedFields({ reason: 'a', fileIds: [] }, { reason: 'b' })).toEqual({ reason: 'b' });
   });
 });
 

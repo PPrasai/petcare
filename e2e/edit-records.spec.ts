@@ -26,7 +26,11 @@ const openPet = async (page: Page, tab: string) => {
   await page.getByRole('tab', { name: tab, exact: true }).click();
 };
 const goContacts = async (page: Page) => {
-  await page.getByRole('link', { name: 'Settings', exact: true }).first().click();
+  await page
+    .getByRole('link', { name: 'Settings', exact: true })
+    .or(page.getByRole('link', { name: 'More', exact: true }))
+    .first()
+    .click();
   await page.getByRole('link', { name: 'Contacts' }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: 'Contacts' })).toBeVisible();
 };
@@ -85,14 +89,20 @@ async function seed(page: Page) {
   await expect(page.getByRole('listitem').filter({ hasText: 'Certificate' })).toBeVisible();
 
   await goContacts(page);
-  await page.getByRole('button', { name: 'Add contact' }).first().click();
+  await page
+    .getByRole('button', { name: /^Add (a )?contact$/ })
+    .first()
+    .click();
   await page.getByLabel('Name', { exact: true }).fill('Dr Rao');
   await page.getByLabel('Phone').fill('555-0101');
   await sheet(page, 'Add contact').getByRole('button', { name: 'Add contact' }).click();
   await expect(page.getByTestId('contact-row').filter({ hasText: 'Dr Rao' })).toBeVisible();
 
   await goExpenses(page);
-  await page.getByRole('button', { name: 'Add expense' }).first().click();
+  await page
+    .getByRole('button', { name: /^Add (an? )?expense$/ })
+    .first()
+    .click();
   await page.getByLabel('Amount').fill('42.50');
   await sheet(page, 'Add expense').getByRole('button', { name: 'Add expense' }).click();
   await expect(page.getByTestId('expense-row').or(page.getByRole('listitem'))).not.toHaveCount(0);
@@ -103,9 +113,9 @@ async function seed(page: Page) {
 async function editAll(page: Page, n: number) {
   await openPet(page, 'Health');
 
-  await page.getByRole('button', { name: 'Edit Rabies', exact: true }).click();
+  await page.getByRole('button', { name: /^Edit Rabies/ }).click();
   await expect(sheet(page, 'Edit vaccination').getByLabel('Vaccine', { exact: true })).toHaveValue(
-    n === 1 ? 'Rabies' : 'Rabies booster',
+    n === 1 ? 'Rabies' : 'Rabies edit1',
   );
   await page.getByLabel('Vaccine', { exact: true }).fill(`Rabies edit${n}`);
   await page.getByLabel('Batch number').fill(`B-${n + 1}`);
@@ -196,27 +206,43 @@ async function expectOnServer(page: Page, n: number) {
   await expect
     .poll(async () => (await one(page, 'vaccination')).vaccineName)
     .toBe(`Rabies edit${n}`);
-  expect(await one(page, 'vaccination')).toMatchObject({ batchNumber: `B-${n + 1}` });
-  expect(await one(page, 'medication')).toMatchObject({ name: `Amoxil edit${n}`, dose: n + 5 });
-  expect(await one(page, 'vetVisit')).toMatchObject({
-    reason: `Dental ${n}`,
-    costMinor: n * 1000 + 25,
-  });
-  expect(await one(page, 'condition')).toMatchObject({ name: `Beef ${n}`, severity: 'moderate' });
-  expect(await one(page, 'symptomEntry')).toMatchObject({ description: `Itchy ear ${n}` });
-  expect(await one(page, 'measurement')).toMatchObject({ value: 10 + n + 0.5, note: `note ${n}` });
-  expect(await one(page, 'document')).toMatchObject({
-    title: `Papers ${n}`,
-    category: 'insurance',
-  });
-  expect(await one(page, 'contact')).toMatchObject({
-    name: `Dr Rao ${n}`,
-    phone: `555-02${n}${n}`,
-  });
-  expect(await one(page, 'expense')).toMatchObject({
-    amountMinor: n * 1000 + 75,
-    note: `Visit ${n}`,
-  });
+  await expect.poll(() => one(page, 'vaccination')).toMatchObject({ batchNumber: `B-${n + 1}` });
+  await expect
+    .poll(() => one(page, 'medication'))
+    .toMatchObject({ name: `Amoxil edit${n}`, dose: n + 5 });
+  await expect
+    .poll(() => one(page, 'vetVisit'))
+    .toMatchObject({
+      reason: `Dental ${n}`,
+      costMinor: n * 1000 + 25,
+    });
+  await expect
+    .poll(() => one(page, 'condition'))
+    .toMatchObject({ name: `Beef ${n}`, severity: 'moderate' });
+  await expect
+    .poll(() => one(page, 'symptomEntry'))
+    .toMatchObject({ description: `Itchy ear ${n}` });
+  await expect
+    .poll(() => one(page, 'measurement'))
+    .toMatchObject({ value: 10 + n + 0.5, note: `note ${n}` });
+  await expect
+    .poll(() => one(page, 'document'))
+    .toMatchObject({
+      title: `Papers ${n}`,
+      category: 'insurance',
+    });
+  await expect
+    .poll(() => one(page, 'contact'))
+    .toMatchObject({
+      name: `Dr Rao ${n}`,
+      phone: `555-02${n}${n}`,
+    });
+  await expect
+    .poll(() => one(page, 'expense'))
+    .toMatchObject({
+      amountMinor: n * 1000 + 75,
+      note: `Visit ${n}`,
+    });
 }
 
 for (const [label, viewport] of [

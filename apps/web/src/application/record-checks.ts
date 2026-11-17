@@ -29,6 +29,8 @@ export function changedFields(
     if (JSON.stringify(current[key]) !== JSON.stringify(value)) fields[key] = value;
   }
   for (const key of Object.keys(current)) {
+    // Lists (attached files) are managed outside the edit forms: absent there means unchanged.
+    if (Array.isArray(current[key])) continue;
     if (!(key in next) && current[key] !== null && current[key] !== undefined) fields[key] = null;
   }
   return fields;
