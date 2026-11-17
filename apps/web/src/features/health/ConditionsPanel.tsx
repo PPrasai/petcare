@@ -6,7 +6,7 @@ import type { MessageKey } from '../../i18n/en';
 import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Button, Card, EmptyState, Line, SectionHeader } from '../../ui';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -189,6 +189,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
   const canCreate = useCan('create', 'condition');
   const canResolve = useCan('update', 'condition');
   const canEdit = canResolve;
+  const tap = useEditTap();
   const canDelete = useCanDelete('condition');
   const removeRecord = useRemoval();
   const today = useToday();
@@ -229,6 +230,7 @@ export function ConditionsPanel({ petId }: { petId: string }) {
               .join(' · ');
             return (
               <Line
+                titleProps={canEdit ? tap(name, () => setSheet({ record: c })) : undefined}
                 key={c.id}
                 title={name}
                 sub={sub}
@@ -283,6 +285,7 @@ export function SymptomsPanel({ petId }: { petId: string }) {
   const prefs = useSessionStore((s) => s.preferences);
   const canLog = useCan('create', 'symptomEntry');
   const canEdit = useCan('update', 'symptomEntry');
+  const tap = useEditTap();
   const canDelete = useCanDelete('symptomEntry');
   const removeRecord = useRemoval();
   const symptoms = useHealthList('symptomEntry', petId);
@@ -312,6 +315,7 @@ export function SymptomsPanel({ petId }: { petId: string }) {
             const date = formatDate(String(s.data.observedAt), prefs);
             return (
               <Line
+                titleProps={canEdit ? tap(date, () => setSheet({ record: s })) : undefined}
                 key={s.id}
                 title={String(s.data.description)}
                 sub={

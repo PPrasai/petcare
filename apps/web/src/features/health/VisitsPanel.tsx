@@ -7,7 +7,7 @@ import { formatDate } from '../../lib/format';
 import { useSessionStore } from '../../state/session';
 import { Button, Card, Disclosure, EmptyState, Icon, Line, SectionHeader } from '../../ui';
 import { useContactName, useContactOptions } from '../contacts/hooks';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -126,6 +126,7 @@ function VisitList({ petId }: { petId: string }) {
   const list = useHealthList('vetVisit', petId);
   const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
   const canEdit = useCan('update', 'vetVisit');
+  const tap = useEditTap();
   const rows = [...(list.data ?? [])].sort((a, b) =>
     String(b.data.visitedOn).localeCompare(String(a.data.visitedOn)),
   );
@@ -153,6 +154,7 @@ function VisitList({ petId }: { petId: string }) {
             ].filter(Boolean);
             return (
               <Line
+                titleProps={canEdit ? tap(date, () => setSheet({ record: v })) : undefined}
                 key={v.id}
                 title={v.data.reason ? String(v.data.reason) : date}
                 sub={

@@ -12,7 +12,7 @@ import {
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
 import { Button, Card, EmptyState, Icon, Line, Pill, SectionHeader } from '../../ui';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -127,6 +127,7 @@ export function MedicationsPanel({ petId }: { petId: string }) {
   const doses = useHealthList('medicationDose', petId);
   const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
   const canEdit = useCan('update', 'medication');
+  const tap = useEditTap();
 
   const log = (med: StoredRecord, slot: DoseSlot, skipped: boolean) =>
     void health.logDose(householdId, med, slot.occurrenceAt, skipped, new Date());
@@ -159,6 +160,7 @@ export function MedicationsPanel({ petId }: { petId: string }) {
             return (
               <li key={m.id}>
                 <Line
+                  titleProps={canEdit ? tap(name, () => setSheet({ record: m })) : undefined}
                   as="div"
                   title={name}
                   {...(dose ? { sub: dose } : {})}

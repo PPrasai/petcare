@@ -22,7 +22,7 @@ import {
   TextField,
 } from '../../ui';
 import { LoadError } from '../shared/LoadError';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -338,6 +338,7 @@ export function ContactsPage() {
   const householdId = useHouseholdId();
   const canCreate = useCan('create', 'contact');
   const canEdit = useCan('update', 'contact');
+  const tap = useEditTap();
   const canDelete = useCanDelete('contact');
   const removeRecord = useRemoval();
   const wide = useWideScreen();
@@ -411,6 +412,7 @@ export function ContactsPage() {
               const site = c.data.website ? String(c.data.website) : '';
               return (
                 <Line
+                  titleProps={canEdit ? tap(name, () => setSheet({ record: c })) : undefined}
                   key={c.id}
                   testId="contact-row"
                   title={name}

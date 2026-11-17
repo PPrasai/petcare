@@ -22,7 +22,7 @@ import {
 } from '../../ui';
 import { FILE_ACCEPT, FilePicker, fileProblem, useMaxFileBytes } from '../files/FilePicker';
 import { FileViewButton, useFileViewer } from '../files/FileViewButton';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -281,6 +281,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'document');
   const canEdit = useCan('update', 'document');
+  const tap = useEditTap();
   const canDelete = useCanDelete('document');
   const removeRecord = useRemoval();
   const [editing, setEditing] = useState<StoredRecord | null>(null);
@@ -369,6 +370,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
                 const name = String(d.data.title);
                 return (
                   <Line
+                    titleProps={canEdit ? tap(name, () => setEditing(d)) : undefined}
                     key={d.id}
                     lead={<Icon name="file" />}
                     title={name}

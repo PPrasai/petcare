@@ -21,7 +21,7 @@ import {
   SheetHead,
   TextField,
 } from '../../ui';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -174,6 +174,13 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
   const wide = useWideScreen();
   const canCreate = useCan('create', 'measurement');
   const canEdit = useCan('update', 'measurement');
+  const tap = useEditTap();
+  // A table cell keeps its own role: the phone edit target is the kind cell, focusable and labelled.
+  const tapCell = (name: string, onEdit: () => void) => {
+    const props = { ...tap(name, onEdit) };
+    delete props.role;
+    return props;
+  };
   const role = useSessionStore((s) => activeHousehold(s)?.role);
   const userId = useSessionStore((s) => s.user?.id ?? '');
   const removeRecord = useRemoval();
@@ -272,7 +279,13 @@ export function MeasurementsPanel({ petId }: { petId: string }) {
                   return (
                     <tr key={m.id}>
                       <td>{date}</td>
-                      <td>{kindLabel(kind)}</td>
+                      <td
+                        {...(canEdit
+                          ? tapCell(`${kindLabel(kind)} ${date}`, () => setSheet({ record: m }))
+                          : undefined)}
+                      >
+                        {kindLabel(kind)}
+                      </td>
                       <td>{formatMeasurement(kind, Number(m.data.value), prefs)}</td>
                       <td>{String(m.data.note ?? '')}</td>
                       <td>

@@ -9,7 +9,7 @@ import { useSessionStore } from '../../state/session';
 import { Button, Card, Chip, EmptyState, Line, Pill, SectionHeader } from '../../ui';
 import type { Tone } from '../../ui';
 import { useContactName, useContactOptions } from '../contacts/hooks';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -137,6 +137,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
   const list = useHealthList('vaccination', petId);
   const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
   const canEdit = useCan('update', 'vaccination');
+  const tap = useEditTap();
   const rows = list.data ?? [];
 
   return (
@@ -161,6 +162,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
             const name = String(v.data.vaccineName);
             return (
               <Line
+                titleProps={canEdit ? tap(name, () => setSheet({ record: v })) : undefined}
                 key={v.id}
                 title={name}
                 sub={

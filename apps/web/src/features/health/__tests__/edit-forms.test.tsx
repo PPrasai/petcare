@@ -58,6 +58,12 @@ function mount() {
 }
 
 beforeEach(() => {
+  // A wide screen: the rows have an Edit button (a phone has none, the title is the target).
+  vi.stubGlobal('matchMedia', () => ({
+    matches: true,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
   edit.mockReset();
   useToastStore.getState().dismiss();
   useSessionStore

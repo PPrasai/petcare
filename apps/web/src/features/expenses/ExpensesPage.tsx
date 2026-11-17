@@ -21,7 +21,7 @@ import {
 import { FileViewButton } from '../files/FileViewButton';
 import { useToday } from '../health/hooks';
 import { LoadError } from '../shared/LoadError';
-import { EditButton } from '../shared/EditButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useServices } from '../shared/services-context';
@@ -36,6 +36,7 @@ export function ExpensesPage() {
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'expense');
   const canEdit = useCan('update', 'expense');
+  const tap = useEditTap();
   const canDelete = useCanDelete('expense');
   const removeRecord = useRemoval();
   const today = useToday();
@@ -114,6 +115,7 @@ export function ExpensesPage() {
     return (
       <Line
         key={x.id}
+        titleProps={canEdit ? tap(title, () => setSheet({ record: x })) : undefined}
         title={title}
         sub={`${date} · ${category} · ${petName(x.data.petId)}`}
         aside={<span className="amt">{money}</span>}
