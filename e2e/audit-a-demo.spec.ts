@@ -14,15 +14,18 @@ const toast = (page: Page) => page.locator('.toast');
 test('a delete is one tap with an Undo toast that brings the record back', async ({ page }) => {
   await openDemo(page);
   await page.goto('/contacts');
-  await expect(page.getByText('Dr. Rai')).toBeVisible();
-  await page.getByRole('button', { name: /^Delete Dr\. Rai/ }).click();
+  const row = page.getByTestId('contact-row').filter({ hasText: 'Dr. Rai' });
+  await expect(row).toBeVisible();
+  // From 860 px the selected contact carries Delete: pick the contact first.
+  await row.click();
+  await page.getByRole('button', { name: /^Delete Dr. Rai/ }).click();
   await expect(toast(page)).toContainText('Deleted Dr. Rai');
-  await expect(page.getByText('Dr. Rai', { exact: true })).toHaveCount(0);
+  await expect(row).toHaveCount(0);
   await toast(page).getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByText('Dr. Rai', { exact: true })).toBeVisible();
+  await expect(row).toBeVisible();
   // Still there after a reload: the undo is a real write, not just a redraw.
   await page.reload();
-  await expect(page.getByText('Dr. Rai', { exact: true })).toBeVisible();
+  await expect(row).toBeVisible();
 });
 
 test('every Log sheet kind offers Undo, and Undo removes what was logged', async ({ page }) => {
@@ -97,14 +100,17 @@ test('a browser that cannot store files still saves the expense, and says so', a
   });
   await openDemo(page);
   await page.getByRole('link', { name: 'Expenses', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Add an expense' }).click();
+  await page.getByRole('button', { name: 'Add expense' }).click();
   await page.getByLabel('Amount').fill('9.99');
   await page.getByLabel(/Receipt|File/).setInputFiles({
     name: 'receipt.png',
     mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgo=', 'base64'),
   });
-  await page.getByRole('button', { name: 'Add expense' }).click();
+  await page
+    .getByRole('dialog', { name: 'Add expense' })
+    .getByRole('button', { name: 'Add expense' })
+    .click();
   await expect(toast(page)).toContainText("files can't be saved in this browser mode");
   await expect(page.getByText('9.99').first()).toBeVisible();
 });

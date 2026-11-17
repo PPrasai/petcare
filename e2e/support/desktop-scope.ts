@@ -25,6 +25,13 @@ export const DESKTOP_SCOPE: string[] = [
   'S-44',
   'S-45',
   'S-48',
+  // D3: Expenses, Household and Contacts
+  'S-18',
+  'S-20',
+  'S-21',
+  'S-23',
+  'S-24',
+  'S-49',
 ];
 
 /** The S-id of a state id such as `S-06 collapsed`. */

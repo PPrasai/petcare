@@ -10,8 +10,9 @@ import type { Period } from '../../application/expense-summary';
 import type { StoredRecord } from '../../application/ports/record-store';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
-import { Card, Disclosure, EmptyState, Line } from '../../ui';
+import { Card, Disclosure, EmptyState, Line, SectionHeader } from '../../ui';
 import { PetAvatar } from '../shared/PetAvatar';
+import { useWideScreen } from '../shared/use-wide-screen';
 
 interface Props {
   expenses: StoredRecord[];
@@ -57,10 +58,33 @@ export function SpendSummary({ expenses, pets, today, period, currency, loading 
         });
   const [before, after] = t('expenses.otherCurrencies', { list: '\u0000' }).split('\u0000');
   const petOf = (id: string | null) => pets.find((p) => p.id === id);
+  const wide = useWideScreen();
+  const byPetTable = (
+    <table className="ltable">
+      <caption className="sr-only">{t('expenses.byPetCaption')}</caption>
+      <tbody>
+        {rows.map((r) => {
+          const pet = petOf(r.petId);
+          return (
+            <tr key={`${r.petId}|${r.currency}`}>
+              <th scope="row">
+                <span className="rh">
+                  {pet ? <PetAvatar pet={pet} size={32} /> : null}
+                  {pet ? String(pet.data.name) : t('expenses.noPet')}
+                </span>
+              </th>
+              <td className="amt">{formatMoney(r.totalMinor, r.currency)}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
 
   return (
     <>
-      <Card role="region" aria-label={t('expenses.summary')}>
+      <Card role="region" aria-label={t('expenses.summary')} data-area="spend">
+        {wide ? <SectionHeader title={t('expenses.summary')} /> : null}
         {loading ? (
           <EmptyState busy>{t('ui.loading')}</EmptyState>
         ) : expenses.length === 0 ? (
@@ -116,27 +140,16 @@ export function SpendSummary({ expenses, pets, today, period, currency, loading 
         )}
       </Card>
       {rows.length > 0 ? (
-        <Disclosure title={t('expenses.byPet')} hint={t('expenses.byPetHint')}>
-          <table className="ltable">
-            <caption className="sr-only">{t('expenses.byPetCaption')}</caption>
-            <tbody>
-              {rows.map((r) => {
-                const pet = petOf(r.petId);
-                return (
-                  <tr key={`${r.petId}|${r.currency}`}>
-                    <th scope="row">
-                      <span className="rh">
-                        {pet ? <PetAvatar pet={pet} size={32} /> : null}
-                        {pet ? String(pet.data.name) : t('expenses.noPet')}
-                      </span>
-                    </th>
-                    <td className="amt">{formatMoney(r.totalMinor, r.currency)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Disclosure>
+        wide ? (
+          <Card data-area="bypet">
+            <SectionHeader title={t('expenses.byPet')} />
+            {byPetTable}
+          </Card>
+        ) : (
+          <Disclosure title={t('expenses.byPet')} hint={t('expenses.byPetHint')}>
+            {byPetTable}
+          </Disclosure>
+        )
       ) : null}
     </>
   );

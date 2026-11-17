@@ -143,12 +143,21 @@ interface Props {
   isOwner: boolean;
   members: UseQueryResult<Person[]>;
   onInvite: () => void;
+  /** From 860 px the Invite button sits in the page header. */
+  hideInvite?: boolean;
   /** The invite sheet, which has to sit inside a card. */
   children?: ReactNode;
 }
 
 /** People in the household, with the owner's invite, role change, removal and ownership transfer. */
-export function MembersPanel({ householdId, isOwner, members, onInvite, children }: Props) {
+export function MembersPanel({
+  householdId,
+  isOwner,
+  members,
+  onInvite,
+  hideInvite,
+  children,
+}: Props) {
   const { households } = useServices();
   const me = useSessionStore((s) => s.user?.id ?? '');
   const client = useQueryClient();
@@ -159,10 +168,12 @@ export function MembersPanel({ householdId, isOwner, members, onInvite, children
   const target = members.data?.find((m) => m.userId === transferTo);
 
   return (
-    <Card>
+    <Card data-area="people">
       <div className="sech">
         <h2>{t('household.people')}</h2>
-        {isOwner ? <Button onClick={onInvite}>{t('household.invite')}</Button> : null}
+        {isOwner && !hideInvite ? (
+          <Button onClick={onInvite}>{t('household.invite')}</Button>
+        ) : null}
       </div>
       {members.isError ? <Banner tone="warn">{t('household.error.offline')}</Banner> : null}
       {members.isPending && members.fetchStatus !== 'idle' ? (
