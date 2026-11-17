@@ -154,8 +154,8 @@ export async function userId(page: Page): Promise<string> {
 
 /**
  * Opens a disclosure by its title (for example "All measurements" on the Health tab). From 860 px
- * some disclosures are panels that are always open (Details, Vet visits, Feeding): then there is
- * nothing to click.
+ * some disclosures are panels that are always open (Details, Vet visits, Feeding), and the others
+ * start open: then there is nothing to click.
  */
 export async function openDisclosure(page: Page, title: string) {
   const summary = page.locator('summary').filter({ hasText: title });
@@ -163,7 +163,12 @@ export async function openDisclosure(page: Page, title: string) {
     .locator('.card')
     .filter({ has: page.getByRole('heading', { level: 2, name: title, exact: true }) });
   await summary.or(panel).first().waitFor();
-  if ((await summary.count()) > 0) await summary.click();
+  // From 860 px a disclosure starts open: only a closed one needs the click.
+  if (
+    (await summary.count()) > 0 &&
+    !(await summary.first().evaluate((el) => el.parentElement?.hasAttribute('open')))
+  )
+    await summary.click();
 }
 
 /** Opens the "Details" disclosure on a pet's Overview tab. */

@@ -3,6 +3,8 @@ import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { useSessionStore } from '../../state/session';
 import { Banner, Card, Icon, PageHeader, SectionHeader } from '../../ui';
+import { Flow } from '../shared/Flow';
+import type { FlowPlan } from '../shared/Flow';
 import { useDemo } from '../shared/demo';
 import { useWideScreen } from '../shared/use-wide-screen';
 import { SignOutButton } from '../sync/SignOutButton';
@@ -25,6 +27,18 @@ const LINKS: {
 ];
 
 /** Everything the user can change about themselves (CAP-19, CAP-20). */
+const PLAN: FlowPlan = {
+  wide: [
+    [1, 'notif', 'signin'],
+    [1.2, 'prefs'],
+    [1, 'aux'],
+  ],
+  mid: [
+    [1, 'notif', 'signin', 'aux'],
+    [1, 'prefs'],
+  ],
+};
+
 export function SettingsPage() {
   const user = useSessionStore((s) => s.user);
   const demo = useDemo();
@@ -49,6 +63,19 @@ export function SettingsPage() {
       {demo ? null : <SignOutButton />}
     </>
   );
+  const notif = (
+    <Card data-area="notif">
+      <PushRow demoNoteId={DEMO_NOTE} />
+      <CalendarRow demoNoteId={DEMO_NOTE} />
+    </Card>
+  );
+  const prefs = <PreferencesPanel />;
+  const signin = <SignInCard demoNoteId={DEMO_NOTE} />;
+  const auxPanel = (
+    <div className="stack" data-area="aux" data-scroll>
+      {aux}
+    </div>
+  );
   return (
     <>
       <PageHeader
@@ -56,25 +83,20 @@ export function SettingsPage() {
         {...(user ? { lede: t('settings.lede', { name: user.name, email: user.email }) } : {})}
       />
       {demo ? <Banner id={DEMO_NOTE}>{t('settings.demo')}</Banner> : null}
-      <div className="two" data-layout={wide ? 'settings' : undefined}>
+      <Flow
+        layout={wide ? 'settings' : undefined}
+        panels={{ notif, prefs, signin, aux: auxPanel }}
+        plan={PLAN}
+      >
         <div className="stack">
-          <Card data-area="notif">
-            <PushRow demoNoteId={DEMO_NOTE} />
-            <CalendarRow demoNoteId={DEMO_NOTE} />
-          </Card>
-          <PreferencesPanel />
+          {notif}
+          {prefs}
         </div>
         <div className="stack">
-          <SignInCard demoNoteId={DEMO_NOTE} />
-          {wide ? (
-            <div className="stack" data-area="aux" data-scroll>
-              {aux}
-            </div>
-          ) : (
-            aux
-          )}
+          {signin}
+          {wide ? auxPanel : aux}
         </div>
-      </div>
+      </Flow>
     </>
   );
 }
