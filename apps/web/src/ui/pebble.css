@@ -2948,7 +2948,8 @@
 /* Panels flow in columns (see features/shared/Flow.tsx): each column stacks its own panels with the
    normal gap, so a short panel never waits for the height of a neighbour in the next column. The
    columns share the grid's one row; inside a column a panel is as tall as its content and shrinks
-   (scrolling inside) only when the column is taller than the window; the last one takes what is left
+   (scrolling inside) only when the column is taller than the window, the last one first; the last one
+   also takes what is left
    so the columns end on the same line. */
 @container content (min-width: 600px) {
   .two[data-flow][data-layout] {
@@ -2968,7 +2969,7 @@
     flex: 0 1 auto;
   }
   .two[data-flow] > .col > [data-area]:nth-last-child(1 of [data-area]) {
-    flex: 1 1 auto;
+    flex: 1 6 auto;
   }
 }
 /* The short-window fallback comes last so it wins over the tiers: rows by content, main scrolls. */
