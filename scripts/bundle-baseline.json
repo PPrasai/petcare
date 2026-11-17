@@ -110,6 +110,12 @@
       "commit": "6b20327",
       "precacheBytes": 1175552,
       "entryChunkGzipBytes": 160917
+    },
+    {
+      "slice": "pr-b",
+      "commit": "7639574",
+      "precacheBytes": 1187468,
+      "entryChunkGzipBytes": 161807
     }
   ]
 }
