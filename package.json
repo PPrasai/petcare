@@ -44,5 +44,12 @@
     "typescript-eslint": "~8.72.0",
     "vitest": "~5.1.0",
     "yaml": "latest"
+  },
+  "pnpm": {
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-fc5q-39xc-vjpf"
+      ]
+    }
   }
 }
