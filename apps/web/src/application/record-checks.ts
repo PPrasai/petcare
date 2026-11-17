@@ -48,5 +48,10 @@ export async function updateRecord(
   if (!current || current.deletedAt !== null) throw new InvalidInput('id');
   checkRecord(type, next);
   const fields = changedFields(current.data, next);
+  // A cleared field is sent as null where the schema allows it, else as an empty string (notes).
+  const schema = getEntity(type).schema;
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === null && !schema.safeParse({ ...next, [key]: null }).success) fields[key] = '';
+  }
   return Object.keys(fields).length === 0 ? current : records.update(type, id, fields);
 }

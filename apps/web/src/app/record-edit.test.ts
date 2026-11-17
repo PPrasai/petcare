@@ -31,7 +31,7 @@ const present = (r: LocalRecord): StoredRecord => ({
   createdBy: r.createdBy,
   updatedAt: r.updatedAt,
   deletedAt: r.deletedAt,
-  pending: r._pending,
+  pending: r._pending === true,
   data: r.data,
 });
 
@@ -188,7 +188,7 @@ describe('editing other health records', () => {
 });
 
 describe('editing a measurement', () => {
-  it('changes the value and clears an emptied note', async () => {
+  it('changes the value and clears an emptied note (notes cannot be null, so it becomes empty)', async () => {
     const measurements = new MeasurementService(records);
     const made = await measurements.add(HOUSEHOLD, {
       petId: PET,
@@ -205,7 +205,7 @@ describe('editing a measurement', () => {
       note: '  ',
     });
     expect(edited.data).toMatchObject({ value: 10.5, petId: PET });
-    expect((await db.outbox.toArray())[0]?.fields).toEqual({ value: 10.5, note: null });
+    expect((await db.outbox.toArray())[0]?.fields).toEqual({ value: 10.5, note: '' });
     await expect(
       measurements.update(made.id, { kind: 'weight', value: -1, measuredAt: 'x' }),
     ).rejects.toBeInstanceOf(InvalidInput);
