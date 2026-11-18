@@ -129,6 +129,8 @@ export function HouseholdPage() {
   const setActive = useSessionStore((s) => s.setActiveHousehold);
   const demo = useDemo();
   const wide = useWideScreen();
+  // On a phone the demo keeps its fixed list of people (QA-45); from 860 px it works on this device.
+  const fixedDemo = demo && !wide;
   const now = useNow();
   const tz = useSessionStore((s) => s.preferences.timeZone);
   const [renaming, setRenaming] = useState(false);
@@ -140,7 +142,7 @@ export function HouseholdPage() {
   const members = useQuery({
     queryKey: ['members', householdId],
     queryFn: () => households.members(householdId),
-    enabled: householdId !== '' && !demo,
+    enabled: householdId !== '' && !fixedDemo,
     retry: false,
   });
   const petList = useQuery({
@@ -157,8 +159,8 @@ export function HouseholdPage() {
   );
 
   if (!current) return null;
-  const isOwner = current.role === 'owner' && !demo;
-  const peopleCount = demo ? DEMO_SEED.members.length : members.data?.length;
+  const isOwner = current.role === 'owner' && !fixedDemo;
+  const peopleCount = fixedDemo ? DEMO_SEED.members.length : members.data?.length;
   const petCount = (petList.data ?? []).filter((p) => !p.data.archivedAt).length;
   const lede =
     peopleCount === undefined
@@ -203,6 +205,7 @@ export function HouseholdPage() {
       members={members}
       onInvite={() => setInviting(true)}
       hideInvite={wide}
+      canTransfer={!demo}
     >
       {isOwner ? (
         <InviteSheet
@@ -217,15 +220,20 @@ export function HouseholdPage() {
   const invites = isOwner ? <OpenInvitesCard householdId={current.id} /> : null;
   const more = (
     <div className="stack" data-area="more" data-scroll>
+      {demo ? <Banner>{t('demo.householdLocal')}</Banner> : null}
       {created ? <NewInviteCard invite={created} onHide={() => setCreated(null)} /> : null}
       <Card>
-        <SectionHeader title={t('household.joinTitle')} />
-        <p className="muted">{t('household.joinBody')}</p>
-        <div className="acts">
-          <Link to="/join" className="btn">
-            {t('household.joinLink')}
-          </Link>
-        </div>
+        {demo ? null : (
+          <>
+            <SectionHeader title={t('household.joinTitle')} />
+            <p className="muted">{t('household.joinBody')}</p>
+            <div className="acts">
+              <Link to="/join" className="btn">
+                {t('household.joinLink')}
+              </Link>
+            </div>
+          </>
+        )}
         <ul>
           <Line
             title={
@@ -237,31 +245,33 @@ export function HouseholdPage() {
           />
         </ul>
       </Card>
-      <Card className="danger-zone">
-        <Line
-          as="div"
-          title={t('household.leave')}
-          sub={t('household.leaveBody')}
-          actions={
-            <Button
-              variant="danger"
-              onClick={() => {
-                setLeaveSerial((n) => n + 1);
-                setLeaving(true);
-              }}
-            >
-              {t('household.leave')}
-            </Button>
-          }
-        />
-        <LeaveDialog
-          key={leaveSerial}
-          householdId={current.id}
-          name={current.name}
-          open={leaving}
-          onClose={() => setLeaving(false)}
-        />
-      </Card>
+      {demo ? null : (
+        <Card className="danger-zone">
+          <Line
+            as="div"
+            title={t('household.leave')}
+            sub={t('household.leaveBody')}
+            actions={
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setLeaveSerial((n) => n + 1);
+                  setLeaving(true);
+                }}
+              >
+                {t('household.leave')}
+              </Button>
+            }
+          />
+          <LeaveDialog
+            key={leaveSerial}
+            householdId={current.id}
+            name={current.name}
+            open={leaving}
+            onClose={() => setLeaving(false)}
+          />
+        </Card>
+      )}
     </div>
   );
   return (
@@ -312,7 +322,7 @@ export function HouseholdPage() {
             }
           : {})}
       />
-      {demo ? (
+      {fixedDemo ? (
         <Flow
           layout={wide ? 'household' : undefined}
           panels={{ people: demoPeople, recent }}

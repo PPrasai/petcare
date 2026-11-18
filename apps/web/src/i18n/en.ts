@@ -652,7 +652,12 @@ export const en = {
   'demo.try': 'Try the demo',
   'demo.tryHint': 'No account needed. Sample data stays on this device.',
   'demo.householdDisabled':
-    'Inviting people and changing members needs an account, so it is turned off in the demo.',
+    'Inviting people and changing members works in the demo from a wider screen (860 px). With an account it works on every screen.',
+  'demo.householdLocal':
+    'People and invites in the demo stay on this device, so nobody can really join. Create an account to invite someone for real.',
+  'demo.inviteNote':
+    'Demo invite: the link and code only look real, and nobody can join with them.',
+  'demo.joinDisabled': 'Joining a household needs an account, so it is turned off in the demo.',
   'demo.pushDisabled':
     'Phone notifications need an account and a connection, so they are turned off in the demo.',
   'demo.emergencyDisabled':
@@ -1012,6 +1017,21 @@ export const en = {
     'Archived pets move off Home into “Archived”. Their history is kept and you can restore them.',
   'pet.restored': '{name} is back on Home',
   'form.added': 'Added {name}',
+  'form.edit': 'Edit',
+  'form.editLabel': 'Edit {name}',
+  'form.saved': 'Saved {name}',
+  'expenses.saved': 'Saved {amount} for {name}',
+  'form.saveChanges': 'Save changes',
+  'vaccine.edit': 'Edit vaccination',
+  'med.edit': 'Edit medication',
+  'visit.edit': 'Edit visit',
+  'condition.edit': 'Edit condition',
+  'symptom.edit': 'Edit symptom',
+  'measure.edit': 'Edit measurement',
+  'measure.actions': 'Actions',
+  'documents.edit': 'Edit document',
+  'expenses.edit': 'Edit expense',
+  'contacts.edit': 'Edit contact',
   'vaccine.addLabel': 'Add a vaccination',
   'empty.vaccines': 'No vaccines yet. Add the dates and we will remind you before each one is due.',
   'med.addLabel': 'Add a medication',

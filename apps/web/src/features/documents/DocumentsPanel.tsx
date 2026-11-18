@@ -22,6 +22,7 @@ import {
 } from '../../ui';
 import { FILE_ACCEPT, FilePicker, fileProblem, useMaxFileBytes } from '../files/FilePicker';
 import { FileViewButton, useFileViewer } from '../files/FileViewButton';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -132,9 +133,64 @@ function AddDocument({
   );
 }
 
+/** The edit-document form: the name and the category; the file stays as it is. */
+function EditDocument({ doc, onClose }: { doc: StoredRecord; onClose: () => void }) {
+  const { documents } = useServices();
+  const show = useToastStore((s) => s.show);
+  const form = useRef<HTMLFormElement>(null);
+  const [title, setTitle] = useState(String(doc.data.title));
+  const [category, setCategory] = useState(String(doc.data.category));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  useFocusInvalid(form, errors);
+  const failure = useSaveFailure();
+  const submit = async () => {
+    failure.clear();
+    try {
+      await documents.update(doc.id, { title, category });
+      show(t('form.saved', { name: title }));
+      onClose();
+    } catch (e) {
+      if (!(e instanceof InvalidInput)) {
+        failure.fail(e);
+        return;
+      }
+      setErrors({ [e.path]: t('form.invalid') });
+    }
+  };
+  return (
+    <form
+      ref={form}
+      aria-label={t('documents.edit')}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+    >
+      <TextField
+        label={t('documents.name')}
+        value={title}
+        error={errors.title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <SelectField
+        label={t('documents.category')}
+        value={category}
+        options={DOCUMENT_CATEGORIES.map((c) => ({
+          value: c,
+          label: t(`documents.category.${c}` as MessageKey),
+        }))}
+        onChange={(e) => setCategory(e.target.value)}
+      />
+      {failure.view}
+      <Button type="submit">{t('form.saveChanges')}</Button>
+    </form>
+  );
+}
+
 /** One photo as a tile. The picture loads the first time the tile scrolls into view. */
-function PhotoTile({ doc }: { doc: StoredRecord }) {
+function PhotoTile({ doc, onEdit }: { doc: StoredRecord; onEdit: (doc: StoredRecord) => void }) {
   const { files } = useServices();
+  const canEdit = useCan('update', 'document');
   const canDelete = useCanDelete('document');
   const removeRecord = useRemoval();
   const title = String(doc.data.title);
@@ -144,15 +200,18 @@ function PhotoTile({ doc }: { doc: StoredRecord }) {
   const viewer = useFileViewer(
     fileId,
     title,
-    canDelete(doc.createdBy) ? (
-      <Button
-        variant="secondary"
-        aria-label={t('form.deleteLabel', { name: title })}
-        onClick={() => void removeRecord(doc, title)}
-      >
-        {t('form.delete')}
-      </Button>
-    ) : null,
+    <>
+      {canEdit ? <EditButton name={title} onClick={() => onEdit(doc)} /> : null}
+      {canDelete(doc.createdBy) ? (
+        <Button
+          variant="secondary"
+          aria-label={t('form.deleteLabel', { name: title })}
+          onClick={() => void removeRecord(doc, title)}
+        >
+          {t('form.delete')}
+        </Button>
+      ) : null}
+    </>,
   );
 
   useEffect(() => {
@@ -221,8 +280,11 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
   const householdId = useHouseholdId();
   const prefs = useSessionStore((s) => s.preferences);
   const canCreate = useCan('create', 'document');
+  const canEdit = useCan('update', 'document');
+  const tap = useEditTap();
   const canDelete = useCanDelete('document');
   const removeRecord = useRemoval();
+  const [editing, setEditing] = useState<StoredRecord | null>(null);
   const max = useMaxFileBytes();
   const wide = useWideScreen();
   const list = useQuery({
@@ -282,7 +344,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
             <SectionHeader title={t('files.photos')} />
             <div className="photos">
               {photos.map((d) => (
-                <PhotoTile key={d.id} doc={d} />
+                <PhotoTile key={d.id} doc={d} onEdit={setEditing} />
               ))}
             </div>
           </Card>
@@ -308,6 +370,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
                 const name = String(d.data.title);
                 return (
                   <Line
+                    titleProps={canEdit ? tap(name, () => setEditing(d)) : undefined}
                     key={d.id}
                     lead={<Icon name="file" />}
                     title={name}
@@ -316,6 +379,7 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
                     actions={
                       <>
                         <FileViewButton fileId={String(d.data.fileId)} label={name} />
+                        {canEdit ? <EditButton name={name} onClick={() => setEditing(d)} /> : null}
                         {canDelete(d.createdBy) ? (
                           <Button
                             variant="secondary"
@@ -337,6 +401,10 @@ export function DocumentsPanel({ petId, petName }: { petId: string; petName: str
       <Sheet open={draft !== null} label={t('documents.add')} onClose={() => setDraft(null)}>
         <SheetHead title={t('documents.add')} onClose={() => setDraft(null)} />
         {draft ? <AddDocument petId={petId} draft={draft} onClose={() => setDraft(null)} /> : null}
+      </Sheet>
+      <Sheet open={editing !== null} label={t('documents.edit')} onClose={() => setEditing(null)}>
+        <SheetHead title={t('documents.edit')} onClose={() => setEditing(null)} />
+        {editing ? <EditDocument doc={editing} onClose={() => setEditing(null)} /> : null}
       </Sheet>
     </div>
   );

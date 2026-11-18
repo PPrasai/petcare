@@ -2,6 +2,7 @@ import { getEntity } from '@petcare/domain';
 import type { RecordType } from '@petcare/domain';
 import { InvalidInput } from './pet-service';
 import type { RecordStore, StoredRecord } from './ports/record-store';
+import { updateRecord } from './record-checks';
 
 export type HealthType =
   | 'vaccination'
@@ -76,6 +77,17 @@ export class HealthService {
       Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== null && v !== undefined)),
     );
     return this.records.update(type, id, fields);
+  }
+
+  /**
+   * Saves an edited record: `input` is the whole new data of the form (empty values leave a field
+   * out), `petId` and other fields the form does not show are kept. Only changes are written.
+   */
+  async edit(type: HealthType, id: string, input: Record<string, unknown>): Promise<StoredRecord> {
+    const current = await this.records.get(type, id);
+    if (!current) throw new InvalidInput('id');
+    const data = Object.fromEntries(Object.entries(input).filter(([, v]) => !isEmpty(v)));
+    return updateRecord(this.records, type, id, { petId: current.data.petId, ...data });
   }
 
   remove(type: HealthType, id: string): Promise<void> {

@@ -22,6 +22,7 @@ import {
   TextField,
 } from '../../ui';
 import { LoadError } from '../shared/LoadError';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -51,12 +52,19 @@ const blank = (): ContactForm => ({
   note: '',
 });
 
-function AddContactForm({ onClose }: { onClose: () => void }) {
+/** The contact form: adds one, or with `record` changes that one. */
+function ContactFormSheet({ record, onClose }: { record?: StoredRecord; onClose: () => void }) {
   const { contacts } = useServices();
   const householdId = useHouseholdId();
   const showToast = useToastStore((s) => s.show);
   const form = useRef<HTMLFormElement>(null);
-  const [values, setValues] = useState<ContactForm>(blank);
+  const [values, setValues] = useState<ContactForm>(() =>
+    record
+      ? (Object.fromEntries(
+          Object.keys(blank()).map((k) => [k, String(record.data[k] ?? '')]),
+        ) as unknown as ContactForm)
+      : blank(),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   useFocusInvalid(form, errors);
   const set = (name: keyof ContactForm) => (e: { target: { value: string } }) =>
@@ -66,8 +74,13 @@ function AddContactForm({ onClose }: { onClose: () => void }) {
   const submit = async () => {
     failure.clear();
     try {
-      await contacts.add(householdId, values);
-      showToast(t('contacts.added', { name: values.name.trim() }));
+      if (record) {
+        await contacts.update(record.id, values);
+        showToast(t('form.saved', { name: values.name.trim() }));
+      } else {
+        await contacts.add(householdId, values);
+        showToast(t('contacts.added', { name: values.name.trim() }));
+      }
       onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) {
@@ -80,10 +93,10 @@ function AddContactForm({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <SheetHead title={t('contacts.add')} onClose={onClose} />
+      <SheetHead title={record ? t('contacts.edit') : t('contacts.add')} onClose={onClose} />
       <form
         ref={form}
-        aria-label={t('contacts.add')}
+        aria-label={record ? t('contacts.edit') : t('contacts.add')}
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
@@ -127,7 +140,7 @@ function AddContactForm({ onClose }: { onClose: () => void }) {
         />
         <TextField label={t('contacts.note')} value={values.note} onChange={set('note')} />
         {failure.view}
-        <Button type="submit">{t('contacts.add')}</Button>
+        <Button type="submit">{record ? t('form.saveChanges') : t('contacts.add')}</Button>
       </form>
     </>
   );
@@ -139,11 +152,15 @@ const roleText = (c: StoredRecord) => t(`contacts.role.${String(c.data.role)}` a
 /** The selected contact (S-24, from 860 px): its fields with Copy, the note and Delete. */
 function ContactDetail({
   c,
+  canEdit,
   canDelete,
+  onEdit,
   onDelete,
 }: {
   c: StoredRecord;
+  canEdit: boolean;
   canDelete: boolean;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const show = useToastStore((s) => s.show);
@@ -173,6 +190,7 @@ function ContactDetail({
       <div className="sech">
         <h2>{name}</h2>
         <span className="muted">{roleText(c)}</span>
+        {canEdit ? <EditButton name={name} onClick={onEdit} /> : null}
         {canDelete ? (
           <Button variant="danger" aria-label={t('form.deleteLabel', { name })} onClick={onDelete}>
             {t('form.delete')}
@@ -216,15 +234,19 @@ function ContactsDesktop({
   rows,
   loading,
   canCreate,
+  canEdit,
   canDelete,
   onAdd,
+  onEdit,
   onRemove,
 }: {
   rows: StoredRecord[];
   loading: boolean;
   canCreate: boolean;
+  canEdit: boolean;
   canDelete: (createdBy: string) => boolean;
   onAdd: () => void;
+  onEdit: (c: StoredRecord) => void;
   onRemove: (c: StoredRecord, name: string) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -298,6 +320,8 @@ function ContactsDesktop({
             <ContactDetail
               key={current.id}
               c={current}
+              canEdit={canEdit}
+              onEdit={() => onEdit(current)}
               canDelete={canDelete(current.createdBy)}
               onDelete={() => onRemove(current, String(current.data.name))}
             />
@@ -313,21 +337,31 @@ export function ContactsPage() {
   const { contacts } = useServices();
   const householdId = useHouseholdId();
   const canCreate = useCan('create', 'contact');
+  const canEdit = useCan('update', 'contact');
+  const tap = useEditTap();
   const canDelete = useCanDelete('contact');
   const removeRecord = useRemoval();
   const wide = useWideScreen();
-  const [adding, setAdding] = useState(false);
+  const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
   const list = useQuery({
     queryKey: ['contact', householdId],
     queryFn: () => contacts.list(householdId),
     enabled: householdId !== '',
   });
   const rows = list.data ?? [];
-  const sheet = canCreate ? (
-    <Sheet open={adding} label={t('contacts.add')} onClose={() => setAdding(false)}>
-      <AddContactForm onClose={() => setAdding(false)} />
-    </Sheet>
-  ) : null;
+  const formSheet =
+    canCreate || canEdit ? (
+      <Sheet
+        open={sheet !== null}
+        label={sheet?.record ? t('contacts.edit') : t('contacts.add')}
+        onClose={() => setSheet(null)}
+      >
+        <ContactFormSheet
+          {...(sheet?.record ? { record: sheet.record } : {})}
+          onClose={() => setSheet(null)}
+        />
+      </Sheet>
+    ) : null;
 
   if (wide) {
     return (
@@ -337,11 +371,13 @@ export function ContactsPage() {
           rows={rows}
           loading={list.isPending}
           canCreate={canCreate}
+          canEdit={canEdit}
           canDelete={canDelete}
-          onAdd={() => setAdding(true)}
+          onAdd={() => setSheet({})}
+          onEdit={(c) => setSheet({ record: c })}
           onRemove={(c, name) => void removeRecord(c, name)}
         />
-        {sheet}
+        {formSheet}
       </>
     );
   }
@@ -358,7 +394,7 @@ export function ContactsPage() {
                 action: {
                   label: t('ui.add'),
                   ariaLabel: t('contacts.addLabel'),
-                  onClick: () => setAdding(true),
+                  onClick: () => setSheet({}),
                 },
               }
             : {})}
@@ -376,6 +412,7 @@ export function ContactsPage() {
               const site = c.data.website ? String(c.data.website) : '';
               return (
                 <Line
+                  titleProps={canEdit ? tap(name, () => setSheet({ record: c })) : undefined}
                   key={c.id}
                   testId="contact-row"
                   title={name}
@@ -421,6 +458,9 @@ export function ContactsPage() {
                           <Icon name="globe" />
                         </a>
                       ) : null}
+                      {canEdit ? (
+                        <EditButton name={name} onClick={() => setSheet({ record: c })} />
+                      ) : null}
                       {canDelete(c.createdBy) ? (
                         <button
                           type="button"
@@ -438,7 +478,7 @@ export function ContactsPage() {
             })}
           </ul>
         ) : null}
-        {sheet}
+        {formSheet}
       </Card>
     </>
   );

@@ -112,10 +112,16 @@
       "entryChunkGzipBytes": 160917
     },
     {
+      "slice": "pr-b",
+      "commit": "7639574",
+      "precacheBytes": 1187468,
+      "entryChunkGzipBytes": 161807
+    },
+    {
       "slice": "desktop-flow",
-      "commit": "71f6803",
-      "precacheBytes": 1179281,
-      "entryChunkGzipBytes": 161240
+      "commit": "6eb9bb4",
+      "precacheBytes": 1191943,
+      "entryChunkGzipBytes": 162091
     }
   ]
 }

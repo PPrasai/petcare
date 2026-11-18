@@ -6,6 +6,8 @@ import { ConflictService } from '../application/conflict-service';
 import { AccountService } from '../application/account-service';
 import { HouseholdService } from '../application/household-service';
 import { createHouseholdRemote } from '../data/remote/household-remote';
+import { DEMO_HOUSEHOLD_KEY, createDemoHousehold } from '../data/local/demo-household';
+import type { HouseholdApi } from '../application/ports/household-api';
 import { EmergencyService } from '../application/emergency-service';
 import { createEmergencyRemote } from '../data/remote/emergency-remote';
 import { ContactService } from '../application/contact-service';
@@ -160,17 +162,21 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
       onChanged: invalidate,
       onStatus: () => undefined,
     });
-    const stored = await data.readSetting(DEMO_PREFERENCES_KEY);
-    const parsed = stored ? preferencesSchema.safeParse(JSON.parse(stored)) : null;
+    const saved = await data.readSetting(DEMO_PREFERENCES_KEY);
+    const parsed = saved ? preferencesSchema.safeParse(JSON.parse(saved)) : null;
     const preferences = parsed?.success
       ? parsed.data
       : { ...DEFAULT_PREFERENCES, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
     if (parsed?.success) useUiPreferences.getState().setTheme(preferences.theme);
+    // A household renamed in the demo keeps its new name after a reload.
+    const stored = await data.households();
     useSessionStore
       .getState()
       .setSignedIn(
         DEMO_USER,
-        [{ id: DEMO_HOUSEHOLD.id, name: DEMO_HOUSEHOLD.name, role: DEMO_HOUSEHOLD.role }],
+        stored.length > 0
+          ? stored.map((h) => ({ id: h.id, name: h.name, role: h.role }))
+          : [{ id: DEMO_HOUSEHOLD.id, name: DEMO_HOUSEHOLD.name, role: DEMO_HOUSEHOLD.role }],
         preferences,
         true,
       );
@@ -252,9 +258,30 @@ export function createRuntime(deps: RuntimeDeps = {}): Runtime {
     restore: (record) => current().records.restore(record),
   };
 
-  const householdApi = createHouseholdRemote();
+  const remoteHouseholds = createHouseholdRemote();
+  /** The demo's people and invites live in the demo database; no request is made. */
+  const demoHouseholds = createDemoHousehold({
+    read: () => current().readSetting(DEMO_HOUSEHOLD_KEY),
+    write: (value) => current().writeSetting(DEMO_HOUSEHOLD_KEY, value),
+    rename: (id, name) => current().renameHousehold(id, name),
+    now: () => new Date(),
+    id: () => uuidv7(),
+    origin: () => window.location.origin,
+  });
+  /** Household actions go to the server, or in the demo to this device. */
+  const householdApi: HouseholdApi = new Proxy(remoteHouseholds, {
+    get: (remote, name: keyof HouseholdApi) =>
+      (useSessionStore.getState().demo ? demoHouseholds : remote)[name],
+  });
   /** Re-reads the user's households (after joining, leaving or a transfer) and syncs. */
   async function refreshHouseholds(): Promise<void> {
+    if (useSessionStore.getState().demo) {
+      const rows = await current().households();
+      useSessionStore
+        .getState()
+        .setHouseholds(rows.map((h) => ({ id: h.id, name: h.name, role: h.role })));
+      return;
+    }
     const me = await auth.me();
     if (!me) return;
     // The device's own preferences win over the server's while a save is still waiting.

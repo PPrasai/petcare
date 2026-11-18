@@ -1,5 +1,5 @@
 import type { RecordStore, StoredRecord } from './ports/record-store';
-import { checkRecord, withoutEmptyValues } from './record-checks';
+import { checkRecord, updateRecord, withoutEmptyValues } from './record-checks';
 
 export interface ContactForm {
   name: string;
@@ -27,6 +27,11 @@ export class ContactService {
     const data = withoutEmptyValues({ ...form });
     checkRecord('contact', data);
     return this.records.create('contact', householdId, data);
+  }
+
+  /** Saves an edited contact; a field emptied in the form is cleared. */
+  update(id: string, form: ContactForm): Promise<StoredRecord> {
+    return updateRecord(this.records, 'contact', id, withoutEmptyValues({ ...form }));
   }
 
   remove(id: string): Promise<void> {
