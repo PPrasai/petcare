@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addPet, openDetails, signUp, waitSynced } from './support/app';
+import { addPet, openDetails, openDisclosure, signUp, waitSynced } from './support/app';
 
 // CAP-04: pet profiles, edit, archive and restore, including offline.
 test('add, edit, archive and restore a pet; data survives a reload and reaches the server', async ({
@@ -58,7 +58,7 @@ test('add, edit, archive and restore a pet; data survives a reload and reaches t
   await openDetails(page);
   await expect(page.getByText('This pet is archived')).toBeVisible();
   await page.getByRole('link', { name: 'Home', exact: true }).first().click();
-  await page.locator('summary').filter({ hasText: 'Archived pets' }).click();
+  await openDisclosure(page, 'Archived pets');
   await page.getByRole('link', { name: 'Momo' }).first().click();
   await openDetails(page);
   await page.getByRole('button', { name: 'Restore pet' }).click();

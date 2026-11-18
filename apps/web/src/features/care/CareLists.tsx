@@ -1,11 +1,14 @@
 import { scheduleSchema } from '@petcare/domain';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { StoredRecord } from '../../application/ports/record-store';
 import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
 import { Card, Disclosure, EmptyState, Line, SectionHeader, Switch } from '../../ui';
 import { useHealthList } from '../health/hooks';
+import { Flow } from '../shared/Flow';
+import type { FlowPlan } from '../shared/Flow';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useWideScreen } from '../shared/use-wide-screen';
@@ -74,11 +77,23 @@ function Rows({ rows, label, onEdit }: { rows: Row[]; label: string; onEdit: (ro
   );
 }
 
+const CARE_PLAN: FlowPlan = {
+  wide: [
+    [1, 'today'],
+    [1.2, 'reminders'],
+    [1, 'feeding', 'sheet'],
+  ],
+  mid: [
+    [1, 'today', 'feeding', 'sheet'],
+    [1, 'reminders'],
+  ],
+};
+
 /**
- * The Care tab's right-hand column: Reminders (with any legacy care routine that is not feeding)
+ * The Care tab's panels: Today (given), Reminders (with any legacy care routine that is not feeding)
  * and the Feeding disclosure, which lists the feeding routines. Both open the same sheet.
  */
-export function CareLists({ pet }: { pet: StoredRecord }) {
+export function CareLists({ pet, today }: { pet: StoredRecord; today: ReactNode }) {
   const householdId = useHouseholdId();
   const wide = useWideScreen();
   const { health } = useServices();
@@ -113,38 +128,50 @@ export function CareLists({ pet }: { pet: StoredRecord }) {
     </>
   );
 
+  const remindersCard = (
+    <Card data-area="reminders">
+      <SectionHeader
+        title={t('reminder.title')}
+        {...(canCreate
+          ? {
+              action: {
+                label: t('reminder.addShort'),
+                ariaLabel: t('reminder.addLabel', { name: petName }),
+                onClick: () => setTarget({ mode: 'new', petId: pet.id, petName }),
+              },
+            }
+          : {})}
+      />
+      {listed.length > 0 ? (
+        <Rows rows={listed.sort(byTitle)} label={t('reminder.title')} onEdit={edit} />
+      ) : reminders.data && routines.data ? (
+        <EmptyState>{t('reminder.empty')}</EmptyState>
+      ) : null}
+    </Card>
+  );
+  const feedingCard = wide ? (
+    <Card data-area="feeding">
+      <SectionHeader title={t('feeding.title')} />
+      {feeding}
+    </Card>
+  ) : (
+    <Disclosure title={t('feeding.title')} hint={t('feeding.hint')}>
+      {feeding}
+    </Disclosure>
+  );
+  const sheet = <ReminderSheet target={target} onClose={() => setTarget(null)} />;
   return (
-    <div className="stack">
-      <Card data-area="reminders">
-        <SectionHeader
-          title={t('reminder.title')}
-          {...(canCreate
-            ? {
-                action: {
-                  label: t('reminder.addShort'),
-                  ariaLabel: t('reminder.addLabel', { name: petName }),
-                  onClick: () => setTarget({ mode: 'new', petId: pet.id, petName }),
-                },
-              }
-            : {})}
-        />
-        {listed.length > 0 ? (
-          <Rows rows={listed.sort(byTitle)} label={t('reminder.title')} onEdit={edit} />
-        ) : reminders.data && routines.data ? (
-          <EmptyState>{t('reminder.empty')}</EmptyState>
-        ) : null}
-      </Card>
-      {wide ? (
-        <Card data-area="feeding">
-          <SectionHeader title={t('feeding.title')} />
-          {feeding}
-        </Card>
-      ) : (
-        <Disclosure title={t('feeding.title')} hint={t('feeding.hint')}>
-          {feeding}
-        </Disclosure>
-      )}
-      <ReminderSheet target={target} onClose={() => setTarget(null)} />
-    </div>
+    <Flow
+      layout="care"
+      panels={{ today, reminders: remindersCard, feeding: feedingCard, sheet }}
+      plan={CARE_PLAN}
+    >
+      {today}
+      <div className="stack">
+        {remindersCard}
+        {feedingCard}
+        {sheet}
+      </div>
+    </Flow>
   );
 }

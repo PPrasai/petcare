@@ -116,6 +116,12 @@
       "commit": "7639574",
       "precacheBytes": 1187468,
       "entryChunkGzipBytes": 161807
+    },
+    {
+      "slice": "desktop-flow",
+      "commit": "6eb9bb4",
+      "precacheBytes": 1191943,
+      "entryChunkGzipBytes": 162091
     }
   ]
 }

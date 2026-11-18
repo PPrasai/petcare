@@ -6,6 +6,8 @@ import { useConnectivityStore } from '../../state/connectivity';
 import { useSessionStore } from '../../state/session';
 import { Banner, Card, Disclosure, EmptyState, Line, PageHeader, SectionHeader } from '../../ui';
 import { useDemo } from '../shared/demo';
+import { Flow } from '../shared/Flow';
+import type { FlowPlan } from '../shared/Flow';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useWideScreen } from '../shared/use-wide-screen';
@@ -67,6 +69,17 @@ function ConflictLine({ conflict, onDone }: { conflict: ConflictItem; onDone: ()
 }
 
 /** Sync activity: conflicts to review (with "restore this value") and changes the server refused. */
+const PLAN: FlowPlan = {
+  wide: [
+    [1, 'status', 'changes'],
+    [1, 'reviewed', 'problems'],
+  ],
+  mid: [
+    [1, 'status', 'changes'],
+    [1, 'reviewed', 'problems'],
+  ],
+};
+
 export function SyncPage() {
   const { sync, conflicts } = useServices();
   const householdId = useHouseholdId();
@@ -106,36 +119,64 @@ export function SyncPage() {
     </ul>
   );
 
+  const status = (
+    <Card data-area="status">
+      <SectionHeader title={t('syncPage.status')} />
+      <LastSyncedLine />
+    </Card>
+  );
+  const changes = (
+    <Card data-area="changes">
+      <SectionHeader title={t('conflict.title')} />
+      {list.isError ? (
+        <Banner tone="warn">{t('ui.loadFailed')}</Banner>
+      ) : open.length === 0 ? (
+        <EmptyState>{t('conflict.none')}</EmptyState>
+      ) : (
+        <ul>
+          {open.map((c) => (
+            <ConflictLine key={c.id} conflict={c} onDone={() => void refresh()} />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+  const reviewed = (
+    <Card data-area="reviewed">
+      <SectionHeader title={t('conflict.history', { count: String(done.length) })} />
+      {history}
+    </Card>
+  );
+  const problemsCard = (
+    <Card data-area="problems">
+      <SectionHeader title={t('syncPage.problems')} />
+      {problems.data?.length === 0 ? <EmptyState>{t('syncPage.noProblems')}</EmptyState> : null}
+      <ul>
+        {problems.data?.map((p) => (
+          <Line
+            key={p.id}
+            title={t('sync.error', { code: p.code })}
+            sub={`${p.recordType} · ${p.at}`}
+          />
+        ))}
+      </ul>
+    </Card>
+  );
   return (
     <>
       <PageHeader title={t('syncPage.title')} lede={lede} />
-      <div className="two" data-layout={wide ? 'sync' : undefined}>
+      <Flow
+        layout={wide ? 'sync' : undefined}
+        panels={{ status, changes, reviewed: wide ? reviewed : null, problems: problemsCard }}
+        plan={PLAN}
+      >
         <div className="stack">
-          <Card data-area="status">
-            <SectionHeader title={t('syncPage.status')} />
-            <LastSyncedLine />
-          </Card>
-          <Card data-area="changes">
-            <SectionHeader title={t('conflict.title')} />
-            {list.isError ? (
-              <Banner tone="warn">{t('ui.loadFailed')}</Banner>
-            ) : open.length === 0 ? (
-              <EmptyState>{t('conflict.none')}</EmptyState>
-            ) : (
-              <ul>
-                {open.map((c) => (
-                  <ConflictLine key={c.id} conflict={c} onDone={() => void refresh()} />
-                ))}
-              </ul>
-            )}
-          </Card>
+          {status}
+          {changes}
         </div>
         <div className="stack">
           {wide ? (
-            <Card data-area="reviewed">
-              <SectionHeader title={t('conflict.history', { count: String(done.length) })} />
-              {history}
-            </Card>
+            reviewed
           ) : done.length > 0 ? (
             <Card>
               <Disclosure title={t('conflict.history', { count: String(done.length) })}>
@@ -143,23 +184,9 @@ export function SyncPage() {
               </Disclosure>
             </Card>
           ) : null}
-          <Card data-area="problems">
-            <SectionHeader title={t('syncPage.problems')} />
-            {problems.data?.length === 0 ? (
-              <EmptyState>{t('syncPage.noProblems')}</EmptyState>
-            ) : null}
-            <ul>
-              {problems.data?.map((p) => (
-                <Line
-                  key={p.id}
-                  title={t('sync.error', { code: p.code })}
-                  sub={`${p.recordType} · ${p.at}`}
-                />
-              ))}
-            </ul>
-          </Card>
+          {problemsCard}
         </div>
-      </div>
+      </Flow>
     </>
   );
 }

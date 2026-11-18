@@ -21,6 +21,8 @@ import {
 import { RecentCare } from '../home/RecentCare';
 import type { HomePet } from '../home/use-home-data';
 import { useDemo } from '../shared/demo';
+import { Flow } from '../shared/Flow';
+import type { FlowPlan } from '../shared/Flow';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
 import { useNow } from '../shared/use-now';
@@ -28,6 +30,18 @@ import { useWideScreen } from '../shared/use-wide-screen';
 import { InviteSheet, NewInviteCard, OpenInvitesCard } from './InvitesPanel';
 import { MembersPanel, PeopleLines } from './MembersPanel';
 import { useHouseholdAction } from './useHouseholdAction';
+
+const PLAN: FlowPlan = {
+  wide: [
+    [1.15, 'people', 'invites'],
+    [1, 'more'],
+    [1, 'recent'],
+  ],
+  mid: [
+    [1, 'people', 'invites'],
+    [1, 'more', 'recent'],
+  ],
+};
 
 function RenameForm({
   householdId,
@@ -165,6 +179,101 @@ export function HouseholdPage() {
 
   const switcher = !demo && all.length > 1;
   const showActions = switcher || isOwner;
+  const recent = wide ? (
+    <RecentCare householdId={current.id} pets={petMap} tz={tz} now={now} />
+  ) : null;
+  const demoPeople = (
+    <Card data-area="people">
+      <SectionHeader title={t('household.people')} />
+      <Banner>{t('demo.householdDisabled')}</Banner>
+      <ul>
+        <PeopleLines
+          members={DEMO_SEED.members.map((m) => ({
+            userId: m.name,
+            name: m.name,
+            role: m.role,
+          }))}
+          me=""
+        />
+      </ul>
+    </Card>
+  );
+  const people = (
+    <MembersPanel
+      householdId={current.id}
+      isOwner={isOwner}
+      members={members}
+      onInvite={() => setInviting(true)}
+      hideInvite={wide}
+      canTransfer={!demo}
+    >
+      {isOwner ? (
+        <InviteSheet
+          householdId={current.id}
+          open={inviting}
+          onClose={() => setInviting(false)}
+          onCreated={setCreated}
+        />
+      ) : null}
+    </MembersPanel>
+  );
+  const invites = isOwner ? <OpenInvitesCard householdId={current.id} /> : null;
+  const more = (
+    <div className="stack" data-area="more" data-scroll>
+      {demo ? <Banner>{t('demo.householdLocal')}</Banner> : null}
+      {created ? <NewInviteCard invite={created} onHide={() => setCreated(null)} /> : null}
+      <Card>
+        {demo ? null : (
+          <>
+            <SectionHeader title={t('household.joinTitle')} />
+            <p className="muted">{t('household.joinBody')}</p>
+            <div className="acts">
+              <Link to="/join" className="btn">
+                {t('household.joinLink')}
+              </Link>
+            </div>
+          </>
+        )}
+        <ul>
+          <Line
+            title={
+              <Link to="/contacts" className="linkbtn">
+                {t('contacts.title')}
+              </Link>
+            }
+            sub={t('more.contactsHint')}
+          />
+        </ul>
+      </Card>
+      {demo ? null : (
+        <Card className="danger-zone">
+          <Line
+            as="div"
+            title={t('household.leave')}
+            sub={t('household.leaveBody')}
+            actions={
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setLeaveSerial((n) => n + 1);
+                  setLeaving(true);
+                }}
+              >
+                {t('household.leave')}
+              </Button>
+            }
+          />
+          <LeaveDialog
+            key={leaveSerial}
+            householdId={current.id}
+            name={current.name}
+            open={leaving}
+            onClose={() => setLeaving(false)}
+          />
+        </Card>
+      )}
+    </div>
+  );
   return (
     <>
       <PageHeader
@@ -214,103 +323,27 @@ export function HouseholdPage() {
           : {})}
       />
       {fixedDemo ? (
-        <div className="two" data-layout={undefined}>
-          <div className="stack">
-            <Card>
-              <SectionHeader title={t('household.people')} />
-              <Banner>{t('demo.householdDisabled')}</Banner>
-              <ul>
-                <PeopleLines
-                  members={DEMO_SEED.members.map((m) => ({
-                    userId: m.name,
-                    name: m.name,
-                    role: m.role,
-                  }))}
-                  me=""
-                />
-              </ul>
-            </Card>
-          </div>
-          {wide ? <RecentCare householdId={current.id} pets={petMap} tz={tz} now={now} /> : null}
-        </div>
+        <Flow
+          layout={wide ? 'household' : undefined}
+          panels={{ people: demoPeople, recent }}
+          plan={PLAN}
+        >
+          <div className="stack">{demoPeople}</div>
+          {recent}
+        </Flow>
       ) : (
-        <div className="two" data-layout={wide ? 'household' : undefined}>
+        <Flow
+          layout={wide ? 'household' : undefined}
+          panels={{ people, invites, more, recent }}
+          plan={PLAN}
+        >
           <div className="stack">
-            <MembersPanel
-              householdId={current.id}
-              isOwner={isOwner}
-              members={members}
-              onInvite={() => setInviting(true)}
-              hideInvite={wide}
-              canTransfer={!demo}
-            >
-              {isOwner ? (
-                <InviteSheet
-                  householdId={current.id}
-                  open={inviting}
-                  onClose={() => setInviting(false)}
-                  onCreated={setCreated}
-                />
-              ) : null}
-            </MembersPanel>
-            {isOwner ? <OpenInvitesCard householdId={current.id} /> : null}
+            {people}
+            {invites}
           </div>
-          <div className="stack" data-area="more" data-scroll>
-            {demo ? <Banner>{t('demo.householdLocal')}</Banner> : null}
-            {created ? <NewInviteCard invite={created} onHide={() => setCreated(null)} /> : null}
-            <Card>
-              {demo ? null : (
-                <>
-                  <SectionHeader title={t('household.joinTitle')} />
-                  <p className="muted">{t('household.joinBody')}</p>
-                  <div className="acts">
-                    <Link to="/join" className="btn">
-                      {t('household.joinLink')}
-                    </Link>
-                  </div>
-                </>
-              )}
-              <ul>
-                <Line
-                  title={
-                    <Link to="/contacts" className="linkbtn">
-                      {t('contacts.title')}
-                    </Link>
-                  }
-                  sub={t('more.contactsHint')}
-                />
-              </ul>
-            </Card>
-            {demo ? null : (
-              <Card className="danger-zone">
-                <Line
-                  as="div"
-                  title={t('household.leave')}
-                  sub={t('household.leaveBody')}
-                  actions={
-                    <Button
-                      variant="danger"
-                      onClick={() => {
-                        setLeaveSerial((n) => n + 1);
-                        setLeaving(true);
-                      }}
-                    >
-                      {t('household.leave')}
-                    </Button>
-                  }
-                />
-                <LeaveDialog
-                  key={leaveSerial}
-                  householdId={current.id}
-                  name={current.name}
-                  open={leaving}
-                  onClose={() => setLeaving(false)}
-                />
-              </Card>
-            )}
-          </div>
-          {wide ? <RecentCare householdId={current.id} pets={petMap} tz={tz} now={now} /> : null}
-        </div>
+          {more}
+          {recent}
+        </Flow>
       )}
     </>
   );

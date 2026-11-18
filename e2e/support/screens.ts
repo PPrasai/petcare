@@ -719,7 +719,7 @@ export const SCREENS: Screen[] = [
     two: true,
     ready: settingsReady,
     open: async (page) => {
-      await page.locator('summary').filter({ hasText: 'Reminder timing' }).click();
+      await openDisclosure(page, 'Reminder timing');
       await expect(page.getByLabel('Minutes before: Vet visits')).toBeVisible();
     },
   },
@@ -968,7 +968,7 @@ export const SCREENS: Screen[] = [
     ready: profile,
     open: async (page) => {
       await profileTab('Health')(page);
-      await page.locator('summary').filter({ hasText: 'All measurements' }).click();
+      await openDisclosure(page, 'All measurements');
       await expect(page.getByRole('table', { name: 'All measurements' })).toBeVisible();
     },
   },

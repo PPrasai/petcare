@@ -8,6 +8,8 @@ import { t } from '../../i18n/t';
 import { useSessionStore } from '../../state/session';
 import { Card, Disclosure, EmptyState, SectionHeader } from '../../ui';
 import { CareLists } from '../care/CareLists';
+import { Flow } from '../shared/Flow';
+import type { FlowPlan } from '../shared/Flow';
 import { useHouseholdId } from '../shared/permissions';
 import { useServices } from '../shared/services-context';
 import { useNow } from '../shared/use-now';
@@ -43,6 +45,18 @@ function usePetToday(petId: string) {
   return { view: view.data, now, tz, act };
 }
 
+const OVERVIEW_PLAN: FlowPlan = {
+  wide: [
+    [1, 'upnext'],
+    [1.25, 'weight'],
+    [1, 'details'],
+  ],
+  mid: [
+    [1, 'upnext', 'details'],
+    [1, 'weight'],
+  ],
+};
+
 export function OverviewPane({ pet, onEdit }: { pet: StoredRecord; onEdit: () => void }) {
   const { view, now, tz, act } = usePetToday(pet.id);
   const wide = useWideScreen();
@@ -51,38 +65,43 @@ export function OverviewPane({ pet, onEdit }: { pet: StoredRecord; onEdit: () =>
       view ? (rankPets([{ id: pet.id, name: '', archived: false }], view, now)[0]?.open ?? []) : [],
     [view, now, pet.id],
   );
-  return (
-    <div className="two" data-layout="overview">
-      <div className="stack">
-        <Card data-area="upnext">
-          <div className="sech">
-            <h2>{t('task.upNext')}</h2>
-          </div>
-          {open.slice(0, UP_NEXT_MAX).map((item) => (
-            <TaskRow
-              key={item.key}
-              item={item}
-              status={item.status}
-              now={now}
-              tz={tz}
-              onAction={(action) => act(item, action)}
-            />
-          ))}
-          {view && open.length === 0 ? <p className="empty">{t('task.upNextEmpty')}</p> : null}
-        </Card>
-        {wide ? (
-          <Card data-area="details">
-            <SectionHeader title={t('pet.details')} />
-            <PetOverview pet={pet} onEdit={onEdit} />
-          </Card>
-        ) : (
-          <Disclosure title={t('pet.details')} hint={t('pet.detailsHint')}>
-            <PetOverview pet={pet} />
-          </Disclosure>
-        )}
+  const upnext = (
+    <Card data-area="upnext">
+      <div className="sech">
+        <h2>{t('task.upNext')}</h2>
       </div>
-      <WeightCard petId={pet.id} />
-    </div>
+      {open.slice(0, UP_NEXT_MAX).map((item) => (
+        <TaskRow
+          key={item.key}
+          item={item}
+          status={item.status}
+          now={now}
+          tz={tz}
+          onAction={(action) => act(item, action)}
+        />
+      ))}
+      {view && open.length === 0 ? <p className="empty">{t('task.upNextEmpty')}</p> : null}
+    </Card>
+  );
+  const details = wide ? (
+    <Card data-area="details">
+      <SectionHeader title={t('pet.details')} />
+      <PetOverview pet={pet} onEdit={onEdit} />
+    </Card>
+  ) : (
+    <Disclosure title={t('pet.details')} hint={t('pet.detailsHint')}>
+      <PetOverview pet={pet} />
+    </Disclosure>
+  );
+  const weight = <WeightCard petId={pet.id} />;
+  return (
+    <Flow layout="overview" panels={{ upnext, details, weight }} plan={OVERVIEW_PLAN}>
+      <div className="stack">
+        {upnext}
+        {details}
+      </div>
+      {weight}
+    </Flow>
   );
 }
 
@@ -98,28 +117,26 @@ export function CarePane({ pet }: { pet: StoredRecord }) {
     ];
   }, [view, now, pet.id]);
   const doneCount = view?.done.filter((i) => !isMeal(i)).length ?? 0;
-  return (
-    <div className="two" data-layout="care">
-      <Card data-area="today">
-        <div className="sech">
-          <h2>{t('care.today')}</h2>
-          <span className="muted">
-            {t('care.doneCount', { done: doneCount, total: rows.length })}
-          </span>
-        </div>
-        {rows.map(({ item, status }) => (
-          <TaskRow
-            key={item.key}
-            item={item}
-            {...(status ? { status } : {})}
-            now={now}
-            tz={tz}
-            onAction={(action) => act(item, action)}
-          />
-        ))}
-        {view && rows.length === 0 ? <EmptyState>{t('care.todayEmpty')}</EmptyState> : null}
-      </Card>
-      <CareLists pet={pet} />
-    </div>
+  const today = (
+    <Card data-area="today">
+      <div className="sech">
+        <h2>{t('care.today')}</h2>
+        <span className="muted">
+          {t('care.doneCount', { done: doneCount, total: rows.length })}
+        </span>
+      </div>
+      {rows.map(({ item, status }) => (
+        <TaskRow
+          key={item.key}
+          item={item}
+          {...(status ? { status } : {})}
+          now={now}
+          tz={tz}
+          onAction={(action) => act(item, action)}
+        />
+      ))}
+      {view && rows.length === 0 ? <EmptyState>{t('care.todayEmpty')}</EmptyState> : null}
+    </Card>
   );
+  return <CareLists pet={pet} today={today} />;
 }

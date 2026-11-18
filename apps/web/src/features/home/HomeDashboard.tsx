@@ -7,6 +7,8 @@ import type { RankedItem, RankedPet } from '../../application/ranking';
 import { isMeal } from '../../application/ranking';
 import { t } from '../../i18n/t';
 import { Disclosure, EmptyState, Icon } from '../../ui';
+import { Flow } from '../shared/Flow';
+import type { FlowPlan } from '../shared/Flow';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useCan } from '../shared/permissions';
 import { whenText } from '../shared/when';
@@ -82,6 +84,18 @@ function TodayRow({
  * Home from 860 px (SPEC-petcare-004 S-10): the pets, what is due today, the week ahead and the
  * household's recent care, in panels that fit the window without scrolling the page.
  */
+const HOME_PLAN: FlowPlan = {
+  wide: [
+    [1.05, 'pets'],
+    [1, 'today'],
+    [0.95, 'week', 'recent'],
+  ],
+  mid: [
+    [1, 'pets', 'week'],
+    [1, 'today', 'recent'],
+  ],
+};
+
 export function HomeDashboard(p: Props) {
   const canAdd = useCan('create', 'pet');
   const byId = new Map(p.pets.map((x) => [x.id, x]));
@@ -164,93 +178,105 @@ export function HomeDashboard(p: Props) {
   }
 
   const quiet = overdue.length + today.length + soon.length + done.length === 0;
+  const petsCard = (
+    <div className="card" data-area="pets">
+      <div className="sech">
+        <h2>{t('home.yourPets')}</h2>
+      </div>
+      <ul className="plist" aria-label={t('home.listLabel')}>
+        {p.ranked.map((r) => (
+          <PetRow
+            key={r.pet.id}
+            ranked={r}
+            selected={false}
+            now={p.now}
+            tz={p.tz}
+            checked={r.top !== null && p.held.has(r.top.key)}
+            onCheck={(item, already) => p.onCheck(item, r.pet.name, already)}
+          />
+        ))}
+        {canAdd ? (
+          <li>
+            <Link to="/pets/new" search={{ step: 1 }} className="addrow">
+              <Icon name="plus" /> {t('pets.add')}
+            </Link>
+          </li>
+        ) : null}
+      </ul>
+      {archived.length > 0 ? (
+        <Disclosure
+          title={t('home.archived')}
+          hint={t('home.archivedCount', { count: archived.length })}
+        >
+          <ul className="plist">
+            {archived.map((x) => (
+              <li key={x.id} className="line">
+                <Link
+                  to="/pets/$petId"
+                  params={{ petId: x.id }}
+                  search={{ tab: 'overview' }}
+                  className="rowmain"
+                >
+                  <b>{x.name}</b>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
+      ) : null}
+    </div>
+  );
+  const todayCard = (
+    <div className="card" data-area="today">
+      <div className="sech">
+        <h2>{t('task.tag.today')}</h2>
+        <span className="muted">{t('home.todayDone', { done: done.length, total })}</span>
+      </div>
+      {quiet ? <p className="muted">{t('task.upNextEmpty')}</p> : null}
+      {group(t('task.tag.overdue'), overdue, 'overdue')}
+      {group(t('task.tag.today'), today, 'today')}
+      {group(t('home.label.comingUp'), soon, 'soon')}
+      {done.length > 0 ? (
+        <section aria-label={t('home.groupDone')} className="grp ok">
+          <h3>
+            {t('home.groupDone')} <span className="cnt">{done.length}</span>
+          </h3>
+          <ul className="plain">
+            {done.map((item) => {
+              const pet = item.petId ? byId.get(item.petId) : undefined;
+              return (
+                <li key={item.key} className="task checked" data-testid="today-row">
+                  {pet ? <PetAvatar pet={pet.record} size={28} /> : null}
+                  <span className="tt">
+                    <b>{item.title}</b>
+                    <span className="ok">{pet?.name ?? item.petName ?? ''}</span>
+                  </span>
+                  <span className="done-ic">
+                    <Icon name="check" />
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+  const weekCard = <WeekAhead week={week} pets={byId} tz={p.tz} />;
+  const recentCard = <RecentCare householdId={p.householdId} pets={byId} tz={p.tz} now={p.now} />;
   return (
     <>
       {head}
-      <div className="two" data-layout="home">
-        <div className="card" data-area="pets">
-          <div className="sech">
-            <h2>{t('home.yourPets')}</h2>
-          </div>
-          <ul className="plist" aria-label={t('home.listLabel')}>
-            {p.ranked.map((r) => (
-              <PetRow
-                key={r.pet.id}
-                ranked={r}
-                selected={false}
-                now={p.now}
-                tz={p.tz}
-                checked={r.top !== null && p.held.has(r.top.key)}
-                onCheck={(item, already) => p.onCheck(item, r.pet.name, already)}
-              />
-            ))}
-            {canAdd ? (
-              <li>
-                <Link to="/pets/new" search={{ step: 1 }} className="addrow">
-                  <Icon name="plus" /> {t('pets.add')}
-                </Link>
-              </li>
-            ) : null}
-          </ul>
-          {archived.length > 0 ? (
-            <Disclosure
-              title={t('home.archived')}
-              hint={t('home.archivedCount', { count: archived.length })}
-            >
-              <ul className="plist">
-                {archived.map((x) => (
-                  <li key={x.id} className="line">
-                    <Link
-                      to="/pets/$petId"
-                      params={{ petId: x.id }}
-                      search={{ tab: 'overview' }}
-                      className="rowmain"
-                    >
-                      <b>{x.name}</b>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </Disclosure>
-          ) : null}
-        </div>
-        <div className="card" data-area="today">
-          <div className="sech">
-            <h2>{t('task.tag.today')}</h2>
-            <span className="muted">{t('home.todayDone', { done: done.length, total })}</span>
-          </div>
-          {quiet ? <p className="muted">{t('task.upNextEmpty')}</p> : null}
-          {group(t('task.tag.overdue'), overdue, 'overdue')}
-          {group(t('task.tag.today'), today, 'today')}
-          {group(t('home.label.comingUp'), soon, 'soon')}
-          {done.length > 0 ? (
-            <section aria-label={t('home.groupDone')} className="grp ok">
-              <h3>
-                {t('home.groupDone')} <span className="cnt">{done.length}</span>
-              </h3>
-              <ul className="plain">
-                {done.map((item) => {
-                  const pet = item.petId ? byId.get(item.petId) : undefined;
-                  return (
-                    <li key={item.key} className="task checked" data-testid="today-row">
-                      {pet ? <PetAvatar pet={pet.record} size={28} /> : null}
-                      <span className="tt">
-                        <b>{item.title}</b>
-                        <span className="ok">{pet?.name ?? item.petName ?? ''}</span>
-                      </span>
-                      <span className="done-ic">
-                        <Icon name="check" />
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ) : null}
-        </div>
-        <WeekAhead week={week} pets={byId} tz={p.tz} />
-        <RecentCare householdId={p.householdId} pets={byId} tz={p.tz} now={p.now} />
-      </div>
+      <Flow
+        layout="home"
+        panels={{ pets: petsCard, today: todayCard, week: weekCard, recent: recentCard }}
+        plan={HOME_PLAN}
+      >
+        {petsCard}
+        {todayCard}
+        {weekCard}
+        {recentCard}
+      </Flow>
     </>
   );
 }

@@ -28,6 +28,8 @@ import { useHealthList, useToday } from '../health/hooks';
 import { LinkQr } from '../shared/LinkQr';
 import { PetAvatar } from '../shared/PetAvatar';
 import { useDemo } from '../shared/demo';
+import { Flow } from '../shared/Flow';
+import type { FlowPlan } from '../shared/Flow';
 import { useCan, useHouseholdId } from '../shared/permissions';
 import { useSaveFailure } from '../shared/save-failure';
 import { useServices } from '../shared/services-context';
@@ -197,6 +199,18 @@ function useMedicalTags(petId: string, visible: readonly string[]): string[] {
   return tags;
 }
 
+const PLAN: FlowPlan = {
+  wide: [
+    [1.2, 'card'],
+    [1, 'found', 'medical'],
+    [1, 'lost', 'preview'],
+  ],
+  mid: [
+    [1, 'card', 'medical'],
+    [1, 'found', 'lost', 'preview'],
+  ],
+};
+
 /** The pet's emergency card: what a finder sees, lost mode, and the public link with its QR. */
 export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
   const petId = pet.id;
@@ -308,6 +322,169 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
     );
   }
 
+  const cardPanel = (
+    <Card data-area="card">
+      <div className="emhero">
+        <PetAvatar pet={pet} size={wide ? 88 : 96} />
+        <div className="l">
+          <h2>{petName}</h2>
+          {breed ? <span className="muted">{breed}</span> : null}
+          <span className="chip-id">
+            {t('emergency.microchip')} {text(pet.data.microchipId) || t('emergency.notAdded')}
+          </span>
+        </div>
+      </div>
+      {demo ? <Banner>{t('demo.emergencyDisabled')}</Banner> : null}
+      {!owner ? <Banner>{t('emergency.ownerOnly')}</Banner> : null}
+      {error ? <Banner tone="warn">{error}</Banner> : null}
+      {notice ? <p role="status">{notice}</p> : null}
+      <div className="qrrow">
+        {link ? (
+          <LinkQr link={link.url} label={t('emergency.qr')} />
+        ) : (
+          <div className="qr empty-qr">
+            <Icon name="shield" />
+            <span>{t('emergency.qrPlaceholder')}</span>
+          </div>
+        )}
+        <div className="l">
+          {link ? (
+            <>
+              <code data-testid="emergency-link">{link.url}</code>
+              <div className="acts">
+                <CopyButton
+                  value={link.url}
+                  label={t('emergency.copy')}
+                  copiedToast={t('emergency.copied')}
+                  onNotify={showToast}
+                />
+                <Button variant="secondary" onClick={print}>
+                  {t('emergency.print')}
+                </Button>
+              </div>
+            </>
+          ) : null}
+          {owner && data && !demo ? (
+            <div className="acts">
+              <Button
+                variant={link ? 'secondary' : 'primary'}
+                onClick={() =>
+                  void run(async () => {
+                    setLink(await emergency.createLink(data.id));
+                  })
+                }
+              >
+                {link ? t('emergency.newLink') : t('emergency.createLink')}
+              </Button>
+              {wide ? revoke : null}
+            </div>
+          ) : null}
+          <p className="muted">{t('emergency.linkHint')}</p>
+        </div>
+      </div>
+      {link ? (
+        <div data-print-card aria-hidden="true">
+          <h2>{t('emergency.printTitle')}</h2>
+          <LinkQr link={link.url} label={t('emergency.qr')} />
+          <p>{t('emergency.printHint', { name: petName })}</p>
+        </div>
+      ) : null}
+    </Card>
+  );
+  const foundPanel = (
+    <Card data-area="found">
+      <SectionHeader
+        title={t('emergency.ifFound')}
+        {...(owner && data ? { aside: editButton('emergency.editCard') } : {})}
+      />
+      {!data ? (
+        <EmptyState
+          {...(owner
+            ? {
+                action: <Button onClick={() => setEditing(true)}>{t('emergency.setUp')}</Button>,
+              }
+            : {})}
+        >
+          {t('emergency.linkNeedsCard')}
+        </EmptyState>
+      ) : (
+        <>
+          {phone ? null : (
+            <EmptyState
+              {...(owner
+                ? {
+                    action: (
+                      <Button variant="secondary" onClick={() => setEditing(true)}>
+                        {t('emergency.editCard')}
+                      </Button>
+                    ),
+                  }
+                : {})}
+            >
+              {t('emergency.noContact')}
+            </EmptyState>
+          )}
+          {phone || notes ? (
+            <ul>
+              {phone ? (
+                <Line
+                  title={contactName}
+                  sub={t('emergency.ownerRole')}
+                  aside={<span>{phone}</span>}
+                />
+              ) : null}
+              {notes ? <Line title={t('emergency.field.notes')} sub={notes} /> : null}
+            </ul>
+          ) : null}
+        </>
+      )}
+    </Card>
+  );
+  const medicalPanel = (
+    <Card data-area="medical">
+      <SectionHeader title={t('emergency.medical')} />
+      {tags.length > 0 ? (
+        <div className="tags">
+          {tags.map((name, i) => (
+            <span key={`${name}-${i}`} className="tag">
+              {name}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <EmptyState>{t('emergency.noMedical')}</EmptyState>
+      )}
+    </Card>
+  );
+  const lostPanel = (
+    <Card data-area="lost">
+      <SectionHeader title={t('emergency.lostMode')} />
+      <p className="muted">{t('emergency.lostAlertBody', { name: petName })}</p>
+      {owner ? <div className="acts">{lostButton}</div> : null}
+    </Card>
+  );
+  const previewPanel = (
+    <Card data-area="preview">
+      <SectionHeader
+        title={t('emergency.editTitle')}
+        {...(link
+          ? {
+              aside: (
+                <a className="linkbtn" href={link.url} target="_blank" rel="noreferrer">
+                  {t('emergency.openPublic')}
+                </a>
+              ),
+            }
+          : {})}
+      />
+      {data ? (
+        <FinderPreview pet={pet} card={data.data} />
+      ) : (
+        <EmptyState>{t('emergency.linkNeedsCard')}</EmptyState>
+      )}
+    </Card>
+  );
+
   return (
     <>
       {lost ? (
@@ -320,166 +497,29 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
           </div>
         </div>
       ) : null}
-      <div className="two" data-layout={wide ? 'emergency' : undefined}>
+      <Flow
+        layout={wide ? 'emergency' : undefined}
+        panels={
+          wide
+            ? {
+                card: cardPanel,
+                found: foundPanel,
+                medical: medicalPanel,
+                lost: lostPanel,
+                preview: previewPanel,
+              }
+            : {}
+        }
+        plan={PLAN}
+      >
+        <div className="stack">{cardPanel}</div>
         <div className="stack">
-          <Card data-area="card">
-            <div className="emhero">
-              <PetAvatar pet={pet} size={wide ? 88 : 96} />
-              <div className="l">
-                <h2>{petName}</h2>
-                {breed ? <span className="muted">{breed}</span> : null}
-                <span className="chip-id">
-                  {t('emergency.microchip')} {text(pet.data.microchipId) || t('emergency.notAdded')}
-                </span>
-              </div>
-            </div>
-            {demo ? <Banner>{t('demo.emergencyDisabled')}</Banner> : null}
-            {!owner ? <Banner>{t('emergency.ownerOnly')}</Banner> : null}
-            {error ? <Banner tone="warn">{error}</Banner> : null}
-            {notice ? <p role="status">{notice}</p> : null}
-            <div className="qrrow">
-              {link ? (
-                <LinkQr link={link.url} label={t('emergency.qr')} />
-              ) : (
-                <div className="qr empty-qr">
-                  <Icon name="shield" />
-                  <span>{t('emergency.qrPlaceholder')}</span>
-                </div>
-              )}
-              <div className="l">
-                {link ? (
-                  <>
-                    <code data-testid="emergency-link">{link.url}</code>
-                    <div className="acts">
-                      <CopyButton
-                        value={link.url}
-                        label={t('emergency.copy')}
-                        copiedToast={t('emergency.copied')}
-                        onNotify={showToast}
-                      />
-                      <Button variant="secondary" onClick={print}>
-                        {t('emergency.print')}
-                      </Button>
-                    </div>
-                  </>
-                ) : null}
-                {owner && data && !demo ? (
-                  <div className="acts">
-                    <Button
-                      variant={link ? 'secondary' : 'primary'}
-                      onClick={() =>
-                        void run(async () => {
-                          setLink(await emergency.createLink(data.id));
-                        })
-                      }
-                    >
-                      {link ? t('emergency.newLink') : t('emergency.createLink')}
-                    </Button>
-                    {wide ? revoke : null}
-                  </div>
-                ) : null}
-                <p className="muted">{t('emergency.linkHint')}</p>
-              </div>
-            </div>
-            {link ? (
-              <div data-print-card aria-hidden="true">
-                <h2>{t('emergency.printTitle')}</h2>
-                <LinkQr link={link.url} label={t('emergency.qr')} />
-                <p>{t('emergency.printHint', { name: petName })}</p>
-              </div>
-            ) : null}
-          </Card>
-        </div>
-        <div className="stack">
-          <Card data-area="found">
-            <SectionHeader
-              title={t('emergency.ifFound')}
-              {...(owner && data ? { aside: editButton('emergency.editCard') } : {})}
-            />
-            {!data ? (
-              <EmptyState
-                {...(owner
-                  ? {
-                      action: (
-                        <Button onClick={() => setEditing(true)}>{t('emergency.setUp')}</Button>
-                      ),
-                    }
-                  : {})}
-              >
-                {t('emergency.linkNeedsCard')}
-              </EmptyState>
-            ) : (
-              <>
-                {phone ? null : (
-                  <EmptyState
-                    {...(owner
-                      ? {
-                          action: (
-                            <Button variant="secondary" onClick={() => setEditing(true)}>
-                              {t('emergency.editCard')}
-                            </Button>
-                          ),
-                        }
-                      : {})}
-                  >
-                    {t('emergency.noContact')}
-                  </EmptyState>
-                )}
-                {phone || notes ? (
-                  <ul>
-                    {phone ? (
-                      <Line
-                        title={contactName}
-                        sub={t('emergency.ownerRole')}
-                        aside={<span>{phone}</span>}
-                      />
-                    ) : null}
-                    {notes ? <Line title={t('emergency.field.notes')} sub={notes} /> : null}
-                  </ul>
-                ) : null}
-              </>
-            )}
-          </Card>
-          <Card data-area="medical">
-            <SectionHeader title={t('emergency.medical')} />
-            {tags.length > 0 ? (
-              <div className="tags">
-                {tags.map((name, i) => (
-                  <span key={`${name}-${i}`} className="tag">
-                    {name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <EmptyState>{t('emergency.noMedical')}</EmptyState>
-            )}
-          </Card>
+          {foundPanel}
+          {medicalPanel}
           {wide ? (
             <>
-              <Card data-area="lost">
-                <SectionHeader title={t('emergency.lostMode')} />
-                <p className="muted">{t('emergency.lostAlertBody', { name: petName })}</p>
-                {owner ? <div className="acts">{lostButton}</div> : null}
-              </Card>
-              <Card data-area="preview">
-                <SectionHeader
-                  title={t('emergency.editTitle')}
-                  {...(link
-                    ? {
-                        aside: (
-                          <a className="linkbtn" href={link.url} target="_blank" rel="noreferrer">
-                            {t('emergency.openPublic')}
-                          </a>
-                        ),
-                      }
-                    : {})}
-                />
-                {data ? (
-                  <FinderPreview pet={pet} card={data.data} />
-                ) : (
-                  <EmptyState>{t('emergency.linkNeedsCard')}</EmptyState>
-                )}
-              </Card>
+              {lostPanel}
+              {previewPanel}
             </>
           ) : owner ? (
             <div className="acts">
@@ -488,7 +528,7 @@ export function EmergencyPanel({ pet }: { pet: StoredRecord }) {
             </div>
           ) : null}
         </div>
-      </div>
+      </Flow>
       <Sheet open={editing} label={t('emergency.editTitle')} onClose={() => setEditing(false)}>
         <CardSheet card={data} petId={petId} onClose={() => setEditing(false)} />
       </Sheet>
