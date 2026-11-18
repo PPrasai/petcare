@@ -1,4 +1,4 @@
-import { Fragment, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useRef, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { WIDE_QUERY } from './use-wide-screen';
 
@@ -37,6 +37,32 @@ function subscribe(notify: () => void) {
   };
 }
 
+const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]';
+
+/**
+ * A panel that shrinks and scrolls inside its column must be reachable from the keyboard. One that
+ * holds a link or a button already is; a text-only one (the week ahead, say) gets a focus stop while it
+ * overflows, named by its heading, and loses it again when it fits.
+ */
+function markScrollable(root: HTMLElement) {
+  for (const panel of root.querySelectorAll<HTMLElement>(':scope > .col > [data-area]')) {
+    const overflows = panel.scrollHeight > panel.clientHeight + 1;
+    const needsStop = overflows && panel.querySelector(FOCUSABLE) === null;
+    if (needsStop) {
+      panel.tabIndex = 0;
+      panel.setAttribute('role', 'region');
+      const heading = panel.querySelector('h1, h2, h3')?.textContent;
+      if (heading) panel.setAttribute('aria-label', heading);
+      panel.dataset.scrollStop = '';
+    } else if (panel.dataset.scrollStop !== undefined) {
+      panel.removeAttribute('tabindex');
+      panel.removeAttribute('role');
+      panel.removeAttribute('aria-label');
+      delete panel.dataset.scrollStop;
+    }
+  }
+}
+
 /** A column of the plan: its share of the width, then the panels in it from top to bottom. */
 export type FlowColumn = [number, ...string[]];
 
@@ -66,6 +92,17 @@ export function Flow({
   children: ReactNode;
 }) {
   const tier = useSyncExternalStore(subscribe, tierNow, () => 'flat' as Tier);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return undefined;
+    markScrollable(el);
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(() => markScrollable(el));
+    observer.observe(el);
+    for (const panel of el.querySelectorAll('[data-area]')) observer.observe(panel);
+    return () => observer.disconnect();
+  });
   if (tier === 'flat' || !layout) {
     return (
       <div className="two" data-layout={layout}>
@@ -85,6 +122,7 @@ export function Flow({
       className="two"
       data-layout={layout}
       data-flow=""
+      ref={root}
       style={{ gridTemplateColumns: columns.map((c) => `minmax(0, ${c.share}fr)`).join(' ') }}
     >
       {columns.map((column) => (
