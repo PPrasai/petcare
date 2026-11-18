@@ -21,6 +21,8 @@ export interface UserData {
   files: FileGateway;
   conflicts: ConflictStore;
   households(): Promise<HouseholdRow[]>;
+  /** Renames a household stored on this device (the demo's household; a real one is renamed on the server). */
+  renameHousehold(id: string, name: string): Promise<void>;
   /** Small per-user settings kept in this database (the demo's preferences). */
   readSetting(key: string): Promise<string | undefined>;
   writeSetting(key: string, value: string): Promise<void>;
@@ -134,6 +136,9 @@ export function openUserData(
     },
     files: createFileGateway(db, fileApi, userId, () => hooks.onChanged([])),
     households: () => db.households.toArray(),
+    async renameHousehold(id, name) {
+      await db.households.update(id, { name });
+    },
     async readSetting(key) {
       const value = (await db.meta.get(key))?.value;
       return typeof value === 'string' ? value : undefined;

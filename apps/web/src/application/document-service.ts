@@ -1,5 +1,6 @@
 import type { RecordStore, StoredRecord } from './ports/record-store';
-import { checkRecord, withoutEmptyValues } from './record-checks';
+import { InvalidInput } from './pet-service';
+import { checkRecord, updateRecord, withoutEmptyValues } from './record-checks';
 
 export interface NewDocument {
   petId: string | null;
@@ -24,6 +25,13 @@ export class DocumentService {
     const data = withoutEmptyValues({ ...input });
     checkRecord('document', data);
     return this.records.create('document', householdId, data);
+  }
+
+  /** Renames or re-files a document; the file itself stays. */
+  async update(id: string, change: { title: string; category: string }): Promise<StoredRecord> {
+    const current = await this.records.get('document', id);
+    if (!current) throw new InvalidInput('id');
+    return updateRecord(this.records, 'document', id, { ...current.data, ...change });
   }
 
   remove(id: string): Promise<void> {

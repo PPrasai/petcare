@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { VACCINE_SUGGESTION_LABEL, vaccineSuggestions } from '@petcare/domain';
 import { addDays, vaccinationBadge } from '../../application/health-logic';
+import type { StoredRecord } from '../../application/ports/record-store';
 import { InvalidInput } from '../../application/pet-service';
 import { t } from '../../i18n/t';
 import { formatDate } from '../../lib/format';
@@ -8,6 +9,7 @@ import { useSessionStore } from '../../state/session';
 import { Button, Card, Chip, EmptyState, Line, Pill, SectionHeader } from '../../ui';
 import type { Tone } from '../../ui';
 import { useContactName, useContactOptions } from '../contacts/hooks';
+import { EditButton, useEditTap } from '../shared/EditButton';
 import { useCan, useCanDelete, useHouseholdId } from '../shared/permissions';
 import { useRemoval } from '../shared/removal';
 import { useSaveFailure } from '../shared/save-failure';
@@ -31,13 +33,18 @@ const BADGE_TONE: Record<'overdue' | 'dueSoon' | 'upcoming', Tone> = {
   upcoming: 'ok',
 };
 
-function AddVaccination({
+const text = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+/** The vaccination form: adds one, or with `record` changes that one. */
+function VaccinationForm({
   petId,
   species,
+  record,
   onClose,
 }: {
   petId: string;
   species: string;
+  record?: StoredRecord;
   onClose: () => void;
 }) {
   const { health } = useServices();
@@ -45,7 +52,13 @@ function AddVaccination({
   const contactOptions = useContactOptions();
   const show = useToastStore((s) => s.show);
   const today = useToday();
-  const [values, setValues] = useState<Record<string, string>>({ givenOn: today });
+  const [values, setValues] = useState<Record<string, string>>(
+    record
+      ? Object.fromEntries(
+          [...FIELDS.map((f) => f.name), 'contactId'].map((k) => [k, text(record.data[k])]),
+        )
+      : { givenOn: today },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const suggestions = vaccineSuggestions(species);
   const fields: FieldSpec[] = [
@@ -64,8 +77,13 @@ function AddVaccination({
   const submit = async () => {
     failure.clear();
     try {
-      await health.add('vaccination', householdId, { petId, ...values });
-      show(t('form.added', { name: values.vaccineName ?? '' }));
+      if (record) {
+        await health.edit('vaccination', record.id, values);
+        show(t('form.saved', { name: values.vaccineName ?? '' }));
+      } else {
+        await health.add('vaccination', householdId, { petId, ...values });
+        show(t('form.added', { name: values.vaccineName ?? '' }));
+      }
       onClose();
     } catch (e) {
       if (!(e instanceof InvalidInput)) {
@@ -95,13 +113,13 @@ function AddVaccination({
         </div>
       ) : null}
       <RecordForm
-        title={t('vaccine.add')}
+        title={record ? t('vaccine.edit') : t('vaccine.add')}
         fields={fields}
         values={values}
         errors={errors}
         onChange={setValues}
         onSubmit={() => void submit()}
-        submitLabel={t('vaccine.add')}
+        submitLabel={record ? t('form.saveChanges') : t('vaccine.add')}
       >
         {failure.view}
       </RecordForm>
@@ -117,7 +135,9 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
   const removeRecord = useRemoval();
   const today = useToday();
   const list = useHealthList('vaccination', petId);
-  const [adding, setAdding] = useState(false);
+  const [sheet, setSheet] = useState<{ record?: StoredRecord } | null>(null);
+  const canEdit = useCan('update', 'vaccination');
+  const tap = useEditTap();
   const rows = list.data ?? [];
 
   return (
@@ -129,7 +149,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
               action: {
                 label: t('ui.add'),
                 ariaLabel: t('vaccine.addLabel'),
-                onClick: () => setAdding(true),
+                onClick: () => setSheet({}),
               },
             }
           : {})}
@@ -142,6 +162,7 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
             const name = String(v.data.vaccineName);
             return (
               <Line
+                titleProps={canEdit ? tap(name, () => setSheet({ record: v })) : undefined}
                 key={v.id}
                 title={name}
                 sub={
@@ -168,23 +189,37 @@ export function VaccinationsPanel({ petId, species }: { petId: string; species: 
                   ) : null
                 }
                 actions={
-                  canDelete(v.createdBy) ? (
-                    <Button
-                      variant="secondary"
-                      aria-label={t('form.deleteLabel', { name })}
-                      onClick={() => void removeRecord(v, name)}
-                    >
-                      {t('form.delete')}
-                    </Button>
-                  ) : null
+                  <>
+                    {canEdit ? (
+                      <EditButton name={name} onClick={() => setSheet({ record: v })} />
+                    ) : null}
+                    {canDelete(v.createdBy) ? (
+                      <Button
+                        variant="secondary"
+                        aria-label={t('form.deleteLabel', { name })}
+                        onClick={() => void removeRecord(v, name)}
+                      >
+                        {t('form.delete')}
+                      </Button>
+                    ) : null}
+                  </>
                 }
               />
             );
           })}
         </ul>
       ) : null}
-      <RecordSheet open={adding} title={t('vaccine.add')} onClose={() => setAdding(false)}>
-        <AddVaccination petId={petId} species={species} onClose={() => setAdding(false)} />
+      <RecordSheet
+        open={sheet !== null}
+        title={sheet?.record ? t('vaccine.edit') : t('vaccine.add')}
+        onClose={() => setSheet(null)}
+      >
+        <VaccinationForm
+          petId={petId}
+          species={species}
+          {...(sheet?.record ? { record: sheet.record } : {})}
+          onClose={() => setSheet(null)}
+        />
       </RecordSheet>
     </Card>
   );

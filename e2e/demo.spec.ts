@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { openDisclosure } from './support/app';
+import { createInvite, openDisclosure } from './support/app';
 
 const SKIP_STORES = new Set(['outbox', 'meta', 'problems', 'conflicts', 'pendingFiles']);
 
@@ -103,7 +103,7 @@ test('the demo works end to end with no request to /api, and reset restores the 
   await page.getByRole('link', { name: 'Expenses', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Expenses' })).toBeVisible();
   await page.getByRole('link', { name: 'Household', exact: true }).click();
-  await expect(page.getByText(/Inviting people .* turned off in the demo/)).toBeVisible();
+  await expect(page.getByText(/People and invites in the demo stay on this device/)).toBeVisible();
   await expect(page.getByTestId('member-row').filter({ hasText: 'Sam' })).toContainText(
     'Caretaker',
   );
@@ -149,4 +149,93 @@ test('the demo works end to end with no request to /api, and reset restores the 
   await expect(banner).toHaveCount(0);
 
   expect(apiCalls.every((url) => new URL(url).pathname === '/api/config')).toBe(true);
+});
+
+// The household in the demo works from the device: people, roles, invites and the name are kept in
+// IndexedDB, nothing goes to the server, and what an account is needed for is not offered.
+test('demo household: roles, invites, removal and rename work on the device and survive a reload', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.route('**/api/**', (route) => route.abort('connectionrefused'));
+  await page.goto('/sign-in');
+  await page.getByRole('button', { name: 'Try the demo' }).click();
+  await expect(page.getByRole('region', { name: 'Demo mode' })).toBeVisible();
+  const problems: string[] = [];
+  const apiCalls: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') problems.push(m.text());
+  });
+  page.on('pageerror', (e) => problems.push(String(e)));
+  page.on('request', (r) => {
+    if (new URL(r.url()).pathname.startsWith('/api/')) apiCalls.push(r.url());
+  });
+
+  await page.getByRole('link', { name: 'Household', exact: true }).first().click();
+  const member = (name: string) => page.getByTestId('member-row').filter({ hasText: name });
+  await expect(member('Alex')).toContainText('Owner');
+  await expect(member('Sam')).toContainText('Caretaker');
+  await expect(member('Riya')).toContainText('Viewer');
+  await expect(page.getByText(/nobody can really join/)).toBeVisible();
+
+  // What needs an account is not offered.
+  await expect(page.getByRole('button', { name: 'Leave household' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Join with a link or code' })).toHaveCount(0);
+
+  // A role change.
+  await page.getByRole('button', { name: 'Manage Sam' }).click();
+  const manage = page.getByRole('dialog', { name: 'Sam' });
+  await expect(manage.getByRole('button', { name: /^Make Sam the owner/ })).toHaveCount(0);
+  await manage.getByLabel('Role of Sam').selectOption('viewer');
+  await page.keyboard.press('Escape');
+  await expect(member('Sam')).toContainText('Viewer');
+
+  // An invite is made, listed, and revoked; its link says it is only a demo.
+  await createInvite(page, 'Viewer');
+  const created = page.getByRole('region', { name: 'New invite' });
+  await expect(created).toContainText('Demo invite');
+  await expect(created.getByTestId('invite-code')).toContainText('DEMO-');
+  await expect(page.getByRole('heading', { level: 2, name: 'Open invites' })).toBeVisible();
+  await page.getByRole('button', { name: /^Revoke / }).click();
+  await expect(page.getByText('No open invites')).toBeVisible();
+
+  // A removal and a rename.
+  await page.getByRole('button', { name: 'Manage Riya' }).click();
+  await page
+    .getByRole('dialog', { name: 'Riya' })
+    .getByRole('button', { name: /^Remove Riya/ })
+    .click();
+  await expect(member('Riya')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Rename household' }).click();
+  await page.getByLabel('New name').fill('Our home');
+  await page
+    .getByRole('dialog', { name: 'Rename household' })
+    .getByRole('button', { name: 'Save' })
+    .click();
+  await expect(page.getByText(/Our home/).first()).toBeVisible();
+
+  // All of it is still there after a reload, and nothing went to the server.
+  await page.reload();
+  await page.getByRole('link', { name: 'Household', exact: true }).first().click();
+  await expect(member('Sam')).toContainText('Viewer');
+  await expect(member('Riya')).toHaveCount(0);
+  await expect(page.getByText(/Our home/).first()).toBeVisible();
+  expect({ problems, apiCalls }).toEqual({ problems: [], apiCalls: [] });
+
+  // A direct visit to the join page explains itself instead of failing.
+  await page.goto('/join');
+  await expect(page.getByText('Joining a household needs an account')).toBeVisible();
+});
+
+test('demo household on a phone keeps its fixed list of people and explains why', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/**', (route) => route.abort('connectionrefused'));
+  await page.goto('/sign-in');
+  await page.getByRole('button', { name: 'Try the demo' }).click();
+  await page.goto('/household');
+  await expect(page.getByTestId('member-row')).toHaveCount(3);
+  await expect(page.getByText(/works in the demo from a wider screen/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(0);
 });

@@ -78,7 +78,8 @@ function MemberSheet({
   householdId: string;
   person: Person;
   onClose: () => void;
-  onTransfer: () => void;
+  /** Absent where ownership cannot be handed over (the demo). */
+  onTransfer?: () => void;
 }) {
   const { households } = useServices();
   const client = useQueryClient();
@@ -117,9 +118,11 @@ function MemberSheet({
           });
         }}
       />
-      <Button variant="secondary" disabled={busy} onClick={onTransfer}>
-        {t('household.makeOwner', { name: person.name })}
-      </Button>
+      {onTransfer ? (
+        <Button variant="secondary" disabled={busy} onClick={onTransfer}>
+          {t('household.makeOwner', { name: person.name })}
+        </Button>
+      ) : null}
       <Button
         variant="danger"
         disabled={busy}
@@ -147,6 +150,8 @@ interface Props {
   hideInvite?: boolean;
   /** The invite sheet, which has to sit inside a card. */
   children?: ReactNode;
+  /** False where ownership cannot be handed over (the demo). */
+  canTransfer?: boolean;
 }
 
 /** People in the household, with the owner's invite, role change, removal and ownership transfer. */
@@ -157,6 +162,7 @@ export function MembersPanel({
   onInvite,
   hideInvite,
   children,
+  canTransfer = true,
 }: Props) {
   const { households } = useServices();
   const me = useSessionStore((s) => s.user?.id ?? '');
@@ -213,7 +219,7 @@ export function MembersPanel({
             householdId={householdId}
             person={person}
             onClose={() => setManaging(null)}
-            onTransfer={() => setTransferTo(person.userId)}
+            {...(canTransfer ? { onTransfer: () => setTransferTo(person.userId) } : {})}
           />
         ) : null}
       </Sheet>

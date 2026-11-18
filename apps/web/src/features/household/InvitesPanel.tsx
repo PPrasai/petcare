@@ -17,6 +17,7 @@ import {
   Sheet,
   SheetHead,
 } from '../../ui';
+import { useDemo } from '../shared/demo';
 import { LinkQr } from '../shared/LinkQr';
 import { useServices } from '../shared/services-context';
 import { useToastStore } from '../shared/toast';
@@ -91,6 +92,7 @@ export function InviteSheet({
 export function NewInviteCard({ invite, onHide }: { invite: CreatedInvite; onHide: () => void }) {
   const showToast = useToastStore((s) => s.show);
   const region = useRef<HTMLDivElement>(null);
+  const demo = useDemo();
   useEffect(() => {
     const frame = requestAnimationFrame(() => region.current?.focus());
     return () => cancelAnimationFrame(frame);
@@ -107,6 +109,7 @@ export function NewInviteCard({ invite, onHide }: { invite: CreatedInvite; onHid
       <div className="stack">
         <h2>{t('household.inviteTitle')}</h2>
         <p className="muted">{t('household.shownOnce')}</p>
+        {demo ? <p className="muted">{t('demo.inviteNote')}</p> : null}
         <ul>
           <Line
             title={t('household.link')}
