@@ -31,7 +31,12 @@ export function EmergencyPage({ petId }: { petId?: string | undefined }) {
             className="pchip"
             pressed={p.id === pet?.id}
             onClick={() =>
-              void navigate({ to: '/emergency', search: { pet: p.id }, replace: true })
+              void navigate({
+                to: '/emergency',
+                search: { pet: p.id },
+                replace: true,
+                resetScroll: false,
+              })
             }
           >
             <PetAvatar pet={p} size={26} />

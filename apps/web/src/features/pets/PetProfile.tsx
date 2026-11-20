@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { TouchEvent } from 'react';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t } from '../../i18n/t';
 import type { MessageKey } from '../../i18n/en';
 import { formatMeasurement } from '../../lib/format';
@@ -74,6 +74,20 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
     observer.observe(node);
     return () => observer.disconnect();
   }, [loaded, petId]);
+  // A new tab keeps the scroll position, but when the page was scrolled past the sticky tab bar,
+  // the new tab starts right under the bar instead of somewhere in its middle (phone only; from
+  // 860 px the tabs do not stick).
+  const panel = useRef<HTMLDivElement>(null);
+  const shownTab = useRef(tab);
+  useLayoutEffect(() => {
+    if (shownTab.current === tab) return;
+    shownTab.current = tab;
+    const node = panel.current;
+    const bar = node?.previousElementSibling;
+    if (wide || !node || !(bar instanceof HTMLElement)) return;
+    const overshoot = node.getBoundingClientRect().top - bar.offsetHeight;
+    if (overshoot < 0) window.scrollBy(0, overshoot);
+  }, [tab, wide]);
   const start = useRef<{ x: number; y: number } | null>(null);
   const photo = usePetPhoto(pet.data);
 
@@ -183,6 +197,7 @@ export function PetProfile({ petId, tab, onTab, headingLevel, strip }: PetProfil
       </div>
       <Tabs tabs={tabs} value={tab} label={t('pets.tabs')} onChange={onTab} caption={name} />
       <div
+        ref={panel}
         role="tabpanel"
         id={panelId(tab)}
         aria-labelledby={tabId(tab)}

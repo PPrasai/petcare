@@ -126,6 +126,8 @@ export function HomePage({ petId, tab }: { petId?: string; tab?: ProfileTab }) {
         params: { petId },
         search: { tab: next },
         replace: true,
+        // A tab is part of the page: switching it must not jump the page to the top.
+        resetScroll: false,
       });
     } else {
       setLocalTab(next);

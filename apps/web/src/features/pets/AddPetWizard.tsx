@@ -170,8 +170,8 @@ export function AddPetWizard() {
     [],
   );
 
+  // The router starts each step at the top (on a phone and in the desktop content column).
   const go = (next: WizardStep) => {
-    window.scrollTo(0, 0);
     void navigate({ to: '/pets/new', search: { step: next } });
   };
   const requireName = (): boolean => {

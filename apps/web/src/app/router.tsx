@@ -207,6 +207,11 @@ const routeTree = root.addChildren([
 export const router = createRouter({
   routeTree,
   defaultPreload: false,
+  // Back and forward return to where the page was scrolled. A new page starts at the top: on a
+  // phone the window scrolls, from 860 px the content column does, so both are reset. Changes
+  // within a page (a profile tab, the emergency pet) pass `resetScroll: false` and stay put.
+  scrollRestoration: true,
+  scrollToTopSelectors: ['#content'],
   // A screen that throws (or a chunk that will not load) shows the friendly screen, not a blank page.
   defaultErrorComponent: () => <CrashScreen />,
 });
