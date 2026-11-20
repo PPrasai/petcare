@@ -3,7 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 // The demo needs no server: run the production build alone, with /api unreachable.
 export default defineConfig({
   testDir: 'e2e',
-  testMatch: ['demo-offline.spec.ts', 'demo.spec.ts', 'audit-a-demo.spec.ts'],
+  testMatch: [
+    'demo-offline.spec.ts',
+    'demo.spec.ts',
+    'audit-a-demo.spec.ts',
+    'demo-scroll.spec.ts',
+  ],
   forbidOnly: true,
   workers: 1,
   reporter: [['list']],
